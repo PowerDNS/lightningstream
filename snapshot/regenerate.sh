@@ -10,5 +10,6 @@ set -ex
 
 # Also mentioned in tools.go
 go install github.com/gogo/protobuf/protoc-gen-gogofast
-protoc --gogofast_out=. snapshot.proto
+go install github.com/bufbuild/buf/cmd/buf
+buf protoc --gogofast_out=. snapshot.proto
 
