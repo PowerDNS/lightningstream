@@ -29,10 +29,7 @@ func (b *Backend) List(ctx context.Context, prefix string) (storage.BlobList, er
 			continue
 		}
 		name := e.Name()
-		if strings.HasPrefix(name, ".") {
-			continue
-		}
-		if strings.HasSuffix(name, ".tmp") {
+		if !allowedName(name) {
 			continue
 		}
 		if !strings.HasPrefix(name, prefix) {
@@ -58,7 +55,7 @@ func (b *Backend) List(ctx context.Context, prefix string) (storage.BlobList, er
 }
 
 func (b *Backend) Load(ctx context.Context, name string) ([]byte, error) {
-	if strings.Contains(name, "/") {
+	if !allowedName(name) {
 		return nil, os.ErrNotExist
 	}
 	fullPath := filepath.Join(b.rootPath, name)
@@ -66,7 +63,7 @@ func (b *Backend) Load(ctx context.Context, name string) ([]byte, error) {
 }
 
 func (b *Backend) Store(ctx context.Context, name string, data []byte) error {
-	if strings.Contains(name, "/") {
+	if !allowedName(name) {
 		return os.ErrPermission
 	}
 	fullPath := filepath.Join(b.rootPath, name)
@@ -75,6 +72,20 @@ func (b *Backend) Store(ctx context.Context, name string, data []byte) error {
 		return err
 	}
 	return os.Rename(tmpPath, fullPath)
+}
+
+func allowedName(name string) bool {
+	// TODO: Make shared and test for rejection
+	if strings.Contains(name, "/") {
+		return false
+	}
+	if strings.HasPrefix(name, ".") {
+		return false
+	}
+	if strings.HasSuffix(name, ".tmp") {
+		return false // used for our temp files when writing
+	}
+	return true
 }
 
 func New(rootPath string) (*Backend, error) {
