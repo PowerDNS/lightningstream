@@ -4,6 +4,7 @@ import (
 	"powerdns.com/platform/lightningstream/cmd/lightningstream/commands"
 
 	// Register storage backends
+	_ "powerdns.com/platform/lightningstream/storage/fs"
 	_ "powerdns.com/platform/lightningstream/storage/memory"
 )
 

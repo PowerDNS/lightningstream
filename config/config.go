@@ -53,7 +53,8 @@ type LMDB struct {
 }
 
 type Storage struct {
-	Type string `yaml:"type"`
+	Type     string `yaml:"type"`
+	RootPath string `yaml:"root_path,omitempty"` // for the 'fs' backend
 }
 
 // HTTP configures the HTTP server with Prometheus metrics and status page
@@ -112,7 +113,7 @@ func (c *Config) LoadYAML(yamlContents []byte, expandEnv bool) error {
 	if expandEnv {
 		yamlContents = []byte(os.ExpandEnv(string(yamlContents)))
 	}
-	return yaml.Unmarshal(yamlContents, c)
+	return yaml.UnmarshalStrict(yamlContents, c)
 }
 
 // LoadYAMLFile loads config from a YAML file. Any set value overwrites any existing value,
