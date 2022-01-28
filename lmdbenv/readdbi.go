@@ -18,7 +18,12 @@ func ReadDBI(txn *lmdb.Txn, dbi lmdb.DBI) ([]KV, error) {
 	}
 	defer c.Close()
 
-	var entries []KV
+	stat, err := txn.Stat(dbi)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]KV, 0, stat.Entries)
 	var flag uint = lmdb.First
 	for {
 		key, val, err := c.Get(nil, nil, flag)

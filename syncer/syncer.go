@@ -61,9 +61,6 @@ func (s *Syncer) Send(ctx context.Context) error {
 		"LastTxnID": info.LastTxnID,
 	}).Info("Env info")
 
-	timer := time.NewTimer(time.Second)
-	defer timer.Stop()
-
 	warnedEmpty := false
 	lastTxnID := info.LastTxnID
 	for {
@@ -72,7 +69,6 @@ func (s *Syncer) Send(ctx context.Context) error {
 		if lastTxnID > 0 {
 			actualTxnID, err := s.SendOnce(ctx, env)
 			if err != nil {
-				// FIXME: we probably want to keep trying instead? Perhaps only the store?
 				return err
 			}
 			lastTxnID = actualTxnID
@@ -84,12 +80,8 @@ func (s *Syncer) Send(ctx context.Context) error {
 		// Wait for change
 		s.l.Debug("Waiting for a new transaction")
 		for {
-			timer.Reset(time.Second)
-			select {
-			case <-ctx.Done():
-				return context.Canceled
-			case <-timer.C:
-				// continue
+			if err := sleepContext(ctx, time.Second); err != nil { // TODO: config
+				return err
 			}
 
 			// Wait for change
@@ -236,20 +228,23 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string) (dbiMsg *snapshot.DBI, e
 	dbiMsg.Name = dbiName
 	// TODO: see if we can change from []*KV to []KVS for efficiency
 	dbiMsg.Entries = make([]*snapshot.KV, 0, stat.Entries)
+	// For now, we use this to preallocate all
+	entries := make([]snapshot.KV, 0, stat.Entries)
 	// TODO: directly read it into the right structure
 	items, err := lmdbenv.ReadDBI(txn, dbi)
 	var prev []byte
-	for _, item := range items {
+	for i, item := range items {
 		if prev != nil && bytes.Compare(prev, item.Key) >= 0 {
 			return nil, fmt.Errorf(
 				"non-default key order detected in DBI %q, refusing to continue",
 				dbiName)
 		}
 		prev = item.Key
-		dbiMsg.Entries = append(dbiMsg.Entries, &snapshot.KV{
+		entries = append(entries, snapshot.KV{
 			Key:   item.Key,
 			Value: item.Val,
 		})
+		dbiMsg.Entries = append(dbiMsg.Entries, &entries[i])
 	}
 
 	return dbiMsg, nil
