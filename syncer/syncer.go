@@ -102,7 +102,6 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	// TODO: other meta fields (generationID, instanceID, previousSnapshot)
 	var msg = new(snapshot.Snapshot)
 	msg.FormatVersion = 1
-	msg.Meta = new(snapshot.Snapshot_Meta)
 	msg.Meta.DatabaseName = s.name
 	msg.Meta.Hostname = hostname
 
@@ -226,25 +225,21 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string) (dbiMsg *snapshot.DBI, e
 
 	dbiMsg = new(snapshot.DBI)
 	dbiMsg.Name = dbiName
-	// TODO: see if we can change from []*KV to []KVS for efficiency
-	dbiMsg.Entries = make([]*snapshot.KV, 0, stat.Entries)
-	// For now, we use this to preallocate all
-	entries := make([]snapshot.KV, 0, stat.Entries)
+	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
 	// TODO: directly read it into the right structure
 	items, err := lmdbenv.ReadDBI(txn, dbi)
 	var prev []byte
-	for i, item := range items {
+	for _, item := range items {
 		if prev != nil && bytes.Compare(prev, item.Key) >= 0 {
 			return nil, fmt.Errorf(
 				"non-default key order detected in DBI %q, refusing to continue",
 				dbiName)
 		}
 		prev = item.Key
-		entries = append(entries, snapshot.KV{
+		dbiMsg.Entries = append(dbiMsg.Entries, snapshot.KV{
 			Key:   item.Key,
 			Value: item.Val,
 		})
-		dbiMsg.Entries = append(dbiMsg.Entries, &entries[i])
 	}
 
 	return dbiMsg, nil

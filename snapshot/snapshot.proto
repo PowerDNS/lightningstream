@@ -1,5 +1,10 @@
 syntax = "proto3";
 
+import "gogo.proto";
+
+option (gogoproto.goproto_unrecognized_all) = false;
+option (gogoproto.goproto_sizecache_all) = false;
+
 message KV {
   bytes key = 1;
   bytes value = 2;
@@ -7,7 +12,7 @@ message KV {
 
 message DBI {
   string name = 1;
-  repeated KV entries = 2;  // Must be in LMDB sort order!
+  repeated KV entries = 2 [(gogoproto.nullable) = false];  // Must be in LMDB sort order!
 }
 
 message Snapshot {
@@ -22,7 +27,7 @@ message Snapshot {
     string previousSnapshot = 6;
     string databaseName = 7;
   }
-  Meta meta = 2;
+  Meta meta = 2 [(gogoproto.nullable) = false];
 
   repeated DBI databases = 3;
 }
