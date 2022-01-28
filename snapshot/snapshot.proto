@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+message KV {
+  bytes key = 1;
+  bytes value = 2;
+}
+
+message DBI {
+  string name = 1;
+  repeated KV entries = 2;  // Must be in LMDB sort order!
+}
+
+message Snapshot {
+  uint32 formatVersion = 1;
+
+  message Meta {
+    string generationID = 1;
+    string instanceID = 2;
+    string hostname = 3;
+    int64 lmdbTxnID = 4;
+    int64 timestampNSec = 5; // UNIX timestamp in nanoseconds (year 1678-2262)
+    string previousSnapshot = 6;
+    string databaseName = 7;
+  }
+  Meta meta = 2;
+
+  repeated DBI databases = 3;
+}

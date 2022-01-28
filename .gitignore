@@ -1,0 +1,12 @@
+/bin/*
+!/bin/.placeholder
+/lightningstream.yaml
+*.mdb
+*-lock
+.DS_Store
+.env
+/tmp
+*.tmp
+.*.swp
+.*.swo
+.idea

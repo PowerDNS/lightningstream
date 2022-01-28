@@ -1,0 +1,40 @@
+# See https://github.com/golangci/golangci-lint/blob/master/.golangci.yml for more examples
+
+linters:
+    enabled:
+        # In addition to default standard linters (see: golangci-lint help linters)
+        # Try extra ones line this: golangci-lint run --disable-all --enable=lll
+        - goimports
+        # For future consideration (requires some extra work, but suggestions look useful)
+        # - gocritic
+        # - golint # can sometimes be a bit pedantic
+        # - lll
+
+run:
+    skip-files: []
+
+linters-settings:
+    govet:
+        # settings per analyzer
+        settings:
+            printf: # analyzer name, run `go tool vet help` to see all analyzers
+                funcs: # run `go tool vet help printf` to see available settings for `printf` analyzer
+                    - (*github.com/sirupsen/logrus.Entry).Debugf
+                    - (*github.com/sirupsen/logrus.Entry).Infof
+                    - (*github.com/sirupsen/logrus.Entry).Logf
+                    - (*github.com/sirupsen/logrus.Entry).Warnf
+                    - (*github.com/sirupsen/logrus.Entry).Errorf
+                    - (*github.com/sirupsen/logrus.Entry).Fatalf
+                    - github.com/sirupsen/logrus.Debugf
+                    - github.com/sirupsen/logrus.Infof
+                    - github.com/sirupsen/logrus.Logf
+                    - github.com/sirupsen/logrus.Warnf
+                    - github.com/sirupsen/logrus.Errorf
+                    - github.com/sirupsen/logrus.Fatalf
+
+issues:
+    exclude-rules:
+        # Ignore complaints about using lmdbenv.KVString without labels in tests
+        - path: _test\.go
+          text: lmdbenv.KVString` composite literal uses unkeyed fields
+
