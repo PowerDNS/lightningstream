@@ -92,7 +92,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	err = env.View(func(txn *lmdb.Txn) error {
 		// Determine snapshot timestamp after we opened the transaction
 		ts = time.Now()
-		msg.Meta.TimestampNSec = ts.UnixNano()
+		msg.Meta.TimestampNano = uint64(ts.UnixNano())
 
 		// Get the actual transaction ID we ended up opening, which could be
 		// higher than the one we received from env.Info() if a new one was

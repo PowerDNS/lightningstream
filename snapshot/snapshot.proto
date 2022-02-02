@@ -8,6 +8,7 @@ option (gogoproto.goproto_sizecache_all) = false;
 message KV {
   bytes key = 1;
   bytes value = 2;
+  fixed64 timestampNano = 3;
 }
 
 message DBI {
@@ -23,7 +24,7 @@ message Snapshot {
     string instanceID = 2;
     string hostname = 3;
     int64 lmdbTxnID = 4;
-    int64 timestampNSec = 5; // UNIX timestamp in nanoseconds (year 1678-2262)
+    fixed64 timestampNano = 5; // UNIX timestamp in nanoseconds (year 1678-2262)
     string previousSnapshot = 6;
     string databaseName = 7;
   }
