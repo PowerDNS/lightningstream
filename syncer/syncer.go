@@ -8,18 +8,20 @@ import (
 
 func New(name string, st storage.Interface, c config.Config, lc config.LMDB) *Syncer {
 	return &Syncer{
-		name: name,
-		st:   st,
-		c:    c,
-		lc:   lc,
-		l:    logrus.WithField("db", name),
+		name:   name,
+		st:     st,
+		c:      c,
+		lc:     lc,
+		l:      logrus.WithField("db", name),
+		shadow: true,
 	}
 }
 
 type Syncer struct {
-	name string
-	st   storage.Interface
-	c    config.Config
-	lc   config.LMDB
-	l    logrus.FieldLogger
+	name   string
+	st     storage.Interface
+	c      config.Config
+	lc     config.LMDB
+	l      logrus.FieldLogger
+	shadow bool // use shadow database for timestamps?
 }

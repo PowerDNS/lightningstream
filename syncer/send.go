@@ -89,6 +89,9 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	// Snapshot timestamp determined within transaction
 	var ts time.Time
 
+	// TODO: Perhaps we need to move the transaction out of the function?
+	//       This may require performing the sending in the background, or
+	//       splitting that part out of this function
 	err = env.View(func(txn *lmdb.Txn) error {
 		// Determine snapshot timestamp after we opened the transaction
 		ts = time.Now()
@@ -110,6 +113,9 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 
 		// Dump all DBIs
 		for _, dbiName := range dbiNames {
+			if strings.HasPrefix(dbiName, "_sync") {
+				continue // FIXME: actually need to dump those shadow dbs instead
+			}
 			dbiMsg, err := s.readDBI(txn, dbiName)
 			if err != nil {
 				return err
