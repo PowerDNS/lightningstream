@@ -33,7 +33,7 @@ func runSend() error {
 		}
 
 		wg.Add(1)
-		go func() {
+		go func(name string) {
 			defer wg.Done()
 			err := s.Send(ctx)
 			if err != nil {
@@ -43,7 +43,7 @@ func runSend() error {
 				}
 				logrus.WithError(err).WithField("db", name).Error("Send failed")
 			}
-		}()
+		}(name)
 	}
 
 	logrus.Info("All senders running")

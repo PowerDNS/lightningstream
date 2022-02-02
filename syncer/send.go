@@ -207,6 +207,10 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string) (dbiMsg *snapshot.DBI, e
 	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
 	// TODO: directly read it into the right structure
 	items, err := lmdbenv.ReadDBI(txn, dbi)
+	if err != nil {
+		return nil, err
+	}
+
 	var prev []byte
 	for _, item := range items {
 		if prev != nil && bytes.Compare(prev, item.Key) >= 0 {
