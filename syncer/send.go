@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"strings"
 	"time"
@@ -116,7 +117,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			if strings.HasPrefix(dbiName, "_sync") {
 				continue // FIXME: actually need to dump those shadow dbs instead
 			}
-			dbiMsg, err := s.readDBI(txn, dbiName)
+			dbiMsg, err := s.readDBI(txn, dbiName, true) // FIXME: false when we dump shadow
 			if err != nil {
 				return err
 			}
@@ -193,7 +194,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	return txnID, nil
 }
 
-func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string) (dbiMsg *snapshot.DBI, err error) {
+// readDBI reads a DBI into a snapshot DBI.
+// By default, the timestamp of values will be split out to the TimestampNano field.
+// If rawValues is true, the value will be stored as is and the timestamp will
+// not be extracted. This is useful when reading a database without timestamps.
+func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg *snapshot.DBI, err error) {
 	l := s.l.WithField("dbi", dbiName)
 
 	l.Debug("Opening DBI")
@@ -225,9 +230,16 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string) (dbiMsg *snapshot.DBI, e
 				dbiName)
 		}
 		prev = item.Key
+		val := item.Val
+		var ts uint64
+		if !rawValues {
+			ts = binary.BigEndian.Uint64(val[:HeaderSize])
+			val = val[HeaderSize:]
+		}
 		dbiMsg.Entries = append(dbiMsg.Entries, snapshot.KV{
-			Key:   item.Key,
-			Value: item.Val,
+			Key:           item.Key,
+			Value:         val,
+			TimestampNano: ts,
 		})
 	}
 

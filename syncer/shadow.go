@@ -24,22 +24,23 @@ func (s *Syncer) mainToShadow(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn,
 	}
 
 	for _, dbiName := range dbiNames {
-		if strings.HasPrefix(dbiName, "_sync") {
-			continue // skip shadow databases
+		if strings.HasPrefix(dbiName, SyncDBIPrefix) {
+			continue // skip shadow and other special databases
 		}
-		dbiMsg, err := s.readDBI(txn, dbiName)
+		// raw dump, because main does not have timestamps
+		dbiMsg, err := s.readDBI(txn, dbiName, true)
 		if err != nil {
 			return err
 		}
 
-		targetDBI, err := txn.OpenDBI("_sync_"+dbiName, lmdb.Create)
+		targetDBI, err := txn.OpenDBI(SyncDBIShadowPrefix+dbiName, lmdb.Create)
 		if err != nil {
 			return err
 		}
 
-		it := &AddTimestampIterator{
-			Entries: dbiMsg.Entries,
-			TSNano:  tsNano,
+		it := &TimestampedIterator{
+			Entries:              dbiMsg.Entries,
+			DefaultTimestampNano: tsNano,
 		}
 		err = strategy.IterUpdate(txn, targetDBI, it)
 		if err != nil {
