@@ -25,7 +25,7 @@ message Snapshot {
     string hostname = 3;
     int64 lmdbTxnID = 4;
     fixed64 timestampNano = 5; // UNIX timestamp in nanoseconds (year 1678-2262)
-    string previousSnapshot = 6;
+    reserved 6; // was: string previousSnapshot = 6;
     string databaseName = 7;
   }
   Meta meta = 2 [(gogoproto.nullable) = false];

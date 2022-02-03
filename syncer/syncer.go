@@ -18,7 +18,7 @@ func New(name string, st storage.Interface, c config.Config, lc config.LMDB) (*S
 		shadow:     true,
 		generation: 0,
 	}
-	if s.instanceName() == "" {
+	if s.instanceID() == "" {
 		return nil, fmt.Errorf("instance name could not be determined, please provide one with --instance")
 	}
 	return s, nil

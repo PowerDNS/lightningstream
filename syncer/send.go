@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"strings"
 	"time"
@@ -17,8 +16,6 @@ import (
 )
 
 func (s *Syncer) Send(ctx context.Context) error {
-	// TODO: First fetch last snapshot and compare
-
 	// Open the env
 	s.l.WithField("lmdbpath", s.lc.Path).Info("Opening LMDB for reading")
 	env, err := lmdbenv.NewWithOptions(s.lc.Path, s.lc.Options)
@@ -83,11 +80,12 @@ func (s *Syncer) Send(ctx context.Context) error {
 }
 
 func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err error) {
-	// TODO: other meta fields (generationID, instanceID, previousSnapshot)
 	var msg = new(snapshot.Snapshot)
 	msg.FormatVersion = 1
 	msg.Meta.DatabaseName = s.name
 	msg.Meta.Hostname = hostname
+	msg.Meta.InstanceID = s.instanceID()
+	msg.Meta.GenerationID = s.generationID()
 
 	t0 := time.Now() // for performance measurements
 
@@ -98,7 +96,9 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	var tShadow time.Time
 
 	// TODO: env.View if no shadow db is needed, or do in two steps with check
-	err = env.Update(func(txn *lmdb.Txn) error {
+	var inTxn func(lmdb.TxnOp) error = env.Update
+
+	err = inTxn(func(txn *lmdb.Txn) error {
 		// Determine snapshot timestamp after we opened the transaction
 		ts = time.Now()
 		tTxnAcquire = ts
@@ -190,11 +190,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	fileTimestamp := strings.Replace(
 		ts.UTC().Format("20060102-150405.000000000"),
 		".", "-", 1)
-	name := fmt.Sprintf("%s__%s__%s__G-%016x.pb.gz",
+	name := fmt.Sprintf("%s__%s__%s__%s.pb.gz",
 		s.name,
-		s.instanceName(),
+		s.instanceID(),
 		fileTimestamp,
-		s.generation,
+		s.generationID(),
 	)
 	for i := 0; i < 100; i++ { // TODO: config
 		err = s.st.Store(ctx, name, out.Bytes())
@@ -228,56 +228,4 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	}).Info("Stored snapshot")
 
 	return txnID, nil
-}
-
-// readDBI reads a DBI into a snapshot DBI.
-// By default, the timestamp of values will be split out to the TimestampNano field.
-// If rawValues is true, the value will be stored as is and the timestamp will
-// not be extracted. This is useful when reading a database without timestamps.
-func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg *snapshot.DBI, err error) {
-	l := s.l.WithField("dbi", dbiName)
-
-	l.Debug("Opening DBI")
-	dbi, err := txn.OpenDBI(dbiName, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	stat, err := txn.Stat(dbi)
-	if err != nil {
-		return nil, err
-	}
-	l.WithField("entries", stat.Entries).Debug("Reading DBI")
-
-	dbiMsg = new(snapshot.DBI)
-	dbiMsg.Name = dbiName
-	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
-	// TODO: directly read it into the right structure
-	items, err := lmdbenv.ReadDBI(txn, dbi)
-	if err != nil {
-		return nil, err
-	}
-
-	var prev []byte
-	for _, item := range items {
-		if prev != nil && bytes.Compare(prev, item.Key) >= 0 {
-			return nil, fmt.Errorf(
-				"non-default key order detected in DBI %q, refusing to continue",
-				dbiName)
-		}
-		prev = item.Key
-		val := item.Val
-		var ts uint64
-		if !rawValues {
-			ts = binary.BigEndian.Uint64(val[:HeaderSize])
-			val = val[HeaderSize:]
-		}
-		dbiMsg.Entries = append(dbiMsg.Entries, snapshot.KV{
-			Key:           item.Key,
-			Value:         val,
-			TimestampNano: ts,
-		})
-	}
-
-	return dbiMsg, nil
 }
