@@ -9,6 +9,9 @@ import (
 	"powerdns.com/platform/lightningstream/snapshot"
 )
 
+// HeaderSize is the size of the timestamp header for each LMDB value in bytes
+const HeaderSize = 8
+
 // MainToShadowIterator iterates over a snapshot of the main database for
 // insertion into a shadow database with extra timestamp.
 type MainToShadowIterator struct {
@@ -38,11 +41,11 @@ func (it *MainToShadowIterator) Merge(oldval []byte) (val []byte, err error) {
 		// Not in destination db, add with timestamp
 		return it.addTS(mainVal)
 	}
-	if len(oldval) < 8 {
+	if len(oldval) < HeaderSize {
 		// Should never happen
 		return nil, fmt.Errorf("marge: oldval in db too short: %v", oldval)
 	}
-	actualOldVal := oldval[8:]
+	actualOldVal := oldval[HeaderSize:]
 	if bytes.Equal(mainVal, actualOldVal) {
 		// No change, so no timestamp change
 		return oldval, nil
@@ -52,10 +55,10 @@ func (it *MainToShadowIterator) Merge(oldval []byte) (val []byte, err error) {
 }
 
 func (it *MainToShadowIterator) addTS(oldval []byte) (val []byte, err error) {
-	if cap(it.buf) < 8 {
-		it.buf = make([]byte, 8, 1024)
+	if cap(it.buf) < HeaderSize {
+		it.buf = make([]byte, HeaderSize, 1024)
 	} else {
-		it.buf = it.buf[:8]
+		it.buf = it.buf[:HeaderSize]
 	}
 	binary.BigEndian.PutUint64(it.buf, it.TSNano)
 	it.buf = append(it.buf, oldval...)
@@ -64,7 +67,7 @@ func (it *MainToShadowIterator) addTS(oldval []byte) (val []byte, err error) {
 }
 
 func (it *MainToShadowIterator) Clean(oldval []byte) (val []byte, err error) {
-	if len(oldval) == 8 {
+	if len(oldval) == HeaderSize {
 		return oldval, nil // already deleted, only timestamp
 	}
 	return it.addTS(nil)
