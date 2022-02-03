@@ -37,9 +37,9 @@ func (s *Syncer) mainToShadow(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn,
 			return err
 		}
 
-		it := &MainToShadowIterator{
-			DBIMsg: dbiMsg,
-			TSNano: tsNano,
+		it := &AddTimestampIterator{
+			Entries: dbiMsg.Entries,
+			TSNano:  tsNano,
 		}
 		err = strategy.IterUpdate(txn, targetDBI, it)
 		if err != nil {

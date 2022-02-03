@@ -12,31 +12,32 @@ import (
 // HeaderSize is the size of the timestamp header for each LMDB value in bytes
 const HeaderSize = 8
 
-// MainToShadowIterator iterates over a snapshot of the main database for
+// AddTimestampIterator iterates over a snapshot of the main database for
 // insertion into a shadow database with extra timestamp.
-type MainToShadowIterator struct {
-	DBIMsg  *snapshot.DBI
-	TSNano  uint64
+type AddTimestampIterator struct {
+	Entries []snapshot.KV // LMDB contents without timestamp to merge
+	TSNano  uint64        // Timestamp to add to entries that do not have one
+
 	current int
 	started bool
 	buf     []byte
 }
 
-func (it *MainToShadowIterator) Next() (key []byte, err error) {
+func (it *AddTimestampIterator) Next() (key []byte, err error) {
 	if it.started {
 		it.current++
 	} else {
 		it.started = true
 	}
-	if len(it.DBIMsg.Entries) <= it.current {
+	if len(it.Entries) <= it.current {
 		return nil, io.EOF
 	}
-	key = it.DBIMsg.Entries[it.current].Key
+	key = it.Entries[it.current].Key
 	return key, nil
 }
 
-func (it *MainToShadowIterator) Merge(oldval []byte) (val []byte, err error) {
-	mainVal := it.DBIMsg.Entries[it.current].Value
+func (it *AddTimestampIterator) Merge(oldval []byte) (val []byte, err error) {
+	mainVal := it.Entries[it.current].Value
 	if len(oldval) == 0 {
 		// Not in destination db, add with timestamp
 		return it.addTS(mainVal)
@@ -54,7 +55,7 @@ func (it *MainToShadowIterator) Merge(oldval []byte) (val []byte, err error) {
 	return it.addTS(mainVal)
 }
 
-func (it *MainToShadowIterator) addTS(oldval []byte) (val []byte, err error) {
+func (it *AddTimestampIterator) addTS(oldval []byte) (val []byte, err error) {
 	if cap(it.buf) < HeaderSize {
 		it.buf = make([]byte, HeaderSize, 1024)
 	} else {
@@ -66,7 +67,7 @@ func (it *MainToShadowIterator) addTS(oldval []byte) (val []byte, err error) {
 	return val, nil
 }
 
-func (it *MainToShadowIterator) Clean(oldval []byte) (val []byte, err error) {
+func (it *AddTimestampIterator) Clean(oldval []byte) (val []byte, err error) {
 	if len(oldval) == HeaderSize {
 		return oldval, nil // already deleted, only timestamp
 	}
