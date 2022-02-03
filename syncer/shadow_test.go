@@ -49,7 +49,7 @@ func TestSyncer_shadow(t *testing.T) {
 
 			// Copy to shadow
 			s := New("test", nil, config.Config{}, config.LMDB{})
-			err = s.mainToShadow(context.Background(), env, txn, ts1)
+			err = s.mainToShadow(context.Background(), txn, ts1)
 			assert.NoError(t, err)
 
 			// Read shadow DBI
@@ -66,7 +66,7 @@ func TestSyncer_shadow(t *testing.T) {
 			}, vals)
 
 			// Reverse sync should not change the original data
-			err = s.shadowToMain(context.Background(), env, txn)
+			err = s.shadowToMain(context.Background(), txn)
 			assert.NoError(t, err)
 			dbiMsg, err := s.readDBI(txn, "foo", true)
 			assert.NoError(t, err)
@@ -92,7 +92,7 @@ func TestSyncer_shadow(t *testing.T) {
 
 			// Copy to shadow
 			s := New("test", nil, config.Config{}, config.LMDB{})
-			err = s.mainToShadow(context.Background(), env, txn, ts2)
+			err = s.mainToShadow(context.Background(), txn, ts2)
 			assert.NoError(t, err)
 
 			// Read shadow DBI
@@ -116,7 +116,7 @@ func TestSyncer_shadow(t *testing.T) {
 		err = env.Update(func(txn *lmdb.Txn) error {
 			// Copy to shadow
 			s := New("test", nil, config.Config{}, config.LMDB{})
-			err = s.mainToShadow(context.Background(), env, txn, ts3)
+			err = s.mainToShadow(context.Background(), txn, ts3)
 			assert.NoError(t, err)
 
 			// Read shadow DBI
@@ -136,7 +136,7 @@ func TestSyncer_shadow(t *testing.T) {
 			// Reverse sync should not change the original data
 			dbi, err := txn.OpenDBI("foo", 0)
 			assert.NoError(t, err)
-			err = s.shadowToMain(context.Background(), env, txn)
+			err = s.shadowToMain(context.Background(), txn)
 			assert.NoError(t, err)
 			data, err := lmdbenv.ReadDBIString(txn, dbi)
 			assert.NoError(t, err)
@@ -161,7 +161,7 @@ func TestSyncer_shadow(t *testing.T) {
 				{Key: "z", Val: "should not be here"},
 			}, data)
 			// Sync again
-			err = s.shadowToMain(context.Background(), env, txn)
+			err = s.shadowToMain(context.Background(), txn)
 			assert.NoError(t, err)
 			data, err = lmdbenv.ReadDBIString(txn, dbi)
 			assert.NoError(t, err)

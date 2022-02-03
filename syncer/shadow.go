@@ -14,7 +14,7 @@ import (
 // mainToShadow syncs the current databases to shadow databases with timestamps.
 // The sync is unidirectional, the state of the main database determines which
 // keys will be present in the shadow database.
-func (s *Syncer) mainToShadow(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn, tsNano uint64) error {
+func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64) error {
 	t0 := time.Now()
 
 	// List of DBIs to dump
@@ -33,6 +33,10 @@ func (s *Syncer) mainToShadow(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn,
 			return err
 		}
 
+		if isCanceled(ctx) {
+			return context.Canceled
+		}
+
 		targetDBI, err := txn.OpenDBI(SyncDBIShadowPrefix+dbiName, lmdb.Create)
 		if err != nil {
 			return err
@@ -45,6 +49,10 @@ func (s *Syncer) mainToShadow(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn,
 		err = strategy.IterUpdate(txn, targetDBI, it)
 		if err != nil {
 			return err
+		}
+
+		if isCanceled(ctx) {
+			return context.Canceled
 		}
 	}
 
@@ -60,7 +68,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn,
 // shadowToMain syncs the current databases from shadow databases with timestamps.
 // The sync is unidirectional. After the sync the main database will contain
 // all the non-deleted key-values present in the shadow database.
-func (s *Syncer) shadowToMain(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn) error {
+func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 	t0 := time.Now()
 
 	// List of DBIs to dump
@@ -82,6 +90,10 @@ func (s *Syncer) shadowToMain(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn)
 			return err
 		}
 
+		if isCanceled(ctx) {
+			return context.Canceled
+		}
+
 		// The target is the current DBI
 		targetDBI, err := txn.OpenDBI(dbiName, 0)
 		if err != nil {
@@ -95,6 +107,10 @@ func (s *Syncer) shadowToMain(ctx context.Context, env *lmdb.Env, txn *lmdb.Txn)
 		err = strategy.IterUpdate(txn, targetDBI, it)
 		if err != nil {
 			return err
+		}
+
+		if isCanceled(ctx) {
+			return context.Canceled
 		}
 	}
 

@@ -69,9 +69,13 @@ func (s *Syncer) Send(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if info.LastTxnID != lastTxnID {
+			logrus.WithFields(logrus.Fields{
+				"info.LastTxnID": info.LastTxnID,
+				"lastTxnID":      lastTxnID,
+			}).Debug("Checking if TxnID changed")
+			if info.LastTxnID > lastTxnID {
 				lastTxnID = info.LastTxnID
-				break
+				break // dump new version
 			}
 		}
 		s.l.WithField("LastTxnID", lastTxnID).Debug("LMDB changed, syncing")
@@ -90,21 +94,31 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	// Snapshot timestamp determined within transaction
 	var ts time.Time
 
-	// TODO: Perhaps we need to move the transaction out of the function?
-	//       This may require performing the sending in the background, or
-	//       splitting that part out of this function
-	err = env.View(func(txn *lmdb.Txn) error {
+	var tTxnAcquire time.Time
+	var tShadow time.Time
+
+	// TODO: env.View if no shadow db is needed, or do in two steps with check
+	err = env.Update(func(txn *lmdb.Txn) error {
 		// Determine snapshot timestamp after we opened the transaction
 		ts = time.Now()
-		msg.Meta.TimestampNano = uint64(ts.UnixNano())
+		tTxnAcquire = ts
+		tsNano := uint64(ts.UnixNano())
+		msg.Meta.TimestampNano = tsNano
 
 		// Get the actual transaction ID we ended up opening, which could be
 		// higher than the one we received from env.Info() if a new one was
 		// created in the meantime.
 		// int64 matches the type we get from env.Info()
+		// If we update, it may be higher than from Info
 		txnID = int64(txn.ID())
 		s.l.WithField("txnID", txnID).Debug("Started dump of transaction")
-		msg.Meta.LmdbTxnID = txnID
+
+		// First update the shadow dbs
+		err := s.mainToShadow(ctx, txn, tsNano)
+		if err != nil {
+			return err
+		}
+		tShadow = time.Now()
 
 		// List of DBIs to dump
 		dbiNames, err := lmdbenv.ReadDBINames(txn)
@@ -112,16 +126,21 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			return err
 		}
 
-		// Dump all DBIs
+		// Dump all DBIs using their shadow db
 		for _, dbiName := range dbiNames {
-			if strings.HasPrefix(dbiName, "_sync") {
-				continue // FIXME: actually need to dump those shadow dbs instead
+			if strings.HasPrefix(dbiName, SyncDBIPrefix) {
+				continue // skip our own special dbs
 			}
-			dbiMsg, err := s.readDBI(txn, dbiName, true) // FIXME: false when we dump shadow
+			dbiMsg, err := s.readDBI(txn, SyncDBIShadowPrefix+dbiName, false)
 			if err != nil {
 				return err
 			}
+			dbiMsg.Name = dbiName // replace shadow name
 			msg.Databases = append(msg.Databases, dbiMsg)
+
+			if isCanceled(ctx) {
+				return context.Canceled
+			}
 		}
 		return nil
 	})
@@ -130,6 +149,20 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 		return -1, err
 	}
 	tDumped := time.Now()
+
+	// If no actual changes were made, LMDB will not record the transaction
+	// and reuse the ID the next time, so we need to adjust the txnID we return.
+	info, err := env.Info()
+	if err != nil {
+		return -1, err
+	}
+	if info.LastTxnID < txnID {
+		// Transaction was empty, no changes
+		s.l.WithField("prevTxnID", txnID).WithField("txnID", info.LastTxnID).
+			Debug("Adjusting TxnID (no changes)")
+		txnID = info.LastTxnID
+	}
+	msg.Meta.LmdbTxnID = txnID
 
 	// Snapshot complete, serialize it
 	pb, err := msg.Marshal()
@@ -181,14 +214,16 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	tStored := time.Now()
 
 	s.l.WithFields(logrus.Fields{
-		"time_dump":     tDumped.Sub(t0).Round(time.Millisecond),
-		"time_marshal":  tMarshaled.Sub(tDumped).Round(time.Millisecond),
-		"time_compress": tCompressed.Sub(tMarshaled).Round(time.Millisecond),
-		"time_store":    tStored.Sub(tCompressed).Round(time.Millisecond),
-		"time_total":    tStored.Sub(t0).Round(time.Millisecond),
-		"snapshot_size": datasize.ByteSize(out.Len()).HumanReadable(),
-		"snapshot_name": name,
-		"txnID":         txnID,
+		"time_acquire":     tTxnAcquire.Sub(t0).Round(time.Millisecond),
+		"time_copy_shadow": tShadow.Sub(tTxnAcquire).Round(time.Millisecond),
+		"time_dump":        tDumped.Sub(tShadow).Round(time.Millisecond),
+		"time_marshal":     tMarshaled.Sub(tDumped).Round(time.Millisecond),
+		"time_compress":    tCompressed.Sub(tMarshaled).Round(time.Millisecond),
+		"time_store":       tStored.Sub(tCompressed).Round(time.Millisecond),
+		"time_total":       tStored.Sub(t0).Round(time.Millisecond),
+		"snapshot_size":    datasize.ByteSize(out.Len()).HumanReadable(),
+		"snapshot_name":    name,
+		"txnID":            txnID,
 	}).Info("Stored snapshot")
 
 	return txnID, nil
