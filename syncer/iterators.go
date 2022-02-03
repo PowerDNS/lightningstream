@@ -122,7 +122,7 @@ func (it *TimestampedIterator) addTS(entryVal []byte, ts uint64) (val []byte, er
 // PlainIterator iterates over a snapshot of a shadow database for
 // insertion into the main database without the timestamp header.
 type PlainIterator struct {
-	Entries []snapshot.KV // LMDB contents with timestamp to merge
+	Entries []snapshot.KV // LMDB contents (timestamp is ignored)
 
 	current int
 	started bool
@@ -143,6 +143,11 @@ func (it *PlainIterator) Next() (key []byte, err error) {
 
 func (it *PlainIterator) Merge(oldval []byte) (val []byte, err error) {
 	mainVal := it.Entries[it.current].Value
+	if len(mainVal) == 0 {
+		// Signal that we want deletion in case the strategy distinguishes
+		// between nil and an empty value
+		mainVal = nil
+	}
 	return mainVal, nil
 }
 

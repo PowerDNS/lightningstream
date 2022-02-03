@@ -25,18 +25,11 @@ func testTS(i int) (uint64, string) {
 	return tsNano, tsNanoString
 }
 
-func TestSyncer_mainToShadow(t *testing.T) {
-	v1 := snapshot.Snapshot{
-		Databases: []*snapshot.DBI{
-			{
-				Name: "foo",
-				Entries: []snapshot.KV{
-					{Key: b("a"), Value: b("abc")},
-					{Key: b("b"), Value: b("xyz")},
-					{Key: b("c"), Value: b("cccccc")},
-				},
-			},
-		},
+func TestSyncer_shadow(t *testing.T) {
+	v1 := []snapshot.KV{
+		{Key: b("a"), Value: b("abc")},
+		{Key: b("b"), Value: b("xyz")},
+		{Key: b("c"), Value: b("cccccc")},
 	}
 
 	ts1, ts1s := testTS(1)
@@ -49,7 +42,7 @@ func TestSyncer_mainToShadow(t *testing.T) {
 			// First insert the initial data into the main database
 			dbi, err := txn.OpenDBI("foo", lmdb.Create)
 			assert.NoError(t, err)
-			for _, e := range v1.Databases[0].Entries {
+			for _, e := range v1 {
 				err := txn.Put(dbi, e.Key, e.Value, 0)
 				assert.NoError(t, err)
 			}
@@ -71,6 +64,14 @@ func TestSyncer_mainToShadow(t *testing.T) {
 				{Key: "b", Val: ts1s + "xyz"},
 				{Key: "c", Val: ts1s + "cccccc"},
 			}, vals)
+
+			// Reverse sync should not change the original data
+			err = s.shadowToMain(context.Background(), env, txn)
+			assert.NoError(t, err)
+			dbiMsg, err := s.readDBI(txn, "foo", true)
+			assert.NoError(t, err)
+			assert.Equal(t, v1, dbiMsg.Entries)
+
 			return nil
 		})
 		assert.NoError(t, err)
@@ -131,6 +132,45 @@ func TestSyncer_mainToShadow(t *testing.T) {
 				{Key: "c", Val: ts2s + "CCC"}, // changed
 				{Key: "d", Val: ts2s + "ddd"}, // new
 			}, vals)
+
+			// Reverse sync should not change the original data
+			dbi, err := txn.OpenDBI("foo", 0)
+			assert.NoError(t, err)
+			err = s.shadowToMain(context.Background(), env, txn)
+			assert.NoError(t, err)
+			data, err := lmdbenv.ReadDBIString(txn, dbi)
+			assert.NoError(t, err)
+			assert.Equal(t, []lmdbenv.KVString{
+				{Key: "a", Val: "abc"},
+				{Key: "c", Val: "CCC"},
+				{Key: "d", Val: "ddd"},
+			}, data)
+
+			// If we delete some data, it will be restored if we repeat it
+			err = txn.Del(dbi, b("a"), nil)
+			assert.NoError(t, err)
+			err = txn.Put(dbi, b("c"), b("CHANGED!"), 0)
+			assert.NoError(t, err)
+			err = txn.Put(dbi, b("z"), b("should not be here"), 0)
+			assert.NoError(t, err)
+			data, err = lmdbenv.ReadDBIString(txn, dbi)
+			assert.NoError(t, err)
+			assert.Equal(t, []lmdbenv.KVString{
+				{Key: "c", Val: "CHANGED!"},
+				{Key: "d", Val: "ddd"},
+				{Key: "z", Val: "should not be here"},
+			}, data)
+			// Sync again
+			err = s.shadowToMain(context.Background(), env, txn)
+			assert.NoError(t, err)
+			data, err = lmdbenv.ReadDBIString(txn, dbi)
+			assert.NoError(t, err)
+			assert.Equal(t, []lmdbenv.KVString{
+				{Key: "a", Val: "abc"},
+				{Key: "c", Val: "CCC"},
+				{Key: "d", Val: "ddd"},
+			}, data)
+
 			return nil
 		})
 		assert.NoError(t, err)
