@@ -36,7 +36,10 @@ func TestSyncer_shadow(t *testing.T) {
 	ts2, ts2s := testTS(2)
 	ts3, _ := testTS(3)
 
-	err := lmdbenv.TestEnv(func(env *lmdb.Env) error {
+	s, err := New("test", nil, config.Config{}, config.LMDB{})
+	assert.NoError(t, err)
+
+	err = lmdbenv.TestEnv(func(env *lmdb.Env) error {
 		// Initial data
 		err := env.Update(func(txn *lmdb.Txn) error {
 			// First insert the initial data into the main database
@@ -48,7 +51,6 @@ func TestSyncer_shadow(t *testing.T) {
 			}
 
 			// Copy to shadow
-			s := New("test", nil, config.Config{}, config.LMDB{})
 			err = s.mainToShadow(context.Background(), txn, ts1)
 			assert.NoError(t, err)
 
@@ -91,7 +93,6 @@ func TestSyncer_shadow(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Copy to shadow
-			s := New("test", nil, config.Config{}, config.LMDB{})
 			err = s.mainToShadow(context.Background(), txn, ts2)
 			assert.NoError(t, err)
 
@@ -115,7 +116,6 @@ func TestSyncer_shadow(t *testing.T) {
 		// No changes in db, so no timestamp changes
 		err = env.Update(func(txn *lmdb.Txn) error {
 			// Copy to shadow
-			s := New("test", nil, config.Config{}, config.LMDB{})
 			err = s.mainToShadow(context.Background(), txn, ts3)
 			assert.NoError(t, err)
 

@@ -31,11 +31,12 @@ const DefaultFetchTimeout = 4 * time.Hour
 
 // Config is the config root object
 type Config struct {
-	RunOnce bool            `yaml:"run_once"` // Exit after a single run // FIXME: needed?
-	LMDBs   map[string]LMDB `yaml:"lmdbs"`
-	Storage Storage         `yaml:"storage"`
-	HTTP    HTTP            `yaml:"http"`
-	Log     logger.Config   `yaml:"log"`
+	RunOnce  bool            `yaml:"run_once"` // Exit after a single run // FIXME: needed?
+	Instance string          `yaml:"instance"`
+	LMDBs    map[string]LMDB `yaml:"lmdbs"`
+	Storage  Storage         `yaml:"storage"`
+	HTTP     HTTP            `yaml:"http"`
+	Log      logger.Config   `yaml:"log"`
 
 	DefaultPollInterval time.Duration `yaml:"default_poll_interval"` // FIXME: move
 

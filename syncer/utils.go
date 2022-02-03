@@ -3,6 +3,7 @@ package syncer
 import (
 	"context"
 	"os"
+	"regexp"
 	"time"
 )
 
@@ -46,4 +47,15 @@ func isCanceled(ctx context.Context) bool {
 	default:
 		return false
 	}
+}
+
+var reUnsafe = regexp.MustCompile("[^a-zA-Z0-9-]")
+
+func (s *Syncer) instanceName() string {
+	n := s.c.Instance
+	if n == "" {
+		n = hostname
+	}
+	n = reUnsafe.ReplaceAllString(n, "-")
+	return n
 }

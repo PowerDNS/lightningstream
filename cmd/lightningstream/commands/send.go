@@ -27,7 +27,7 @@ func runSend() error {
 
 	var wg sync.WaitGroup
 	for name, lc := range conf.LMDBs {
-		s := syncer.New(name, st, conf, lc)
+		s, err := syncer.New(name, st, conf, lc)
 		if err != nil {
 			return err
 		}

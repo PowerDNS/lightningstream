@@ -72,7 +72,7 @@ func (s *Syncer) Send(ctx context.Context) error {
 			logrus.WithFields(logrus.Fields{
 				"info.LastTxnID": info.LastTxnID,
 				"lastTxnID":      lastTxnID,
-			}).Debug("Checking if TxnID changed")
+			}).Trace("Checking if TxnID changed")
 			if info.LastTxnID > lastTxnID {
 				lastTxnID = info.LastTxnID
 				break // dump new version
@@ -186,14 +186,15 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	tCompressed := time.Now()
 
 	// Send it to storage
+	// TODO: move somewhere else
 	fileTimestamp := strings.Replace(
 		ts.UTC().Format("20060102-150405.000000000"),
 		".", "-", 1)
-	name := fmt.Sprintf("%s__%s__%s__%s.pb.gz",
+	name := fmt.Sprintf("%s__%s__%s__G-%016x.pb.gz",
 		s.name,
+		s.instanceName(),
 		fileTimestamp,
-		"TODO-instance",
-		"TODO-generation",
+		s.generation,
 	)
 	for i := 0; i < 100; i++ { // TODO: config
 		err = s.st.Store(ctx, name, out.Bytes())

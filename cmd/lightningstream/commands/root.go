@@ -11,9 +11,10 @@ import (
 )
 
 var (
-	configFile string
-	debug      bool
-	conf       config.Config
+	configFile   string
+	instanceName string
+	debug        bool
+	conf         config.Config
 )
 
 var rootHelp = `This tool syncs one or more LMDB databases with an S3 bucket
@@ -40,6 +41,9 @@ var rootCmd = &cobra.Command{
 		if debug {
 			conf.Log.Level = "debug"
 		}
+		if instanceName != "" {
+			conf.Instance = instanceName
+		}
 		logger.Configure(conf.Log)
 		logrus.WithField("version", version).Debug("Running")
 	},
@@ -50,7 +54,8 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "lightningstream.yaml", "config file")
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "lightningstream.yaml", "Config file")
+	rootCmd.PersistentFlags().StringVarP(&instanceName, "instance", "i", "", "Instance name, defaults to hostname. MUST be unique for each instance")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	logger.RegisterFlagsWith(rootCmd.PersistentFlags().StringVar)
 }
