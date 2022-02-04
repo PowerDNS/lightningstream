@@ -21,6 +21,12 @@ func New(name string, st storage.Interface, c config.Config, lc config.LMDB) (*S
 	if s.instanceID() == "" {
 		return nil, fmt.Errorf("instance name could not be determined, please provide one with --instance")
 	}
+	if !lc.SchemaTracksChanges {
+		logrus.Info("This LMDB has schema_tracks_changes disabled and will use " +
+			"shadow databases for version tracking.")
+	} else {
+		logrus.Info("schema_tracks_changes enabled")
+	}
 	return s, nil
 }
 

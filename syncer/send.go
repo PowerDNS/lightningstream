@@ -92,8 +92,14 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	var tTxnAcquire time.Time
 	var tShadow time.Time
 
-	// TODO: env.View if no shadow db is needed, or do in two steps with check
-	var inTxn func(lmdb.TxnOp) error = env.Update
+	schemaTracksChanges := s.lc.SchemaTracksChanges
+
+	var inTxn func(lmdb.TxnOp) error
+	if schemaTracksChanges {
+		inTxn = env.View
+	} else {
+		inTxn = env.Update
+	}
 
 	err = inTxn(func(txn *lmdb.Txn) error {
 		// Determine snapshot timestamp after we opened the transaction
@@ -111,9 +117,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 		s.l.WithField("txnID", txnID).Debug("Started dump of transaction")
 
 		// First update the shadow dbs
-		err := s.mainToShadow(ctx, txn, tsNano)
-		if err != nil {
-			return err
+		if !schemaTracksChanges {
+			err := s.mainToShadow(ctx, txn, tsNano)
+			if err != nil {
+				return err
+			}
 		}
 		tShadow = time.Now()
 
@@ -128,11 +136,16 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			if strings.HasPrefix(dbiName, SyncDBIPrefix) {
 				continue // skip our own special dbs
 			}
-			dbiMsg, err := s.readDBI(txn, SyncDBIShadowPrefix+dbiName, false)
+
+			readDBIName := dbiName
+			if !schemaTracksChanges {
+				readDBIName = SyncDBIShadowPrefix + dbiName
+			}
+			dbiMsg, err := s.readDBI(txn, readDBIName, false)
 			if err != nil {
 				return err
 			}
-			dbiMsg.Name = dbiName // replace shadow name
+			dbiMsg.Name = dbiName // replace shadow name if used
 			msg.Databases = append(msg.Databases, dbiMsg)
 
 			if isCanceled(ctx) {

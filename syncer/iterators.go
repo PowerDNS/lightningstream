@@ -4,17 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/snapshot"
 )
-
-// ErrNoTimestamp is returned when an entry does not contain a timestamp, or the
-// timestamp is 0.
-var ErrNoTimestamp = errors.New("no timestamp for entry")
 
 // TimestampedIterator iterates over a snapshot DBI and updates the LMDB with
 // values that are prefixed with a timestamp header.
@@ -110,7 +105,7 @@ func (it *TimestampedIterator) addTS(entryVal []byte, ts uint64) (val []byte, er
 	if ts == 0 {
 		ts = it.DefaultTimestampNano
 		if ts == 0 {
-			return nil, ErrNoTimestamp
+			return nil, ErrNoTimestamp{} // no extra info here
 		}
 	}
 	binary.BigEndian.PutUint64(it.buf, ts)

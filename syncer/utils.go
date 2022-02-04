@@ -27,6 +27,18 @@ const (
 	SyncDBIShadowPrefix = "_sync_"
 )
 
+// ErrNoTimestamp is returned when an entry does not contain a timestamp, or the
+// timestamp is 0.
+type ErrNoTimestamp struct {
+	DBIName string
+	Key     []byte
+}
+
+func (e ErrNoTimestamp) Error() string {
+	k := displayASCII(e.Key)
+	return fmt.Sprintf("no timestamp for entry (dbi %s, key %s)", e.DBIName, k)
+}
+
 var hostname string
 
 func init() {
@@ -56,6 +68,26 @@ func isCanceled(ctx context.Context) bool {
 	default:
 		return false
 	}
+}
+
+// displayASCII represents a key as ascii if it only contains safe ascii characters.
+// If it contains unsafe characters, these are replaced by '.' and a hex
+// representation is added to the output.
+func displayASCII(b []byte) string {
+	ret := make([]byte, len(b))
+	unsafe := false
+	for i, ch := range b {
+		if ch < 32 || ch > 126 {
+			ret[i] = '.'
+			unsafe = true
+		} else {
+			ret[i] = ch
+		}
+	}
+	if unsafe {
+		return fmt.Sprintf("%s [% 0x]", string(ret), b)
+	}
+	return string(ret)
 }
 
 var reUnsafe = regexp.MustCompile("[^a-zA-Z0-9-]")
@@ -92,6 +124,9 @@ func (s *Syncer) openEnv() (env *lmdb.Env, err error) {
 		"MapSize":   datasize.ByteSize(info.MapSize).HumanReadable(),
 		"LastTxnID": info.LastTxnID,
 	}).Info("Env info")
+
+	// TODO: Perhaps check data if SchemaTracksChanges is set. Check if
+	//       the timestamp is in a reasonable range or 0.
 
 	return env, nil
 }
@@ -142,6 +177,12 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 		val := item.Val
 		var ts uint64
 		if !rawValues {
+			if len(val) < HeaderSize {
+				return nil, ErrNoTimestamp{
+					DBIName: dbiName,
+					Key:     item.Key,
+				}
+			}
 			ts = binary.BigEndian.Uint64(val[:HeaderSize])
 			val = val[HeaderSize:]
 		}
