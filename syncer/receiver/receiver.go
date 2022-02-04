@@ -82,6 +82,7 @@ func (r *Receiver) Run(ctx context.Context) error {
 }
 
 func (r *Receiver) RunOnce(ctx context.Context) error {
+	//r.l.Debug("RunOnce")
 	st := r.st
 	prefix := r.prefix
 
@@ -94,6 +95,7 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 	lastSeenByInstance := make(map[string]snapshot.NameInfo)
 	for _, name := range names {
 		if r.ignoredFilenames[name] {
+			//r.l.WithField("filename", name).Debug("Ignored")
 			continue
 		}
 		ni, err := snapshot.ParseName(name)
@@ -102,10 +104,6 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 				Debug("Skipping invalid filename")
 			r.ignoredFilenames[name] = true
 			continue
-		}
-		if ni.InstanceID == r.ownInstance {
-			// FIXME: we need to load our own snapshot once on startup
-			continue // ignore own snapshots
 		}
 		lastSeenByInstance[ni.InstanceID] = ni
 	}
@@ -117,9 +115,19 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 	r.mu.Unlock()
 
 	for inst, ni := range lastSeenByInstance {
+		//r.l.WithField("filename", ni.FullName).Debug("Considering")
 		lastNotified := r.lastNotifiedByInstance[inst]
 		if ni.FullName == lastNotified.FullName {
+			//r.l.WithField("filename", ni.FullName).Debug("Already handled")
 			continue // no change
+		}
+
+		if inst == r.ownInstance && lastNotified.FullName != "" {
+			// Own instance and already notified once.
+			// We only want to load our own snapshot once on startup, and ignore
+			// any further snapshots.
+			//r.l.WithField("filename", ni.FullName).Debug("Skipping own instance")
+			continue
 		}
 
 		r.l.WithFields(logrus.Fields{
@@ -128,13 +136,6 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 			"generation": ni.GenerationID,
 			"age":        now.Sub(ni.Timestamp).Round(10 * time.Millisecond),
 		}).Debug("New snapshot detected")
-
-		if inst == r.ownInstance && lastNotified.FullName != "" {
-			// Own instance and already notified once.
-			// We only want to load our own snapshot once on startup, and ignore
-			// any further snapshots.
-			continue
-		}
 
 		d := r.getDownloader(ctx, inst)
 		d.NotifyNewSnapshot()
