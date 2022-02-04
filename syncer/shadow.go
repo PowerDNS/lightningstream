@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
+	"powerdns.com/platform/lightningstream/utils"
 )
 
 // mainToShadow syncs the current databases to shadow databases with timestamps.
@@ -33,7 +34,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 			return err
 		}
 
-		if isCanceled(ctx) {
+		if utils.IsCanceled(ctx) {
 			return context.Canceled
 		}
 
@@ -51,7 +52,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 			return err
 		}
 
-		if isCanceled(ctx) {
+		if utils.IsCanceled(ctx) {
 			return context.Canceled
 		}
 	}
@@ -90,7 +91,7 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 			return err
 		}
 
-		if isCanceled(ctx) {
+		if utils.IsCanceled(ctx) {
 			return context.Canceled
 		}
 
@@ -109,7 +110,7 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 			return err
 		}
 
-		if isCanceled(ctx) {
+		if utils.IsCanceled(ctx) {
 			return context.Canceled
 		}
 	}

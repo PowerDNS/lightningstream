@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/snapshot"
+	"powerdns.com/platform/lightningstream/utils"
 )
 
 // Send opens the env and starts the send-loop. No data is received from the
@@ -54,7 +54,7 @@ func (s *Syncer) sendLoop(ctx context.Context, env *lmdb.Env) error {
 		// Wait for change
 		s.l.Debug("Waiting for a new transaction")
 		for {
-			if err := sleepContext(ctx, time.Second); err != nil { // TODO: config
+			if err := utils.SleepContext(ctx, time.Second); err != nil { // TODO: config
 				return err
 			}
 
@@ -148,7 +148,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			dbiMsg.Name = dbiName // replace shadow name if used
 			msg.Databases = append(msg.Databases, dbiMsg)
 
-			if isCanceled(ctx) {
+			if utils.IsCanceled(ctx) {
 				return context.Canceled
 			}
 		}
@@ -196,21 +196,12 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	tCompressed := time.Now()
 
 	// Send it to storage
-	// TODO: move somewhere else
-	fileTimestamp := strings.Replace(
-		ts.UTC().Format("20060102-150405.000000000"),
-		".", "-", 1)
-	name := fmt.Sprintf("%s__%s__%s__%s.pb.gz",
-		s.name,
-		s.instanceID(),
-		fileTimestamp,
-		s.generationID(),
-	)
+	name := snapshot.Name(s.name, s.instanceID(), s.generationID(), ts)
 	for i := 0; i < 100; i++ { // TODO: config
 		err = s.st.Store(ctx, name, out.Bytes())
 		if err != nil {
 			s.l.WithError(err).Warn("Store failed, retrying")
-			if err := sleepContext(ctx, time.Second); err != nil { // TODO: config
+			if err := utils.SleepContext(ctx, time.Second); err != nil { // TODO: config
 				return -1, err
 			}
 			continue
@@ -225,7 +216,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	tStored := time.Now()
 
 	s.l.WithFields(logrus.Fields{
-		"time_acquire":     tTxnAcquire.Sub(t0).Round(time.Millisecond),
+		"time_acquire":     utils.TimeDiff(tTxnAcquire, t0),
 		"time_copy_shadow": tShadow.Sub(tTxnAcquire).Round(time.Millisecond),
 		"time_dump":        tDumped.Sub(tShadow).Round(time.Millisecond),
 		"time_marshal":     tMarshaled.Sub(tDumped).Round(time.Millisecond),

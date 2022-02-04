@@ -2,18 +2,17 @@ package syncer
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"fmt"
 	"os"
 	"regexp"
-	"time"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/snapshot"
+	"powerdns.com/platform/lightningstream/utils"
 )
 
 // HeaderSize is the size of the timestamp header for each LMDB value in bytes
@@ -35,7 +34,7 @@ type ErrNoTimestamp struct {
 }
 
 func (e ErrNoTimestamp) Error() string {
-	k := displayASCII(e.Key)
+	k := utils.DisplayASCII(e.Key)
 	return fmt.Sprintf("no timestamp for entry (dbi %s, key %s)", e.DBIName, k)
 }
 
@@ -47,47 +46,6 @@ func init() {
 		return
 	}
 	hostname = h
-}
-
-func sleepContext(ctx context.Context, d time.Duration) error {
-	t := time.NewTimer(d)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return context.Canceled
-	case <-t.C:
-		return nil
-	}
-}
-
-// isCanceled checks if the context has been canceled.
-func isCanceled(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
-}
-
-// displayASCII represents a key as ascii if it only contains safe ascii characters.
-// If it contains unsafe characters, these are replaced by '.' and a hex
-// representation is added to the output.
-func displayASCII(b []byte) string {
-	ret := make([]byte, len(b))
-	unsafe := false
-	for i, ch := range b {
-		if ch < 32 || ch > 126 {
-			ret[i] = '.'
-			unsafe = true
-		} else {
-			ret[i] = ch
-		}
-	}
-	if unsafe {
-		return fmt.Sprintf("%s [% 0x]", string(ret), b)
-	}
-	return string(ret)
 }
 
 var reUnsafe = regexp.MustCompile("[^a-zA-Z0-9-]")
