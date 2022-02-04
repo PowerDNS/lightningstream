@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
+	"github.com/c2h5oh/datasize"
+	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/snapshot"
 )
@@ -71,6 +73,34 @@ func (s *Syncer) instanceID() string {
 // instanceID returns a safe instance name
 func (s *Syncer) generationID() string {
 	return fmt.Sprintf("G-%016x.pb.gz", s.generation)
+}
+
+// openEnv opens the LMDB env with the right options
+func (s *Syncer) openEnv() (env *lmdb.Env, err error) {
+	s.l.WithField("lmdbpath", s.lc.Path).Info("Opening LMDB")
+	env, err = lmdbenv.NewWithOptions(s.lc.Path, s.lc.Options)
+	if err != nil {
+		return nil, err
+	}
+
+	// Print some env info
+	info, err := env.Info()
+	if err != nil {
+		return nil, err
+	}
+	s.l.WithFields(logrus.Fields{
+		"MapSize":   datasize.ByteSize(info.MapSize).HumanReadable(),
+		"LastTxnID": info.LastTxnID,
+	}).Info("Env info")
+
+	return env, nil
+}
+
+// closeEnv closes the LMDB env, logging any unexpected errors for easy defer
+func (s *Syncer) closeEnv(env *lmdb.Env) {
+	if err := env.Close(); err != nil {
+		s.l.WithError(err).Warn("Env close returned error")
+	}
 }
 
 // readDBI reads a DBI into a snapshot DBI.

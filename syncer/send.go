@@ -15,31 +15,28 @@ import (
 	"powerdns.com/platform/lightningstream/snapshot"
 )
 
+// Send opens the env and starts the send-loop. No data is received from the
+// storage.
 func (s *Syncer) Send(ctx context.Context) error {
 	// Open the env
-	s.l.WithField("lmdbpath", s.lc.Path).Info("Opening LMDB for reading")
-	env, err := lmdbenv.NewWithOptions(s.lc.Path, s.lc.Options)
+	env, err := s.openEnv()
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := env.Close(); err != nil {
-			s.l.WithError(err).Warn("Env close returned error")
-		}
-	}()
+	defer s.closeEnv(env)
+	return s.sendLoop(ctx, env)
+}
 
-	// Print some env info
+// sendLoop enters a send-loop and only returns when an error that cannot be
+// handled occurs.
+// TODO: evolve this into a more generic sync loop with send-only option
+func (s *Syncer) sendLoop(ctx context.Context, env *lmdb.Env) error {
 	info, err := env.Info()
 	if err != nil {
 		return err
 	}
-	s.l.WithFields(logrus.Fields{
-		"MapSize":   datasize.ByteSize(info.MapSize).HumanReadable(),
-		"LastTxnID": info.LastTxnID,
-	}).Info("Env info")
-
-	warnedEmpty := false
 	lastTxnID := info.LastTxnID
+	warnedEmpty := false
 	for {
 		// Store snapshot
 		// If lastTxnID == 0, the LMDB is empty, so we do not store anything
