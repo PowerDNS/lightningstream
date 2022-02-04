@@ -62,7 +62,7 @@ func (s *Syncer) instanceID() string {
 
 // instanceID returns a safe instance name
 func (s *Syncer) generationID() string {
-	return fmt.Sprintf("G-%016x.pb.gz", s.generation)
+	return fmt.Sprintf("G-%016x", s.generation)
 }
 
 // openEnv opens the LMDB env with the right options

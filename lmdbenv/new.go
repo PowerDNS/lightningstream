@@ -16,13 +16,14 @@ const (
 )
 
 // Options are used for NewWithOptions, allowing a user to override them
-// This tyoe is also used for the yaml config file.
+// This type is also used for the yaml config file.
 type Options struct {
 	DirMask  os.FileMode       `yaml:"dir_mask"`
 	FileMask os.FileMode       `yaml:"file_mask"`
 	MapSize  datasize.ByteSize `yaml:"map_size"`
 	MaxDBs   int               `yaml:"max_dbs"`
 	NoSubdir bool              `yaml:"no_subdir"`
+	Create   bool              `yaml:"create"`
 	EnvFlags uint              `yaml:"-"` // Too dangerous for direct yaml support
 }
 
@@ -55,6 +56,10 @@ func NewWithOptions(path string, opt Options) (*lmdb.Env, error) {
 	env, err := lmdb.NewEnv()
 	if err != nil {
 		return nil, fmt.Errorf("lmdb env: new: %v", err)
+	}
+
+	if opt.Create {
+		opt.EnvFlags |= lmdb.Create
 	}
 
 	// Special default MapSize handling: only if we passed the create flag

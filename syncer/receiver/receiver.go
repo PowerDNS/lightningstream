@@ -6,11 +6,28 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/storage"
 	"powerdns.com/platform/lightningstream/utils"
 )
+
+func New(st storage.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string) *Receiver {
+	r := &Receiver{
+		st:                     st,
+		c:                      c,
+		prefix:                 dbname + "__", // snapshot filename prefix
+		l:                      l.WithField("component", "receiver"),
+		ownInstance:            inst,
+		lastNotifiedByInstance: make(map[string]snapshot.NameInfo),
+		ignoredFilenames:       make(map[string]bool),
+		snapshotsByInstance:    make(map[string]*snapshot.Snapshot),
+		lastSeenByInstance:     make(map[string]snapshot.NameInfo),
+		downloadersByInstance:  make(map[string]*Downloader),
+	}
+	return r
+}
 
 // Receiver monitors a storage backend, downloads updates and notifies the
 // syncer.Syncer of new snapshots. When the Syncer gets around to handle a
@@ -19,14 +36,15 @@ import (
 // It spawns per-instance Downloader goroutines to take care of the actual
 // downloading.
 type Receiver struct {
-	Storage     storage.Interface
-	Config      config.Config
-	Prefix      string
-	Logger      logrus.Logger
-	OwnInstance string
+	st          storage.Interface
+	c           config.Config
+	prefix      string
+	l           logrus.FieldLogger
+	ownInstance string
 
 	// Only accessed by Run goroutine
 	lastNotifiedByInstance map[string]snapshot.NameInfo
+	ignoredFilenames       map[string]bool
 
 	// The following fields are protected by this mutex, because they
 	// are accessed by multiple goroutines.
@@ -54,7 +72,7 @@ func (r *Receiver) Next() (instance string, snap *snapshot.Snapshot) {
 func (r *Receiver) Run(ctx context.Context) error {
 	for {
 		if err := r.RunOnce(ctx); err != nil {
-			r.Logger.WithError(err).Error("Fetch error")
+			r.l.WithError(err).Error("Fetch error")
 		}
 
 		if err := utils.SleepContext(ctx, time.Second); err != nil { // TODO: config
@@ -64,8 +82,8 @@ func (r *Receiver) Run(ctx context.Context) error {
 }
 
 func (r *Receiver) RunOnce(ctx context.Context) error {
-	st := r.Storage
-	prefix := r.Prefix
+	st := r.st
+	prefix := r.prefix
 
 	// The result is ordered lexicographically
 	ls, err := st.List(ctx, prefix)
@@ -75,13 +93,17 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 	names := ls.Names()
 	lastSeenByInstance := make(map[string]snapshot.NameInfo)
 	for _, name := range names {
-		ni, err := snapshot.ParseName(name)
-		if err != nil {
-			r.Logger.WithError(err).WithField("filename", name).
-				Debug("Skipping invalid filename")
+		if r.ignoredFilenames[name] {
 			continue
 		}
-		if ni.InstanceID == r.OwnInstance {
+		ni, err := snapshot.ParseName(name)
+		if err != nil {
+			r.l.WithError(err).WithField("filename", name).
+				Debug("Skipping invalid filename")
+			r.ignoredFilenames[name] = true
+			continue
+		}
+		if ni.InstanceID == r.ownInstance {
 			// FIXME: we need to load our own snapshot once on startup
 			continue // ignore own snapshots
 		}
@@ -100,18 +122,19 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 			continue // no change
 		}
 
-		if inst == r.OwnInstance && lastNotified.FullName != "" {
+		r.l.WithFields(logrus.Fields{
+			"instance":   inst,
+			"timestamp":  ni.TimestampString,
+			"generation": ni.GenerationID,
+			"age":        now.Sub(ni.Timestamp).Round(10 * time.Millisecond),
+		}).Debug("New snapshot detected")
+
+		if inst == r.ownInstance && lastNotified.FullName != "" {
 			// Own instance and already notified once.
 			// We only want to load our own snapshot once on startup, and ignore
 			// any further snapshots.
 			continue
 		}
-
-		r.Logger.WithFields(logrus.Fields{
-			"instance": inst,
-			"filename": ni.FullName,
-			"age":      now.Sub(ni.Timestamp).Round(10 * time.Millisecond),
-		}).Debug("New snapshot detected")
 
 		d := r.getDownloader(ctx, inst)
 		d.NotifyNewSnapshot()
@@ -132,7 +155,7 @@ func (r *Receiver) getDownloader(ctx context.Context, instance string) *Download
 
 	d = &Downloader{
 		r: r,
-		l: r.Logger.WithFields(logrus.Fields{
+		l: r.l.WithFields(logrus.Fields{
 			"component": "downloader",
 			"instance":  instance,
 		}),

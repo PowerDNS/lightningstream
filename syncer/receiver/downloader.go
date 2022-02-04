@@ -80,7 +80,7 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	t0 := time.Now()
 
 	// Fetch the blob from the storage
-	data, err := d.r.Storage.Load(ctx, ni.FullName)
+	data, err := d.r.st.Load(ctx, ni.FullName)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,8 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 
 	t2 := time.Now()
 	d.l.WithFields(logrus.Fields{
-		"filename":          ni.FullName,
+		"timestamp":         ni.TimestampString,
+		"generation":        ni.GenerationID,
 		"time_load_storage": utils.TimeDiff(t1, t0),
 		"time_load_total":   utils.TimeDiff(t2, t0),
 	}).Info("Snapshot downloaded")

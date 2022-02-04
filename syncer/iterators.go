@@ -48,7 +48,7 @@ func (it *TimestampedIterator) Merge(oldval []byte) (val []byte, err error) {
 	entryVal := entry.Value
 	if len(oldval) == 0 {
 		// Not in destination db, add with timestamp
-		return it.addTS(entryVal, entry.TimestampNano)
+		return it.addTS(entryVal, entry.TimestampNano, false)
 	}
 	if len(oldval) < HeaderSize {
 		// Should never happen
@@ -75,14 +75,14 @@ func (it *TimestampedIterator) Merge(oldval []byte) (val []byte, err error) {
 		return oldval, nil
 	}
 	// Update LMDB value
-	return it.addTS(entryVal, newTS)
+	return it.addTS(entryVal, newTS, false)
 }
 
 func (it *TimestampedIterator) Clean(oldval []byte) (val []byte, err error) {
 	if len(oldval) == HeaderSize {
 		return oldval, nil // already deleted, only timestamp
 	}
-	return it.addTS(nil, 0)
+	return it.addTS(nil, 0, true)
 }
 
 func (it *TimestampedIterator) logDebugValue(val []byte) {
@@ -96,7 +96,7 @@ func (it *TimestampedIterator) logDebugValue(val []byte) {
 // addTS prepends a timestamp header to a plain value. It uses the ts parameter
 // passed in if non-zero, or the default one set on the iterator.
 // A timestamp is mandatory. If both are 0, an ErrNoTimestamp error is returned.
-func (it *TimestampedIterator) addTS(entryVal []byte, ts uint64) (val []byte, err error) {
+func (it *TimestampedIterator) addTS(entryVal []byte, ts uint64, fromClean bool) (val []byte, err error) {
 	if cap(it.buf) < HeaderSize {
 		it.buf = make([]byte, HeaderSize, 1024)
 	} else {
@@ -105,7 +105,12 @@ func (it *TimestampedIterator) addTS(entryVal []byte, ts uint64) (val []byte, er
 	if ts == 0 {
 		ts = it.DefaultTimestampNano
 		if ts == 0 {
-			return nil, ErrNoTimestamp{} // no extra info here
+			if fromClean {
+				return nil, ErrNoTimestamp{} // no extra info here
+			} else {
+				key := it.Entries[it.current].Key
+				return nil, ErrNoTimestamp{Key: key}
+			}
 		}
 	}
 	binary.BigEndian.PutUint64(it.buf, ts)
