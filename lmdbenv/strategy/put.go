@@ -9,14 +9,14 @@ import (
 
 // Put implements the Put strategy.
 //
-// Directly put the entries from the iterator into LMDB, overwriting any existing one.
+// Directly put the entries from the CSV into LMDB, overwriting any existing one.
 //
 // Prerequisites:
 //
 // - Single namespace
 // - Sorted input not required
 //
-// Uses: currently only for tests
+// Uses: unsorted first snapshot load (slow for large snapshots).
 func Put(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 	for {
 		// Get key
@@ -36,7 +36,7 @@ func Put(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 
 		// If the value is empty, we delete the key instead
 		if len(val) == 0 {
-			err := txn.Del(dbi, key, nil)
+			err := txn.Del(dbi, key, val) // pass val to support DupSort
 			if err != nil && !lmdb.IsNotFound(err) {
 				return errors.Wrap(err, "del")
 			}

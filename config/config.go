@@ -50,6 +50,9 @@ type LMDB struct {
 	Path    string          `yaml:"path"` // Path to directory holding data.mdb, or mdb file if NoSubdir
 	Options lmdbenv.Options `yaml:"options"`
 
+	// Per-DBI options
+	DBIOptions map[string]DBIOptions `yaml:"dbi_options"`
+
 	// Both important and dangerous: set to true if the LMDB schema already tracks
 	// changes in the exact way that this tool expects. This includes:
 	// - Every value is prefixed with an 8-byte big-endian timestamp containing
@@ -64,6 +67,12 @@ type LMDB struct {
 	ScrapeSmaps      bool          `yaml:"scrape_smaps"` // Reading proc smaps can be expensive in some situations
 	LogStats         bool          `yaml:"log_stats"`
 	LogStatsInterval time.Duration `yaml:"log_stats_interval"`
+}
+
+type DBIOptions struct {
+	// Enables hacky support for DupSort DBs, with limitations
+	// Not compatible with schema_tracks_changes=true
+	DupSortHack bool `yaml:"dupsort_hack"`
 }
 
 type Storage struct {
@@ -99,6 +108,13 @@ func (c Config) Check() error {
 		}
 		if l.LogStats && l.LogStatsInterval < 100*time.Millisecond {
 			return fmt.Errorf("lmdb.log_stats_interval: too short interval")
+		}
+		if l.SchemaTracksChanges {
+			for _, do := range l.DBIOptions {
+				if do.DupSortHack {
+					return fmt.Errorf("lmdb.schema_tracks_changes: cannot be used together with the dupsort_hack DBI option")
+				}
+			}
 		}
 	}
 	if c.HTTP.Address != "" {

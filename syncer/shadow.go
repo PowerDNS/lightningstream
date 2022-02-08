@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -32,6 +33,12 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 		dbiMsg, err := s.readDBI(txn, dbiName, true)
 		if err != nil {
 			return err
+		}
+
+		if s.lc.DBIOptions[dbiName].DupSortHack {
+			if err = dupSortHackEncode(dbiMsg.Entries); err != nil {
+				return fmt.Errorf("dupsort_hack error for DBI %s: %w", dbiName, err)
+			}
 		}
 
 		if utils.IsCanceled(ctx) {
@@ -83,6 +90,8 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 			continue // skip shadow and other special databases
 		}
 
+		dupSortHack := s.lc.DBIOptions[dbiName].DupSortHack
+
 		// Dump associated shadow database. We will ignore the timestamps.
 		// At this point the shadow database must exist, as this function call
 		// will always be preceded by a mainToShadow call.
@@ -91,21 +100,36 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 			return err
 		}
 
+		if dupSortHack {
+			if err = dupSortHackDecode(dbiMsg.Entries); err != nil {
+				return fmt.Errorf("dupsort_hack error for DBI %s: %w", dbiName, err)
+			}
+		}
+
 		if utils.IsCanceled(ctx) {
 			return context.Canceled
 		}
 
 		// The target is the current DBI
-		targetDBI, err := txn.OpenDBI(dbiName, 0)
+		var flags uint
+		if dupSortHack {
+			flags = lmdb.DupSort
+		}
+		targetDBI, err := txn.OpenDBI(dbiName, flags)
 		if err != nil {
 			return err
+		}
+
+		var stratFunc = strategy.IterUpdate
+		if dupSortHack {
+			stratFunc = strategy.EmptyPut
 		}
 
 		// This iterator will insert the plain items without timestamp header
 		it := &PlainIterator{
 			Entries: dbiMsg.Entries,
 		}
-		err = strategy.IterUpdate(txn, targetDBI, it)
+		err = stratFunc(txn, targetDBI, it)
 		if err != nil {
 			return err
 		}

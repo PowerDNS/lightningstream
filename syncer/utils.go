@@ -124,9 +124,10 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 		return nil, err
 	}
 
+	dupSortHack := s.lc.DBIOptions[dbiName].DupSortHack
 	var prev []byte
 	for _, item := range items {
-		if prev != nil && bytes.Compare(prev, item.Key) >= 0 {
+		if prev != nil && !dupSortHack && bytes.Compare(prev, item.Key) >= 0 {
 			return nil, fmt.Errorf(
 				"non-default key order detected in DBI %q, refusing to continue",
 				dbiName)
