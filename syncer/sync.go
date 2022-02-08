@@ -129,11 +129,11 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, s
 
 		// TODO: Would be useful to have the NameInfo here
 		l := s.l.WithFields(logrus.Fields{
-			"txnID":             txnID,
-			"lastTxnID":         lastTxnID,
-			"instance":          instance,
-			"snapshotTimestamp": snap.Meta.TimestampNano,
-			"localChanged":      localChanged,
+			"txnID":        txnID,
+			"lastTxnID":    lastTxnID,
+			"instance":     instance,
+			"timestamp":    snapshot.TimestampFromNano(snap.Meta.TimestampNano),
+			"localChanged": localChanged,
 		})
 		l.Debug("Started load")
 
@@ -229,7 +229,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, s
 		"time_total":        utils.TimeDiff(tLoaded, t0),
 		"txnID":             txnID,
 		"instance":          instance,
-		"snapshotTimestamp": snap.Meta.TimestampNano,
+		"timestamp":         snapshot.TimestampFromNano(snap.Meta.TimestampNano),
 	}).Info("Loaded remote snapshot")
 
 	return txnID, localChanged, nil

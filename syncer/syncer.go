@@ -27,6 +27,7 @@ func New(name string, st storage.Interface, c config.Config, lc config.LMDB) (*S
 	} else {
 		s.l.Info("schema_tracks_changes enabled")
 	}
+	s.l.WithField("instance", s.instanceID()).Info("Initialised syncer")
 	return s, nil
 }
 

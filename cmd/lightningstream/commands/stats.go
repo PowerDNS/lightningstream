@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
@@ -71,7 +72,13 @@ var statsCmd = &cobra.Command{
 	Use:   "stats",
 	Short: "Print LMDB stats",
 	Run: func(cmd *cobra.Command, args []string) {
-		for name, lc := range conf.LMDBs {
+		var names []string
+		for name := range conf.LMDBs {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			lc := conf.LMDBs[name]
 			if err := statsForLMDB(name, lc); err != nil {
 				logrus.WithError(err).WithField("db", name).Error("LMDB stats error")
 			}

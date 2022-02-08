@@ -13,10 +13,20 @@ const (
 	dotIndex   = 15                          // position of the '.'
 )
 
-func Name(syncerName, instanceID, generationID string, ts time.Time) string {
+func Timestamp(ts time.Time) string {
 	fileTimestamp := strings.Replace(
 		ts.UTC().Format(timeFormat),
 		".", "-", 1)
+	return fileTimestamp
+}
+
+func TimestampFromNano(tsNano uint64) string {
+	ts := time.Unix(0, int64(tsNano))
+	return Timestamp(ts)
+}
+
+func Name(syncerName, instanceID, generationID string, ts time.Time) string {
+	fileTimestamp := Timestamp(ts)
 	name := fmt.Sprintf("%s__%s__%s__%s.pb.gz",
 		syncerName,
 		instanceID,

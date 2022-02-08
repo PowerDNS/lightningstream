@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
@@ -9,11 +11,19 @@ import (
 	"github.com/spf13/cobra"
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/syncer"
 	"powerdns.com/platform/lightningstream/utils"
+)
+
+var (
+	dumpName string
+	dumpHide bool
 )
 
 func init() {
 	rootCmd.AddCommand(dumpCmd)
+	dumpCmd.Flags().BoolVarP(&dumpHide, "hide", "H", false, "Hide private lightningstream databases")
+	dumpCmd.Flags().StringVarP(&dumpName, "name", "n", "", "Only dump given database name")
 }
 
 func dumpLMDB(name string, lc config.LMDB) error {
@@ -30,6 +40,10 @@ func dumpLMDB(name string, lc config.LMDB) error {
 		}
 
 		for _, dbiName := range names {
+			if dumpHide && strings.HasPrefix(dbiName, syncer.SyncDBIPrefix) {
+				continue
+			}
+
 			fmt.Printf("\n### %s :: %s\n\n", name, dbiName)
 
 			dbi, err := txn.OpenDBI(dbiName, 0)
@@ -59,7 +73,16 @@ var dumpCmd = &cobra.Command{
 	Use:   "dump",
 	Short: "Dump LMDB contents",
 	Run: func(cmd *cobra.Command, args []string) {
-		for name, lc := range conf.LMDBs {
+		var names []string
+		for name := range conf.LMDBs {
+			if dumpName != "" && dumpName != name {
+				continue
+			}
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			lc := conf.LMDBs[name]
 			if err := dumpLMDB(name, lc); err != nil {
 				logrus.WithError(err).WithField("db", name).Error("LMDB dump error")
 			}
