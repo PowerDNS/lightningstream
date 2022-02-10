@@ -28,7 +28,16 @@ func IterUpdate(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 	}
 	defer c.Close()
 
-	err = iterBoth(it, c, func(itKey, dbKey, dbVal []byte, itEOF, dbEOF bool) error {
+	integerKey := false
+	flags, err := txn.Flags(dbi)
+	if err != nil {
+		return errors.Wrap(err, "get flags")
+	}
+	if flags&LMDBIntegerKeyFlag > 0 {
+		integerKey = true
+	}
+
+	err = iterBoth(it, c, integerKey, func(itKey, dbKey, dbVal []byte, itEOF, dbEOF bool) error {
 		//log.Printf("@@@ args: itkey=%s, dbkey=%s, dbVal=%s, itEOF=%v, dbEOF=%v", string(itKey), string(dbKey), string(dbVal), itEOF, dbEOF)
 
 		if itEOF || itKey == nil {

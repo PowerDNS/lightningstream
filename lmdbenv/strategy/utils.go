@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"bytes"
+	encoding_binary "encoding/binary"
 	"io"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
@@ -9,6 +10,8 @@ import (
 )
 
 const LMDBMaxKeySize = 511
+
+const LMDBIntegerKeyFlag = 0x08 // not defined in Go bindings
 
 // iterBothFunc is the callback called by iterBoth.
 // Here 'db' refers to LMDB and 'it' to the Iterator with data we want to insert.
@@ -18,7 +21,15 @@ type iterBothFunc func(itKey, dbKey, dbVal []byte, itEOF, dbEOF bool) error
 
 // iterBoth iterates over both LMDB and the Iterator and calls the callback
 // function with the values.
-func iterBoth(it Iterator, c *lmdb.Cursor, f iterBothFunc) error {
+// Set integerKey=true if the MDB_INTEGERKEY flag is set on the DBI.
+func iterBoth(it Iterator, c *lmdb.Cursor, integerKey bool, f iterBothFunc) error {
+	var cmpFunc func(a, b []byte) int
+	if integerKey && isLittleEndian {
+		cmpFunc = cmpIntegerLittleEndian
+	} else {
+		cmpFunc = bytes.Compare
+	}
+
 	itEOF := false
 	dbEOF := false
 	var itKey, dbKey, dbVal []byte
@@ -39,7 +50,7 @@ func iterBoth(it Iterator, c *lmdb.Cursor, f iterBothFunc) error {
 				}
 			} else {
 				// Check to ensure the keys are in insert order
-				if bytes.Compare(prevKey, itKey) >= 0 {
+				if cmpFunc(prevKey, itKey) >= 0 {
 					return errors.Wrap(ErrNotSorted, string(itKey))
 				}
 				prevKey = prevKey[:len(itKey)]
@@ -84,7 +95,7 @@ func iterBoth(it Iterator, c *lmdb.Cursor, f iterBothFunc) error {
 		}
 
 		// Compare
-		cmp := bytes.Compare(dbKey, itKey)
+		cmp := cmpFunc(dbKey, itKey)
 		if cmp < 0 {
 			// LMDB key is smaller
 			err = f(nil, dbKey, dbVal, false, false)
@@ -102,5 +113,38 @@ func iterBoth(it Iterator, c *lmdb.Cursor, f iterBothFunc) error {
 		if err != nil {
 			return errors.Wrap(err, "callback")
 		}
+	}
+}
+
+// cmpIntegerLittleEndian is a compare function that interprets the data as a little endian
+func cmpIntegerLittleEndian(a, b []byte) int {
+	var ai, bi uint64 // LMDB also assumes unsigned
+
+	switch len(a) {
+	case 4:
+		// Only one I have seen in the wild
+		ai = uint64(encoding_binary.LittleEndian.Uint32(a))
+	case 8:
+		ai = encoding_binary.LittleEndian.Uint64(a)
+	case 2:
+		ai = uint64(encoding_binary.LittleEndian.Uint16(a))
+	}
+
+	switch len(b) {
+	case 4:
+		// Only one I have seen in the wild
+		bi = uint64(encoding_binary.LittleEndian.Uint32(b))
+	case 8:
+		bi = encoding_binary.LittleEndian.Uint64(b)
+	case 2:
+		bi = uint64(encoding_binary.LittleEndian.Uint16(b))
+	}
+
+	if ai < bi {
+		return -1
+	} else if ai > bi {
+		return 1
+	} else {
+		return 0
 	}
 }

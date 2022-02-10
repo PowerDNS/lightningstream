@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ func IsCanceled(ctx context.Context) bool {
 // DisplayASCII represents a key as ascii if it only contains safe ascii characters.
 // If it contains unsafe characters, these are replaced by '.' and a hex
 // representation is added to the output.
+// It the first 8 bytes look like a nanosecond UNIX timestamp, that will be shown too.
 func DisplayASCII(b []byte) string {
 	ret := make([]byte, len(b))
 	unsafe := false
@@ -44,8 +46,21 @@ func DisplayASCII(b []byte) string {
 			ret[i] = ch
 		}
 	}
-	if unsafe {
-		return fmt.Sprintf("%s [% 0x]", string(ret), b)
+	var tsString string
+	if len(b) >= 8 {
+		ts := time.Unix(0, int64(binary.BigEndian.Uint64(b[:8]))).UTC()
+		if ts.After(time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)) &&
+			ts.Before(time.Now().Add(30*24*time.Hour)) {
+			tsString = ts.Format(time.RFC3339Nano)
+		}
+	}
+	if unsafe || len(b) <= 8 || tsString != "" {
+		if tsString != "" {
+			return fmt.Sprintf("%s [% 0x] (%s)", string(ret), b, tsString)
+
+		} else {
+			return fmt.Sprintf("%s [% 0x]", string(ret), b)
+		}
 	}
 	return string(ret)
 }

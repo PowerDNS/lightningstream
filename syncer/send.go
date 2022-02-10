@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -143,7 +144,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			}
 			dbiMsg, err := s.readDBI(txn, readDBIName, false)
 			if err != nil {
-				return err
+				return fmt.Errorf("dbi %s: %w", dbiNames, err)
 			}
 			dbiMsg.Name = dbiName // replace shadow name if used
 			msg.Databases = append(msg.Databases, dbiMsg)

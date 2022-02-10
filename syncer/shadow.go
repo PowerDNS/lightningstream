@@ -35,6 +35,22 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 			return err
 		}
 
+		dbi, err := txn.OpenDBI(dbiName, 0)
+		if err != nil {
+			return err
+		}
+
+		dbiFlags, err := txn.Flags(dbi)
+		if err != nil {
+			return err
+		}
+
+		// If the DBI has MDB_INTEGERKEY set, our shadow db will use the same
+		var targetFlags uint = lmdb.Create
+		if dbiFlags&strategy.LMDBIntegerKeyFlag > 0 {
+			targetFlags |= strategy.LMDBIntegerKeyFlag
+		}
+
 		if s.lc.DBIOptions[dbiName].DupSortHack {
 			if err = dupSortHackEncode(dbiMsg.Entries); err != nil {
 				return fmt.Errorf("dupsort_hack error for DBI %s: %w", dbiName, err)
@@ -45,7 +61,8 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 			return context.Canceled
 		}
 
-		targetDBI, err := txn.OpenDBI(SyncDBIShadowPrefix+dbiName, lmdb.Create)
+		targetDBIName := SyncDBIShadowPrefix + dbiName
+		targetDBI, err := txn.OpenDBI(targetDBIName, targetFlags)
 		if err != nil {
 			return err
 		}
@@ -56,7 +73,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 		}
 		err = strategy.IterUpdate(txn, targetDBI, it)
 		if err != nil {
-			return err
+			return fmt.Errorf("dbi %s strategy %s: %w", targetDBIName, "IterUpdate", err)
 		}
 
 		if utils.IsCanceled(ctx) {
@@ -120,8 +137,10 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 			return err
 		}
 
+		var stratName = "IterUpdate"
 		var stratFunc = strategy.IterUpdate
 		if dupSortHack {
+			stratName = "EmptyPut"
 			stratFunc = strategy.EmptyPut
 		}
 
@@ -131,7 +150,7 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 		}
 		err = stratFunc(txn, targetDBI, it)
 		if err != nil {
-			return err
+			return fmt.Errorf("dbi %s strategy %s: %w", dbiName, stratName, err)
 		}
 
 		if utils.IsCanceled(ctx) {
