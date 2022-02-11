@@ -63,6 +63,11 @@ type LMDB struct {
 	// that THIS MUST BE SUPPORTED IN THE LMDB SCHEMA THE APPLICATION USES!
 	SchemaTracksChanges bool `yaml:"schema_tracks_changes"`
 
+	// Enables hacky support for DupSort DBs, with limitations.
+	// This will be applied to all dbs marked as DupSort.
+	// Not compatible with schema_tracks_changes=true
+	DupSortHack bool `yaml:"dupsort_hack"`
+
 	// Stats logging options
 	ScrapeSmaps      bool          `yaml:"scrape_smaps"` // Reading proc smaps can be expensive in some situations
 	LogStats         bool          `yaml:"log_stats"`
@@ -70,9 +75,7 @@ type LMDB struct {
 }
 
 type DBIOptions struct {
-	// Enables hacky support for DupSort DBs, with limitations
-	// Not compatible with schema_tracks_changes=true
-	DupSortHack bool `yaml:"dupsort_hack"`
+	// No longer has any options, but may get them in the future
 }
 
 type Storage struct {
@@ -109,12 +112,8 @@ func (c Config) Check() error {
 		if l.LogStats && l.LogStatsInterval < 100*time.Millisecond {
 			return fmt.Errorf("lmdb.log_stats_interval: too short interval")
 		}
-		if l.SchemaTracksChanges {
-			for _, do := range l.DBIOptions {
-				if do.DupSortHack {
-					return fmt.Errorf("lmdb.schema_tracks_changes: cannot be used together with the dupsort_hack DBI option")
-				}
-			}
+		if l.SchemaTracksChanges && l.DupSortHack {
+			return fmt.Errorf("lmdb.schema_tracks_changes: cannot be used together with the dupsort_hack option")
 		}
 	}
 	if c.HTTP.Address != "" {

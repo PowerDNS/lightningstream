@@ -124,11 +124,19 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 		return nil, err
 	}
 
-	dupSortHack := s.lc.DBIOptions[dbiName].DupSortHack
+	dbiFlags, err := txn.Flags(dbi)
+	if err != nil {
+		return nil, err
+	}
+	isDupSort := dbiFlags&lmdb.DupSort > 0
+	if isDupSort && !s.lc.DupSortHack {
+		return nil, fmt.Errorf("dupsort db %s found and dupsort_hack disabled", dbiName)
+	}
+
 	var prev []byte
 	for _, item := range items {
 		// Not checking wrong order to support native integer and reverse ordering
-		if prev != nil && !dupSortHack && bytes.Equal(prev, item.Key) {
+		if prev != nil && !isDupSort && bytes.Equal(prev, item.Key) {
 			return nil, fmt.Errorf(
 				"duplicate key detected in DBI %q without dupsort_hack, refusing to continue",
 				dbiName)

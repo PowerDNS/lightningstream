@@ -53,7 +53,7 @@ func dropshadowForLMDB(name string, lc config.LMDB) error {
 
 var dropshadowCmd = &cobra.Command{
 	Use:   "drop-shadow",
-	Short: "Drop all shadow dbs and other sync metadata",
+	Short: "Drop all shadow dbs and other sync metadata. This can potentially cause data loss.",
 	Run: func(cmd *cobra.Command, args []string) {
 		var names []string
 		for name := range conf.LMDBs {

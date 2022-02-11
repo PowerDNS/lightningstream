@@ -118,27 +118,8 @@ func iterBoth(it Iterator, c *lmdb.Cursor, integerKey bool, f iterBothFunc) erro
 
 // cmpIntegerLittleEndian is a compare function that interprets the data as a little endian
 func cmpIntegerLittleEndian(a, b []byte) int {
-	var ai, bi uint64 // LMDB also assumes unsigned
-
-	switch len(a) {
-	case 4:
-		// Only one I have seen in the wild
-		ai = uint64(encoding_binary.LittleEndian.Uint32(a))
-	case 8:
-		ai = encoding_binary.LittleEndian.Uint64(a)
-	case 2:
-		ai = uint64(encoding_binary.LittleEndian.Uint16(a))
-	}
-
-	switch len(b) {
-	case 4:
-		// Only one I have seen in the wild
-		bi = uint64(encoding_binary.LittleEndian.Uint32(b))
-	case 8:
-		bi = encoding_binary.LittleEndian.Uint64(b)
-	case 2:
-		bi = uint64(encoding_binary.LittleEndian.Uint16(b))
-	}
+	ai := bytesToInt(a)
+	bi := bytesToInt(b)
 
 	if ai < bi {
 		return -1
@@ -146,5 +127,20 @@ func cmpIntegerLittleEndian(a, b []byte) int {
 		return 1
 	} else {
 		return 0
+	}
+}
+
+func bytesToInt(b []byte) uint64 {
+	// LMDB also assumes unsigned ints
+	switch len(b) {
+	case 4:
+		// Only one I have seen in the wild
+		return uint64(encoding_binary.LittleEndian.Uint32(b))
+	case 8:
+		return encoding_binary.LittleEndian.Uint64(b)
+	case 2:
+		return uint64(encoding_binary.LittleEndian.Uint16(b))
+	default:
+		return 0 // TODO: better way?
 	}
 }

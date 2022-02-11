@@ -45,13 +45,18 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 			return err
 		}
 
+		isDupSort := dbiFlags&lmdb.DupSort > 0
+		if isDupSort && !s.lc.DupSortHack {
+			return fmt.Errorf("dupsort db %s found and dupsort_hack disabled", dbiName)
+		}
+
 		// If the DBI has MDB_INTEGERKEY set, our shadow db will use the same
 		var targetFlags uint = lmdb.Create
 		if dbiFlags&strategy.LMDBIntegerKeyFlag > 0 {
 			targetFlags |= strategy.LMDBIntegerKeyFlag
 		}
 
-		if s.lc.DBIOptions[dbiName].DupSortHack {
+		if s.lc.DupSortHack && isDupSort {
 			if err = dupSortHackEncode(dbiMsg.Entries); err != nil {
 				return fmt.Errorf("dupsort_hack error for DBI %s: %w", dbiName, err)
 			}
@@ -107,7 +112,20 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 			continue // skip shadow and other special databases
 		}
 
-		dupSortHack := s.lc.DBIOptions[dbiName].DupSortHack
+		// The target is the current DBI
+		targetDBI, err := txn.OpenDBI(dbiName, 0)
+		if err != nil {
+			return err
+		}
+		dbiFlags, err := txn.Flags(targetDBI)
+		if err != nil {
+			return err
+		}
+
+		isDupSort := dbiFlags&lmdb.DupSort > 0
+		if isDupSort && !s.lc.DupSortHack {
+			return fmt.Errorf("dupsort db %s found and dupsort_hack disabled", dbiName)
+		}
 
 		// Dump associated shadow database. We will ignore the timestamps.
 		// At this point the shadow database must exist, as this function call
@@ -117,7 +135,7 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 			return err
 		}
 
-		if dupSortHack {
+		if isDupSort {
 			if err = dupSortHackDecode(dbiMsg.Entries); err != nil {
 				return fmt.Errorf("dupsort_hack error for DBI %s: %w", dbiName, err)
 			}
@@ -127,19 +145,9 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 			return context.Canceled
 		}
 
-		// The target is the current DBI
-		var flags uint
-		if dupSortHack {
-			flags = lmdb.DupSort
-		}
-		targetDBI, err := txn.OpenDBI(dbiName, flags)
-		if err != nil {
-			return err
-		}
-
 		var stratName = "IterUpdate"
 		var stratFunc = strategy.IterUpdate
-		if dupSortHack {
+		if isDupSort {
 			stratName = "EmptyPut"
 			stratFunc = strategy.EmptyPut
 		}
