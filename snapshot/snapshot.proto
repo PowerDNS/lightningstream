@@ -14,6 +14,7 @@ message KV {
 message DBI {
   string name = 1;
   repeated KV entries = 2 [(gogoproto.nullable) = false];  // Must be in LMDB sort order!
+  uint64 flags = 3; // DBI flags stored in the LMDB
 }
 
 message Snapshot {
