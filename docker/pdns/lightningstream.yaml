@@ -1,0 +1,17 @@
+instance: instance-${instance}
+lmdbs:
+  main:
+    path: /lmdb/instance-${instance}/db
+    dupsort_hack: true
+    options:
+      no_subdir: true
+      create: true
+  shard:
+    path: /lmdb/instance-${instance}/db-0
+    options:
+      no_subdir: true
+      create: true
+
+storage:
+  type: fs
+  root_path: /snapshots

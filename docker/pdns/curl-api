@@ -1,0 +1,25 @@
+#!/bin/bash
+
+instance=1
+
+while getopts ":i:" opt; do
+    case $opt in
+    i)  instance="$OPTARG"
+        ;;
+    \?) echo "Invalid option: -$OPTARG" >&2
+        exit 30
+        ;;
+    :)  echo "Missing required argument for -$OPTARG" >&2
+        exit 30
+        ;;
+    esac
+done
+shift $((OPTIND-1))
+
+echo "* Using instance $instance" > /dev/stderr
+
+path="$1"
+shift 1
+
+curl -H "X-API-Key: changeme" "http://127.0.0.1:478$instance$path" "$@"
+

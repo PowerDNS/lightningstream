@@ -1,0 +1,23 @@
+#!/bin/bash
+
+instance=1
+
+while getopts ":i:" opt; do
+    case $opt in
+    i)  instance="$OPTARG"
+        ;;
+    \?) echo "Invalid option: -$OPTARG" >&2
+        exit 30
+        ;;
+    :)  echo "Missing required argument for -$OPTARG" >&2
+        exit 30
+        ;;
+    esac
+done
+shift $((OPTIND-1))
+
+docker-compose exec "auth$instance" pdnsutil "$@"
+
+
+
+
