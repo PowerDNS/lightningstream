@@ -22,7 +22,7 @@ Or run `./build.sh` to install it in a `bin/` subdirectory of this repo.
 Easy cross compiling is not supported, because the LMDB bindings require CGo.
 
 
-## Example in Dockr Compose
+## Example in Docker Compose
 
 This repo includes an example of syncing the PowerDNS Authoritative Nameserver LMDB. It runs two DNS
 servers with each their own syncer, syncing to a common volume.
