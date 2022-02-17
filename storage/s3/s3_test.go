@@ -74,21 +74,9 @@ func TestBackend(t *testing.T) {
 				t.Logf("Object delete error: %s", err)
 			}
 		}
-
-		_, err = b.client.DeleteBucket(ctx, &s3.DeleteBucketInput{
-			Bucket: aws.String(b.opt.Bucket),
-		})
-		if err != nil {
-			t.Logf("Bucket delete error: %s", err)
-		}
 	}
 	t.Cleanup(cleanup)
 	cleanup()
-
-	_, err = b.client.CreateBucket(ctx, &s3.CreateBucketInput{
-		Bucket: aws.String(b.opt.Bucket),
-	})
-	assert.NoError(t, err)
 
 	tester.DoBackendTests(t, b)
 }

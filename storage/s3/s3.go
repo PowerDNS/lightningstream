@@ -147,21 +147,18 @@ func New(st config.Storage) (*Backend, error) {
 	if err := json.Unmarshal(j, &opt); err != nil {
 		return nil, err
 	}
-
 	if opt.Region == "" {
 		opt.Region = DefaultRegion
 	}
-
+	if opt.InitTimeout == 0 {
+		opt.InitTimeout = DefaultInitTimeout
+	}
 	if err := opt.Check(); err != nil {
 		return nil, err
 	}
 
 	// Some of the following calls require a context
-	initTimeout := opt.InitTimeout
-	if initTimeout == 0 {
-		initTimeout = DefaultInitTimeout
-	}
-	ctx, cancel := context.WithTimeout(context.TODO(), initTimeout)
+	ctx, cancel := context.WithTimeout(context.TODO(), opt.InitTimeout)
 	defer cancel()
 
 	creds := credentials.NewStaticCredentialsProvider(opt.AccessKey, opt.SecretKey, "")
