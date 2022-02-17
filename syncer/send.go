@@ -55,7 +55,7 @@ func (s *Syncer) sendLoop(ctx context.Context, env *lmdb.Env) error {
 		// Wait for change
 		s.l.Debug("Waiting for a new transaction")
 		for {
-			if err := utils.SleepContext(ctx, time.Second); err != nil { // TODO: config
+			if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
 				return err
 			}
 
@@ -198,11 +198,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 
 	// Send it to storage
 	name := snapshot.Name(s.name, s.instanceID(), s.generationID(), ts)
-	for i := 0; i < 100; i++ { // TODO: config
+	for i := 0; i < s.c.StorageRetryCount; i++ {
 		err = s.st.Store(ctx, name, out.Bytes())
 		if err != nil {
 			s.l.WithError(err).Warn("Store failed, retrying")
-			if err := utils.SleepContext(ctx, time.Second); err != nil { // TODO: config
+			if err := utils.SleepContext(ctx, s.c.StorageRetryInterval); err != nil {
 				return -1, err
 			}
 			continue

@@ -75,7 +75,7 @@ func (r *Receiver) Run(ctx context.Context) error {
 			r.l.WithError(err).Error("Fetch error")
 		}
 
-		if err := utils.SleepContext(ctx, time.Second); err != nil { // TODO: config
+		if err := utils.SleepContext(ctx, r.c.StoragePollInterval); err != nil {
 			return err
 		}
 	}
@@ -160,6 +160,7 @@ func (r *Receiver) getDownloader(ctx context.Context, instance string) *Download
 			"component": "downloader",
 			"instance":  instance,
 		}),
+		c:                 r.c,
 		instance:          instance,
 		last:              snapshot.NameInfo{},
 		newSnapshotSignal: make(chan struct{}, 1),

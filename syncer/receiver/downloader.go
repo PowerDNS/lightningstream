@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
@@ -17,6 +18,7 @@ type Downloader struct {
 	l        logrus.FieldLogger
 	instance string
 	last     snapshot.NameInfo
+	c        config.Config
 
 	// for signaling new work
 	newSnapshotSignal chan struct{}
@@ -63,7 +65,7 @@ func (d *Downloader) Run(ctx context.Context) error {
 			// Do one load attempt
 			if err := d.LoadOnce(ctx, ni); err != nil {
 				d.l.WithError(err).WithField("filename", ni.FullName).Warn("Load error")
-				if err := utils.SleepContext(ctx, time.Second); err != nil {
+				if err := utils.SleepContext(ctx, d.c.StorageRetryInterval); err != nil {
 					return err // cancelled
 				}
 				continue // retry

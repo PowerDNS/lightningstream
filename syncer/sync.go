@@ -64,7 +64,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		// Wait for change
 		s.l.Debug("Waiting for a new transaction")
 		for {
-			if err := utils.SleepContext(ctx, time.Second); err != nil { // TODO: config
+			if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
 				return err
 			}
 

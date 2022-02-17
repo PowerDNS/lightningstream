@@ -16,29 +16,56 @@ import (
 	"powerdns.com/platform/lightningstream/lmdbenv"
 )
 
-// DefaultLMDBLogStatsInterval is the default interval for logging LMDB stats
-const DefaultLMDBLogStatsInterval = time.Minute
+const (
+	// DefaultLMDBLogStatsInterval is the default interval for logging LMDB stats
+	DefaultLMDBLogStatsInterval = time.Minute
 
-// DefaultFetchTimeout is the default timeout for an HTTP fetch.
-// This timeout is a very conservative protection against a stuck
-// download. In practise this should never happen, because Go also
-// uses TCP keepalive for HTTP TCP connections, but it prevents
-// a hung process if the server keeps the TCP connection
-// open but stops sending data for some reason.
-// At 4 hours and a snapshot size of 1.4 GB, it this assumes
-// a transfer speed of at least 100 kB/s (800 kbit/s).
-const DefaultFetchTimeout = 4 * time.Hour
+	// DefaultLMDBPollInterval is the minimum time between checking for new LMDB
+	// transactions. The check itself is fast, but this also serves to rate limit
+	// the creation of new snapshots.
+	DefaultLMDBPollInterval = time.Second
+
+	// DefaultStoragePollInterval is the minimum time between polling the storage
+	// backend for new snapshots.
+	DefaultStoragePollInterval = time.Second
+
+	// DefaultStorageRetryInterval is interval to retry a storage operation
+	// after failure.
+	DefaultStorageRetryInterval = 5 * time.Second
+
+	// DefaultStorageRetryCount is the number of times to retry a storage operation
+	// after failure, before giving up.
+	DefaultStorageRetryCount = 100
+)
 
 // Config is the config root object
 type Config struct {
-	RunOnce  bool            `yaml:"run_once"` // Exit after a single run // FIXME: needed?
 	Instance string          `yaml:"instance"`
 	LMDBs    map[string]LMDB `yaml:"lmdbs"`
 	Storage  Storage         `yaml:"storage"`
 	HTTP     HTTP            `yaml:"http"`
 	Log      logger.Config   `yaml:"log"`
 
-	DefaultPollInterval time.Duration `yaml:"default_poll_interval"` // FIXME: move
+	// LMDBPollInterval is the minimum time between checking for new LMDB
+	// transactions. The check itself is fast, but this also serves to rate limit
+	// the creation of new snapshots. Checking for actual changes once a new
+	// transaction is detected also requires a full database scan, and a merge
+	// with shadow databases when schema_tracks_changes is false.
+	LMDBPollInterval time.Duration `yaml:"lmdb_poll_interval"`
+
+	// StoragePollInterval is the minimum time between polling the storage backend
+	// for new snapshots. This can be set quite low, but keep in mind that loading
+	// a new snapshot can also trigger writing a new snapshot when
+	// schema_tracks_changes is false and shadow databases are used.
+	StoragePollInterval time.Duration `yaml:"storage_poll_interval"`
+
+	// StorageRetryInterval is interval to retry a storage operation
+	// after failure.
+	StorageRetryInterval time.Duration `yaml:"storage_retry_interval"`
+
+	// StorageRetryCount is the number of times to retry a storage operation
+	// after failure, before giving up.
+	StorageRetryCount int `yaml:"storage_retry_count"`
 
 	// Set to current version by main
 	Version string `yaml:"-"`
@@ -123,8 +150,17 @@ func (c Config) Check() error {
 			return fmt.Errorf("http.address: %v", err)
 		}
 	}
-	if c.DefaultPollInterval < 100*time.Millisecond {
-		return fmt.Errorf("default_poll_interval: too short interval")
+	if c.LMDBPollInterval < 100*time.Millisecond {
+		return fmt.Errorf("lmdb_poll_interval: too short interval")
+	}
+	if c.StoragePollInterval < 100*time.Millisecond {
+		return fmt.Errorf("storage_poll_interval: too short interval")
+	}
+	if c.StorageRetryInterval < 100*time.Millisecond {
+		return fmt.Errorf("storage_retry_interval: too short interval")
+	}
+	if c.StorageRetryCount < 1 {
+		return fmt.Errorf("storage_retry_count: positive number required")
 	}
 	return nil
 }
@@ -162,7 +198,9 @@ func Default() Config {
 	return Config{
 		Log: logger.DefaultConfig,
 
-		// Default poll intervals
-		DefaultPollInterval: 5 * time.Second,
+		LMDBPollInterval:     DefaultLMDBPollInterval,
+		StoragePollInterval:  DefaultStoragePollInterval,
+		StorageRetryInterval: DefaultStorageRetryInterval,
+		StorageRetryCount:    DefaultStorageRetryCount,
 	}
 }
