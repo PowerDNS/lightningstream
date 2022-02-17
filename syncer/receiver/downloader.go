@@ -17,6 +17,7 @@ type Downloader struct {
 	r        *Receiver
 	l        logrus.FieldLogger
 	instance string
+	lmdbname string
 	last     snapshot.NameInfo
 	c        config.Config
 
@@ -82,8 +83,10 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	t0 := time.Now()
 
 	// Fetch the blob from the storage
+	metricSnapshotsLoadCalls.Inc()
 	data, err := d.r.st.Load(ctx, ni.FullName)
 	if err != nil {
+		metricSnapshotsLoadFailed.WithLabelValues(d.lmdbname, d.instance).Inc()
 		return err
 	}
 	t1 := time.Now()

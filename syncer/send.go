@@ -198,12 +198,18 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	}
 	tCompressed := time.Now()
 
+	metricSnapshotsLoaded.WithLabelValues(s.name).Inc()
+	metricSnapshotsLastTimestamp.WithLabelValues(s.name).Set(float64(ts.UnixNano()) / 1e9)
+	metricSnapshotsLastSize.WithLabelValues(s.name).Set(float64(out.Len()))
+
 	// Send it to storage
 	name := snapshot.Name(s.name, s.instanceID(), s.generationID(), ts)
 	for i := 0; i < s.c.StorageRetryCount; i++ {
+		metricSnapshotsStoreCalls.Inc()
 		err = s.st.Store(ctx, name, out.Bytes())
 		if err != nil {
 			s.l.WithError(err).Warn("Store failed, retrying")
+			metricSnapshotsStoreFailed.WithLabelValues(s.name).Inc()
 			if err := utils.SleepContext(ctx, s.c.StorageRetryInterval); err != nil {
 				return -1, err
 			}
@@ -214,6 +220,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	}
 	if err != nil {
 		s.l.WithError(err).Warn("Store failed too many times, giving up")
+		metricSnapshotsStoreFailedPermenantly.WithLabelValues(s.name).Inc()
 		return -1, err
 	}
 	tStored := time.Now()

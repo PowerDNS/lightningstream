@@ -17,6 +17,7 @@ func New(st storage.Interface, c config.Config, dbname string, l logrus.FieldLog
 	r := &Receiver{
 		st:                     st,
 		c:                      c,
+		lmdbname:               dbname,
 		prefix:                 dbname + "__", // snapshot filename prefix
 		l:                      l.WithField("component", "receiver"),
 		ownInstance:            inst,
@@ -38,6 +39,7 @@ func New(st storage.Interface, c config.Config, dbname string, l logrus.FieldLog
 type Receiver struct {
 	st          storage.Interface
 	c           config.Config
+	lmdbname    string
 	prefix      string
 	l           logrus.FieldLogger
 	ownInstance string
@@ -87,8 +89,10 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 	prefix := r.prefix
 
 	// The result is ordered lexicographically
+	metricSnapshotsListCalls.Inc()
 	ls, err := st.List(ctx, prefix)
 	if err != nil {
+		metricSnapshotsListFailed.WithLabelValues(r.lmdbname).Inc()
 		return err
 	}
 	names := ls.Names()
@@ -130,12 +134,18 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 			continue
 		}
 
+		age := now.Sub(ni.Timestamp)
 		r.l.WithFields(logrus.Fields{
 			"instance":   inst,
 			"timestamp":  ni.TimestampString,
 			"generation": ni.GenerationID,
-			"age":        now.Sub(ni.Timestamp).Round(10 * time.Millisecond),
+			"age":        age.Round(10 * time.Millisecond),
 		}).Debug("New snapshot detected")
+
+		metricSnapshotsLastReceivedTimestamp.WithLabelValues(r.lmdbname, inst).
+			Set(float64(ni.Timestamp.UnixNano()) / 1e9)
+		metricSnapshotsLastReceivedAge.WithLabelValues(r.lmdbname, inst).
+			Observe(float64(age) / float64(time.Second))
 
 		d := r.getDownloader(ctx, inst)
 		d.NotifyNewSnapshot()
@@ -162,6 +172,7 @@ func (r *Receiver) getDownloader(ctx context.Context, instance string) *Download
 		}),
 		c:                 r.c,
 		instance:          instance,
+		lmdbname:          r.lmdbname,
 		last:              snapshot.NameInfo{},
 		newSnapshotSignal: make(chan struct{}, 1),
 	}
