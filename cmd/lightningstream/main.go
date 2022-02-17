@@ -6,6 +6,7 @@ import (
 	// Register storage backends
 	_ "powerdns.com/platform/lightningstream/storage/fs"
 	_ "powerdns.com/platform/lightningstream/storage/memory"
+	_ "powerdns.com/platform/lightningstream/storage/s3"
 )
 
 // version is overridden during the build with the go linker

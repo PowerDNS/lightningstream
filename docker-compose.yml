@@ -6,10 +6,22 @@ version: '2.4'
 volumes:
     lmdb:
         driver: local
-    snapshots:
+    minio:
         driver: local
+    #snapshots:
+    #    driver: local
 
 services:
+    minio:
+        # Default credentials: minioadmin / minioadmin
+        image: minio/minio  
+        ports:
+            - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}30:9000"
+            - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}31:9001"
+        command: server /data --console-address :9001
+        volumes:
+            - "minio:/data" 
+
     auth1:
         image: powerdns/pdns-auth-master
         environment:
@@ -52,8 +64,8 @@ services:
             instance: 1  # used in config file
         volumes:
             - "lmdb:/lmdb" 
-            - "snapshots:/snapshots" 
             - "./docker/pdns/lightningstream.yaml:/lightningstream.yaml:ro"
+            #- "snapshots:/snapshots" 
         working_dir: /
         user: "953"  # pdns
         command: --minimum-pid 50 sync
@@ -66,8 +78,8 @@ services:
             instance: 2  # used in config file
         volumes:
             - "lmdb:/lmdb" 
-            - "snapshots:/snapshots" 
             - "./docker/pdns/lightningstream.yaml:/lightningstream.yaml:ro"
+            #- "snapshots:/snapshots" 
         working_dir: /
         user: "953"  # pdns
         command: --minimum-pid 50 sync

@@ -25,7 +25,7 @@ Easy cross compiling is not supported, because the LMDB bindings require CGo.
 ## Example in Docker Compose
 
 This repo includes an example of syncing the PowerDNS Authoritative Nameserver LMDB. It runs two DNS
-servers with each their own syncer, syncing to a common volume.
+servers with each their own syncer, syncing to a bucket in a Minio server.
 
 The LightningStream config used can be found in `docker/pdns/lightningstream.yaml`.
 
@@ -71,4 +71,8 @@ To view a dump of the LMDB contents:
 
     docker/pdns/dump-lmdb -i 1
     docker/pdns/dump-lmdb -i 2
+
+You can browse the snapshots in Minio at <http://localhost:4731/buckets/lightningstream/browse>
+(login with minioadmin / minioadmin).
+
 

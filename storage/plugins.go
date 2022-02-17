@@ -14,6 +14,18 @@ type Blob struct {
 
 type BlobList []Blob
 
+func (bl BlobList) Len() int {
+	return len(bl)
+}
+
+func (bl BlobList) Less(i, j int) bool {
+	return bl[i].Name < bl[j].Name
+}
+
+func (bl BlobList) Swap(i, j int) {
+	bl[i], bl[j] = bl[j], bl[i]
+}
+
 func (bl BlobList) Names() []string {
 	var names []string
 	for _, b := range bl {

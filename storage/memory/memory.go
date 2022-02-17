@@ -31,9 +31,7 @@ func (b *Backend) List(ctx context.Context, prefix string) (storage.BlobList, er
 	}
 	b.mu.Unlock()
 
-	sort.Slice(blobs, func(i, j int) bool {
-		return blobs[i].Name < blobs[j].Name
-	})
+	sort.Sort(blobs)
 	return blobs, nil
 }
 

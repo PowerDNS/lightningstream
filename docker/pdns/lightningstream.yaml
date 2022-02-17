@@ -13,5 +13,13 @@ lmdbs:
       create: true
 
 storage:
-  type: fs
-  root_path: /snapshots
+  #type: fs
+  #root_path: /snapshots
+  type: s3
+  options:
+    access_key: minioadmin
+    secret_key: minioadmin
+    region: us-east-1
+    bucket: lightningstream
+    endpoint_url: http://minio:9000
+
