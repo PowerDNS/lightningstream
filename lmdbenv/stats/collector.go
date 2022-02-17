@@ -41,6 +41,8 @@ func NewCollector(withSmaps bool) *Collector {
 }
 
 func (c *Collector) AddTarget(name string, dbnames []string, env *lmdb.Env) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.targets[name] = Target{
 		Name:    name,
 		DBNames: dbnames,
@@ -59,6 +61,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- envMapSizeDesc
 	ch <- envCurrentReadersDesc
 	ch <- envMaxReadersDesc
+	ch <- envLastTxnID
 	ch <- envFileSizeDesc
 	ch <- statUsageBytesDesc
 	ch <- statTotalUsageBytesDesc
@@ -100,6 +103,12 @@ func (c *Collector) doCollect(ch chan<- prometheus.Metric, t Target) {
 			envCurrentReadersDesc,
 			prometheus.GaugeValue,
 			float64(info.NumReaders),
+			t.Name,
+		)
+		ch <- prometheus.MustNewConstMetric(
+			envLastTxnID,
+			prometheus.GaugeValue,
+			float64(info.LastTxnID),
 			t.Name,
 		)
 		ch <- prometheus.MustNewConstMetric(
@@ -271,6 +280,12 @@ var (
 	envMaxReadersDesc = prometheus.NewDesc(
 		"lmdb_env_readers_max",
 		"Maximum number of readers for LMDB database",
+		[]string{"lmdb"},
+		nil,
+	)
+	envLastTxnID = prometheus.NewDesc(
+		"lmdb_env_last_tnx_id",
+		"Last write transaction ID of LMDB database",
 		[]string{"lmdb"},
 		nil,
 	)
