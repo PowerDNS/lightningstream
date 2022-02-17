@@ -10,7 +10,7 @@ func EmptyPut(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 	if err := txn.Drop(dbi, false); err != nil { // empty without deleting the DBI
 		return errors.Wrap(err, "empty dbi")
 	}
-	if err := Put(txn, dbi, it); err != nil {
+	if err := doPut(txn, dbi, it, true); err != nil {
 		return errors.Wrap(err, "put")
 	}
 	return nil
