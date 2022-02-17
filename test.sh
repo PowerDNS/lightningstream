@@ -11,7 +11,7 @@ fi
 
 set -ex
 
-go test "$@" ./...
+go test -count=1 "$@" ./...
 
 # Configure linters in .golangci.yml
 GOBIN="$PWD/bin" go install github.com/golangci/golangci-lint/cmd/golangci-lint
