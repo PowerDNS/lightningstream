@@ -62,6 +62,8 @@ services:
             context: .
         environment:
             instance: 1  # used in config file
+        ports:
+            - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}91:8500"
         volumes:
             - "lmdb:/lmdb" 
             - "./docker/pdns/lightningstream.yaml:/lightningstream.yaml:ro"
@@ -76,6 +78,8 @@ services:
             context: .
         environment:
             instance: 2  # used in config file
+        ports:
+            - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}92:8500"
         volumes:
             - "lmdb:/lmdb" 
             - "./docker/pdns/lightningstream.yaml:/lightningstream.yaml:ro"

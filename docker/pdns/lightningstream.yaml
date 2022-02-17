@@ -23,3 +23,6 @@ storage:
     bucket: lightningstream
     endpoint_url: http://minio:9000
 
+http:
+  address: ":8500"
+

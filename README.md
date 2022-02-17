@@ -48,8 +48,8 @@ This should show output like:
 lightningstream_auth1_1   /run.sh                          Up      127.0.0.1:4751->53/tcp, 127.0.0.1:4751->53/udp, 127.0.0.1:4781->8081/tcp
 lightningstream_auth2_1   /run.sh                          Up      127.0.0.1:4752->53/tcp, 127.0.0.1:4752->53/udp, 127.0.0.1:4782->8081/tcp
 lightningstream_minio_1   /usr/bin/docker-entrypoint ...   Up      127.0.0.1:4730->9000/tcp, 127.0.0.1:4731->9001/tcp
-lightningstream_sync1_1   /usr/local/bin/lightningst ...   Up
-lightningstream_sync2_1   /usr/local/bin/lightningst ...   Up
+lightningstream_sync1_1   /usr/local/bin/lightningst ...   Up      127.0.0.1:4791->8500/tcp
+lightningstream_sync2_1   /usr/local/bin/lightningst ...   Up      127.0.0.1:4792->8500/tcp
 ```
 
 Open one terminal with all the logs:
