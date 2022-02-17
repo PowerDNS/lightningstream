@@ -171,9 +171,32 @@ func (c Config) Check() error {
 	return nil
 }
 
+func (c Config) Clone() Config {
+	y, err := yaml.Marshal(c)
+	if err != nil {
+		logrus.Panicf("YAML marshal of config failed: %v", err) // Should never happen
+	}
+	var newConfig Config
+	err = yaml.Unmarshal(y, &newConfig)
+	if err != nil {
+		logrus.Panicf("YAML unmarshal of config failed: %v", err) // Should never happen
+	}
+	return newConfig
+}
+
 // String returns the config as a YAML string with passwords masked.
 func (c Config) String() string {
-	y, err := yaml.Marshal(c)
+	cc := c.Clone()
+	if cc.Storage.Options != nil {
+		opt := cc.Storage.Options
+		for _, key := range []string{"secret_key", "secret", "password"} {
+			iv := opt[key]
+			if v, ok := iv.(string); ok && v != "" {
+				opt[key] = "***"
+			}
+		}
+	}
+	y, err := yaml.Marshal(cc)
 	if err != nil {
 		logrus.Panicf("YAML marshal of config failed: %v", err) // Should never happen
 	}
