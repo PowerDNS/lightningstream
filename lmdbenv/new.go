@@ -3,6 +3,7 @@ package lmdbenv
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
@@ -75,8 +76,12 @@ func NewWithOptions(path string, opt Options) (*lmdb.Env, error) {
 		opt.EnvFlags |= lmdb.NoSubdir
 	}
 
-	if createIsSet && opt.EnvFlags&lmdb.NoSubdir == 0 {
-		err = os.MkdirAll(path, opt.DirMask)
+	if createIsSet {
+		dirPath := path
+		if opt.EnvFlags&lmdb.NoSubdir > 0 {
+			dirPath, _ = filepath.Split(dirPath)
+		}
+		err := os.MkdirAll(dirPath, opt.DirMask)
 		if err != nil {
 			return nil, fmt.Errorf("lmdb env: mkdir: %v", err)
 		}
