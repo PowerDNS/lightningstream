@@ -3,8 +3,6 @@ package strategy
 import "testing"
 
 func Test_cmpIntegerLittleEndian(t *testing.T) {
-	type args struct {
-	}
 	tests := []struct {
 		name string
 		a    []byte

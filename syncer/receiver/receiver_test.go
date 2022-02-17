@@ -40,27 +40,24 @@ func TestReceiver(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// No snapshots yet
-	inst, s := r.Next()
+	inst, _ := r.Next()
 	assert.Equal(t, "", inst)
 
 	// Add a snapshot
 	err := st.Store(ctx, snapshot.Name("test", "other", "G-0", ts), emptySnapshot())
 	assert.NoError(t, err)
 	time.Sleep(1100 * time.Millisecond)
-	inst, s = r.Next()
+	inst, _ = r.Next()
 	assert.Equal(t, "other", inst)
 
 	// Add another snapshot for the same instance
 	err = st.Store(ctx, snapshot.Name("test", "other", "G-0", ts.Add(time.Second)), emptySnapshot())
 	assert.NoError(t, err)
 	time.Sleep(1100 * time.Millisecond)
-	inst, s = r.Next()
+	inst, _ = r.Next()
 	assert.Equal(t, "other", inst)
 
 	// No snapshots anymore
-	inst, s = r.Next()
+	inst, _ = r.Next()
 	assert.Equal(t, "", inst)
-
-	_ = s
-
 }
