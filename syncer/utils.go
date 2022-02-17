@@ -193,3 +193,8 @@ func (s *Syncer) startStatsLogger(ctx context.Context, env *lmdb.Env) {
 	}()
 
 }
+
+func (s *Syncer) registerCollector(env *lmdb.Env) {
+	lmdbCollector.EnableSmaps(s.c.LMDBScrapeSmaps)
+	lmdbCollector.AddTarget(s.name, nil, env)
+}

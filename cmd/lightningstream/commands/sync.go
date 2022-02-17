@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"powerdns.com/platform/lightningstream/status"
 
 	"powerdns.com/platform/lightningstream/storage"
 	"powerdns.com/platform/lightningstream/syncer"
@@ -45,6 +46,8 @@ func runSync() error {
 			}
 		}(name)
 	}
+
+	status.StartHTTPServer(conf)
 
 	logrus.Info("All syncers running")
 	wg.Wait()
