@@ -216,6 +216,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			continue
 		}
 		s.l.Debug("Store succeeded")
+		metricSnapshotsStoreBytes.Add(float64(out.Len()))
 		break
 	}
 	if err != nil {

@@ -49,6 +49,12 @@ var (
 			Help: "Number of snapshot store calls",
 		},
 	)
+	metricSnapshotsStoreBytes = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "lightningstream_syncer_snapshots_store_bytes_total",
+			Help: "Number of bytes stored successfully",
+		},
+	)
 )
 
 func init() {
@@ -61,4 +67,5 @@ func init() {
 	prometheus.MustRegister(metricSnapshotsStoreFailed)
 	prometheus.MustRegister(metricSnapshotsStoreFailedPermenantly)
 	prometheus.MustRegister(metricSnapshotsStoreCalls)
+	prometheus.MustRegister(metricSnapshotsStoreBytes)
 }

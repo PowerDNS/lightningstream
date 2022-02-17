@@ -89,6 +89,7 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 		metricSnapshotsLoadFailed.WithLabelValues(d.lmdbname, d.instance).Inc()
 		return err
 	}
+	metricSnapshotsLoadBytes.Add(float64(len(data)))
 	t1 := time.Now()
 
 	// TODO: Distinguish between storage load errors and unpack errors

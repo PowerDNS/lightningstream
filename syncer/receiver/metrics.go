@@ -57,6 +57,12 @@ var (
 		},
 		[]string{"lmdb"},
 	)
+	metricSnapshotsLoadBytes = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "lightningstream_syncer_snapshots_load_bytes_total",
+			Help: "Number of bytes downloaded successfully",
+		},
+	)
 )
 
 func init() {
@@ -66,4 +72,5 @@ func init() {
 	prometheus.MustRegister(metricSnapshotsListCalls)
 	prometheus.MustRegister(metricSnapshotsLoadFailed)
 	prometheus.MustRegister(metricSnapshotsListFailed)
+	prometheus.MustRegister(metricSnapshotsLoadBytes)
 }
