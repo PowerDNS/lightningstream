@@ -24,6 +24,7 @@ func (s *Syncer) Send(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	s.startStatsLogger(ctx, env)
 	defer s.closeEnv(env)
 	return s.sendLoop(ctx, env)
 }

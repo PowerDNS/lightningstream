@@ -8,9 +8,11 @@ import (
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"powerdns.com/platform/lightningstream/lmdbenv"
 )
 
 // Log logs all LMDB statistics once using logrus
+// If dbnames is nil, all databases are logged.
 func Log(env *lmdb.Env, dbnames []string, withSmaps bool, log logrus.FieldLogger) {
 	if log == nil {
 		log = logrus.New()
@@ -44,6 +46,14 @@ func Log(env *lmdb.Env, dbnames []string, withSmaps bool, log logrus.FieldLogger
 
 		// Collect per database stat
 		err = env.View(func(txn *lmdb.Txn) error {
+			var err error
+			if dbnames == nil {
+				dbnames, err = lmdbenv.ReadDBINames(txn)
+				if err != nil {
+					return err
+				}
+			}
+
 			for _, dbname := range dbnames {
 				dbi, err := txn.OpenDBI(dbname, 0)
 				if err != nil {

@@ -2,15 +2,18 @@ package syncer
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/stats"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
@@ -163,4 +166,30 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	}
 
 	return dbiMsg, nil
+}
+
+func (s *Syncer) startStatsLogger(ctx context.Context, env *lmdb.Env) {
+	// Log LMDB stats every configured interval
+	interval := s.c.LMDBLogStatsInterval
+	if interval <= 0 {
+		s.l.Info("LMDB stats logging disabled")
+		return
+	}
+	s.l.WithField("interval", interval).Info("Enabled LMDB stats logging")
+	go func() {
+		logStatsTicker := time.NewTicker(interval)
+		defer logStatsTicker.Stop()
+		logStatsCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		for {
+			select {
+			case <-logStatsCtx.Done():
+				return
+			case <-logStatsTicker.C:
+				// Skip the meta db, not that interesting
+				stats.Log(env, nil, s.c.LMDBScrapeSmaps, s.l)
+			}
+		}
+	}()
+
 }

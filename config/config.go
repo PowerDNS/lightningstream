@@ -18,7 +18,7 @@ import (
 
 const (
 	// DefaultLMDBLogStatsInterval is the default interval for logging LMDB stats
-	DefaultLMDBLogStatsInterval = time.Minute
+	DefaultLMDBLogStatsInterval = 30 * time.Minute
 
 	// DefaultLMDBPollInterval is the minimum time between checking for new LMDB
 	// transactions. The check itself is fast, but this also serves to rate limit
@@ -53,6 +53,9 @@ type Config struct {
 	// with shadow databases when schema_tracks_changes is false.
 	LMDBPollInterval time.Duration `yaml:"lmdb_poll_interval"`
 
+	// LMDBLogStatsInterval is the interval to log LMDB stats. Set to 0 to disable.
+	LMDBLogStatsInterval time.Duration `yaml:"lmdb_log_stats_interval"`
+
 	// StoragePollInterval is the minimum time between polling the storage backend
 	// for new snapshots. This can be set quite low, but keep in mind that loading
 	// a new snapshot can also trigger writing a new snapshot when
@@ -66,6 +69,9 @@ type Config struct {
 	// StorageRetryCount is the number of times to retry a storage operation
 	// after failure, before giving up.
 	StorageRetryCount int `yaml:"storage_retry_count"`
+
+	// LMDBScrapeSmaps enabled the scraping of /proc/smaps for LMDB stats
+	LMDBScrapeSmaps bool `yaml:"lmdb_scrape_smaps"`
 
 	// Set to current version by main
 	Version string `yaml:"-"`
@@ -198,7 +204,9 @@ func Default() Config {
 	return Config{
 		Log: logger.DefaultConfig,
 
+		LMDBScrapeSmaps:      true,
 		LMDBPollInterval:     DefaultLMDBPollInterval,
+		LMDBLogStatsInterval: DefaultLMDBLogStatsInterval,
 		StoragePollInterval:  DefaultStoragePollInterval,
 		StorageRetryInterval: DefaultStorageRetryInterval,
 		StorageRetryCount:    DefaultStorageRetryCount,

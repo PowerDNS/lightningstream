@@ -22,6 +22,8 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	}
 	defer s.closeEnv(env)
 
+	s.startStatsLogger(ctx, env)
+
 	r := receiver.New(
 		s.st,
 		s.c,

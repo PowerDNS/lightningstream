@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
@@ -262,7 +261,11 @@ var (
 )
 
 func lmdbFullPath(path string) (string, error) {
-	if !strings.HasSuffix(path, ".mdb") {
+	st, err := os.Stat(path)
+	if err != nil {
+		return "", errors.Wrap(err, "stat")
+	}
+	if st.IsDir() {
 		path = filepath.Join(path, "data.mdb")
 	}
 	return filepath.Abs(path)
