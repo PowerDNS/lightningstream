@@ -148,8 +148,10 @@ func (b *Backend) doList(ctx context.Context, prefix string) (storage.BlobList, 
 	})
 
 	for paginator.HasMorePages() {
+		metricCalls.WithLabelValues("list").Inc()
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
+			metricCallErrors.WithLabelValues("list").Inc()
 			return nil, err
 		}
 		for _, obj := range page.Contents {
@@ -176,11 +178,13 @@ func (b *Backend) doList(ctx context.Context, prefix string) (storage.BlobList, 
 func (b *Backend) Load(ctx context.Context, name string) ([]byte, error) {
 	buf := manager.NewWriteAtBuffer(nil)
 	downloader := manager.NewDownloader(b.client)
+	metricCalls.WithLabelValues("load").Inc()
 	_, err := downloader.Download(ctx, buf, &s3.GetObjectInput{
 		Bucket: aws.String(b.opt.Bucket),
 		Key:    aws.String(name),
 	})
 	if err != nil {
+		metricCallErrors.WithLabelValues("load").Inc()
 		if isResponseError(err, http.StatusNotFound) {
 			return nil, os.ErrNotExist
 		}
@@ -202,12 +206,16 @@ func (b *Backend) Store(ctx context.Context, name string, data []byte) error {
 }
 
 func (b *Backend) doStore(ctx context.Context, name string, data []byte) error {
+	metricCalls.WithLabelValues("store").Inc()
 	uploader := manager.NewUploader(b.client)
 	_, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(b.opt.Bucket),
 		Key:    aws.String(name),
 		Body:   bytes.NewReader(data),
 	})
+	if err != nil {
+		metricCallErrors.WithLabelValues("store").Inc()
+	}
 	return err
 }
 
@@ -270,10 +278,12 @@ func New(st config.Storage) (*Backend, error) {
 
 	if opt.CreateBucket {
 		// Create bucket if it does not exist
+		metricCalls.WithLabelValues("create-bucket").Inc()
 		_, err = client.CreateBucket(ctx, &s3.CreateBucketInput{
 			Bucket: aws.String(opt.Bucket),
 		})
 		if err != nil && !isResponseError(err, http.StatusConflict) {
+			metricCallErrors.WithLabelValues("create-bucket").Inc()
 			return nil, err
 		}
 	}
