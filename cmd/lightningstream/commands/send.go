@@ -2,10 +2,10 @@ package commands
 
 import (
 	"context"
-	"sync"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"powerdns.com/platform/lightningstream/status"
 
 	"powerdns.com/platform/lightningstream/storage"
@@ -26,32 +26,31 @@ func runSend() error {
 	}
 	logrus.WithField("storage_type", conf.Storage.Type).Info("Storage backend initialised")
 
-	var wg sync.WaitGroup
+	eg, ctx := errgroup.WithContext(ctx)
 	for name, lc := range conf.LMDBs {
 		s, err := syncer.New(name, st, conf, lc)
 		if err != nil {
 			return err
 		}
 
-		wg.Add(1)
-		go func(name string) {
-			defer wg.Done()
+		name := name
+		eg.Go(func() error {
 			err := s.Send(ctx)
 			if err != nil {
 				if err == context.Canceled {
 					logrus.WithField("db", name).Error("Send cancelled")
-					return
+					return err
 				}
 				logrus.WithError(err).WithField("db", name).Error("Send failed")
 			}
-		}(name)
+			return err
+		})
 	}
 
 	status.StartHTTPServer(conf)
 
 	logrus.Info("All senders running")
-	wg.Wait()
-	return nil
+	return eg.Wait()
 }
 
 var sendCmd = &cobra.Command{
