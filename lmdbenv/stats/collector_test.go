@@ -24,7 +24,8 @@ func TestCollector(t *testing.T) {
 			return err
 		}
 
-		c := NewCollector(env, names, true)
+		c := NewCollector(true)
+		c.AddTarget("test", names, env)
 		ch := make(chan prometheus.Metric, 1000) // buffer large enough for Collect
 		c.Collect(ch)
 		close(ch)
