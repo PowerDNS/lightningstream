@@ -2,19 +2,21 @@ package s3
 
 import (
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/storage/tester"
 )
 
-// TestConfigPathEnv is the path to a JSON file with the Options
+// TestConfigPathEnv is the path to a YAML file with the Options
 // with an S3 bucket configuration that can be used for testing.
 // This is intentionally different from the normal YAML config, to prevent mistakes.
 // The bucket will be emptied before every run!!!
@@ -35,7 +37,7 @@ import (
 //
 const TestConfigPathEnv = "LIGHTNINGSTREAM_TEST_S3_CONFIG"
 
-func TestBackend(t *testing.T) {
+func getBackend(ctx context.Context, t *testing.T) (b *Backend) {
 	cfgPath := os.Getenv(TestConfigPathEnv)
 	if cfgPath == "" {
 		t.Skipf("S3 tests skipped, set the %s env var to run these", TestConfigPathEnv)
@@ -43,24 +45,22 @@ func TestBackend(t *testing.T) {
 	}
 
 	cfgContents, err := ioutil.ReadFile(cfgPath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var d map[string]interface{}
-	err = json.Unmarshal(cfgContents, &d)
-	assert.NoError(t, err)
+	err = yaml.Unmarshal(cfgContents, &d)
+	require.NoError(t, err)
 
 	cfg := config.Storage{
 		Type:    "s3",
 		Options: d,
 	}
 
-	b, err := New(cfg)
-	assert.NoError(t, err)
-
-	ctx := context.TODO()
+	b, err = New(cfg)
+	require.NoError(t, err)
 
 	cleanup := func() {
-		blobs, err := b.List(ctx, "")
+		blobs, err := b.doList(ctx, "")
 		if err != nil {
 			t.Logf("Blobs list error: %s", err)
 			return
@@ -74,9 +74,38 @@ func TestBackend(t *testing.T) {
 				t.Logf("Object delete error: %s", err)
 			}
 		}
+		// This one is not returned by the List command
+		_, _ = b.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(b.opt.Bucket),
+			Key:    aws.String(UpdateMarkerFilename),
+		})
 	}
 	t.Cleanup(cleanup)
 	cleanup()
 
+	return b
+}
+
+func TestBackend(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	t.Cleanup(cancel)
+
+	b := getBackend(ctx, t)
 	tester.DoBackendTests(t, b)
+	assert.Equal(t, "", b.lastMarker)
+}
+
+func TestBackend_marker(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	t.Cleanup(cancel)
+
+	b := getBackend(ctx, t)
+	b.opt.UseUpdateMarker = true
+
+	tester.DoBackendTests(t, b)
+	assert.Equal(t, "bar-1", b.lastMarker)
+
+	data, err := b.Load(ctx, UpdateMarkerFilename)
+	assert.NoError(t, err)
+	assert.Equal(t, "bar-1", string(data))
 }

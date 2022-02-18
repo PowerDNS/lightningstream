@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"powerdns.com/platform/lightningstream/config"
 )
@@ -32,6 +33,16 @@ func (bl BlobList) Names() []string {
 		names = append(names, b.Name)
 	}
 	return names
+}
+
+func (bl BlobList) WithPrefix(prefix string) (blobs BlobList) {
+	for _, b := range bl {
+		if !strings.HasPrefix(b.Name, prefix) {
+			continue
+		}
+		blobs = append(blobs, b)
+	}
+	return blobs
 }
 
 // Interface defines the interface storage plugins need to implement
