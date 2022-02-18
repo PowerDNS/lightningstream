@@ -149,6 +149,7 @@ func (b *Backend) doList(ctx context.Context, prefix string) (storage.BlobList, 
 
 	for paginator.HasMorePages() {
 		metricCalls.WithLabelValues("list").Inc()
+		metricLastCallTimestamp.WithLabelValues("list").SetToCurrentTime()
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
 			metricCallErrors.WithLabelValues("list").Inc()
@@ -179,6 +180,7 @@ func (b *Backend) Load(ctx context.Context, name string) ([]byte, error) {
 	buf := manager.NewWriteAtBuffer(nil)
 	downloader := manager.NewDownloader(b.client)
 	metricCalls.WithLabelValues("load").Inc()
+	metricLastCallTimestamp.WithLabelValues("load").SetToCurrentTime()
 	_, err := downloader.Download(ctx, buf, &s3.GetObjectInput{
 		Bucket: aws.String(b.opt.Bucket),
 		Key:    aws.String(name),
@@ -207,6 +209,7 @@ func (b *Backend) Store(ctx context.Context, name string, data []byte) error {
 
 func (b *Backend) doStore(ctx context.Context, name string, data []byte) error {
 	metricCalls.WithLabelValues("store").Inc()
+	metricLastCallTimestamp.WithLabelValues("store").SetToCurrentTime()
 	uploader := manager.NewUploader(b.client)
 	_, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(b.opt.Bucket),
@@ -279,6 +282,7 @@ func New(st config.Storage) (*Backend, error) {
 	if opt.CreateBucket {
 		// Create bucket if it does not exist
 		metricCalls.WithLabelValues("create-bucket").Inc()
+		metricLastCallTimestamp.WithLabelValues("create-bucket").SetToCurrentTime()
 		_, err = client.CreateBucket(ctx, &s3.CreateBucketInput{
 			Bucket: aws.String(opt.Bucket),
 		})
