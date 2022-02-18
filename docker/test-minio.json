@@ -4,5 +4,6 @@
   "region": "us-east-1",
   "bucket": "test-lightningstream",
   "endpoint_url": "http://127.0.0.1:4730",
-  "init_timeout": "2s"
+  "init_timeout": "2s",
+  "create_bucket": true
 }

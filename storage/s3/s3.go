@@ -46,6 +46,8 @@ type Options struct {
 	// Region defaults to "us-east-1", which also works for Minio
 	Region string `yaml:"region"`
 	Bucket string `yaml:"bucket"`
+	// CreateBucket tells us to try to create the bucket
+	CreateBucket bool `yaml:"create_bucket"`
 
 	// EndpointURL can be set to something like "http://localhost:9000" when using Minio
 	// instead of AWS S3.
@@ -266,15 +268,14 @@ func New(st config.Storage) (*Backend, error) {
 
 	client := s3.NewFromConfig(cfg)
 
-	// Create bucket if it does not exist
-	_, err = client.CreateBucket(ctx, &s3.CreateBucketInput{
-		Bucket: aws.String(opt.Bucket),
-	})
-	if err != nil &&
-		!isResponseError(err, http.StatusConflict) &&
-		!isResponseError(err, http.StatusForbidden) {
-
-		return nil, err
+	if opt.CreateBucket {
+		// Create bucket if it does not exist
+		_, err = client.CreateBucket(ctx, &s3.CreateBucketInput{
+			Bucket: aws.String(opt.Bucket),
+		})
+		if err != nil && !isResponseError(err, http.StatusConflict) {
+			return nil, err
+		}
 	}
 
 	b := &Backend{
