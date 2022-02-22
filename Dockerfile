@@ -3,7 +3,7 @@ FROM golang:1.17-buster
 ENV GOBIN=/usr/local/bin
 ARG GOPROXY=
 RUN mkdir /src
-ADD go.mod go.sum /src
+ADD go.mod go.sum /src/
 WORKDIR /src
 RUN echo "GOPROXY=$GOPROXY"; go mod download
 ADD . /src
