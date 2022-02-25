@@ -14,20 +14,20 @@ func New(name string, st storage.Interface, c config.Config, lc config.LMDB) (*S
 		st:         st,
 		c:          c,
 		lc:         lc,
-		l:          logrus.WithField("db", name),
 		shadow:     true,
 		generation: 0,
 	}
 	if s.instanceID() == "" {
 		return nil, fmt.Errorf("instance name could not be determined, please provide one with --instance")
 	}
+	s.l = logrus.WithField("db", name).WithField("instance", s.instanceID())
 	if !lc.SchemaTracksChanges {
 		s.l.Info("This LMDB has schema_tracks_changes disabled and will use " +
 			"shadow databases for version tracking.")
 	} else {
 		s.l.Info("schema_tracks_changes enabled")
 	}
-	s.l.WithField("instance", s.instanceID()).Info("Initialised syncer")
+	s.l.Info("Initialised syncer")
 	return s, nil
 }
 

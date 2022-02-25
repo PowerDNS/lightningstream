@@ -1,6 +1,8 @@
 package snapshot
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -76,4 +78,16 @@ type NameInfo struct {
 	GenerationID    string
 	TimestampString string
 	Timestamp       time.Time
+}
+
+// ShortHash returns a short hash of name info to visually distinguish snapshots in logs
+func (ni NameInfo) ShortHash() string {
+	return ShortHash(ni.InstanceID, ni.TimestampString)
+}
+
+// ShortHash returns a short hash of name info to visually distinguish snapshots in logs
+func ShortHash(instance, timestamp string) string {
+	s := sha256.New()
+	_, _ = fmt.Fprintf(s, "%s-%s", instance, timestamp)
+	return hex.EncodeToString(s.Sum(nil))[:7]
 }

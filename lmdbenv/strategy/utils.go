@@ -144,3 +144,23 @@ func bytesToInt(b []byte) uint64 {
 		return 0 // TODO: better way?
 	}
 }
+
+// setNewVal updates the LMDB if the value has changed. If the new value is
+// empty, the key is removed instead.
+func setNewVal(txn *lmdb.Txn, dbi lmdb.DBI, key, oldVal, newVal []byte) error {
+	if len(newVal) == 0 {
+		err := txn.Del(dbi, key, nil)
+		if err != nil && !lmdb.IsNotFound(err) {
+			return errors.Wrap(err, "del")
+		}
+		return nil
+	}
+	if bytes.Equal(newVal, oldVal) {
+		return nil
+	}
+	err := txn.Put(dbi, key, newVal, 0)
+	if err != nil {
+		return errors.Wrap(err, "put")
+	}
+	return nil
+}

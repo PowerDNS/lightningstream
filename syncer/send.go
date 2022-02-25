@@ -1,8 +1,6 @@
 package syncer
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"strings"
@@ -177,36 +175,21 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	}
 	msg.Meta.LmdbTxnID = txnID
 
-	// Snapshot complete, serialize it
-	pb, err := msg.Marshal()
+	out, dds, err := snapshot.DumpData(msg)
 	if err != nil {
 		return -1, err
 	}
-	tMarshaled := time.Now()
-
-	// Compress it
-	out := bytes.NewBuffer(make([]byte, 0, datasize.MB))
-	gw, err := gzip.NewWriterLevel(out, gzip.BestSpeed)
-	if err != nil {
-		return -1, err
-	}
-	if _, err = gw.Write(pb); err != nil {
-		return -1, err
-	}
-	if err = gw.Close(); err != nil {
-		return -1, err
-	}
-	tCompressed := time.Now()
+	tDumpedData := time.Now()
 
 	metricSnapshotsLoaded.WithLabelValues(s.name).Inc()
 	metricSnapshotsLastTimestamp.WithLabelValues(s.name).Set(float64(ts.UnixNano()) / 1e9)
-	metricSnapshotsLastSize.WithLabelValues(s.name).Set(float64(out.Len()))
+	metricSnapshotsLastSize.WithLabelValues(s.name).Set(float64(len(out)))
 
 	// Send it to storage
 	name := snapshot.Name(s.name, s.instanceID(), s.generationID(), ts)
 	for i := 0; i < s.c.StorageRetryCount; i++ {
 		metricSnapshotsStoreCalls.Inc()
-		err = s.st.Store(ctx, name, out.Bytes())
+		err = s.st.Store(ctx, name, out)
 		if err != nil {
 			s.l.WithError(err).Warn("Store failed, retrying")
 			metricSnapshotsStoreFailed.WithLabelValues(s.name).Inc()
@@ -216,7 +199,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			continue
 		}
 		s.l.Debug("Store succeeded")
-		metricSnapshotsStoreBytes.Add(float64(out.Len()))
+		metricSnapshotsStoreBytes.Add(float64(len(out)))
 		break
 	}
 	if err != nil {
@@ -230,11 +213,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 		"time_acquire":     utils.TimeDiff(tTxnAcquire, t0),
 		"time_copy_shadow": tShadow.Sub(tTxnAcquire).Round(time.Millisecond),
 		"time_dump":        tDumped.Sub(tShadow).Round(time.Millisecond),
-		"time_marshal":     tMarshaled.Sub(tDumped).Round(time.Millisecond),
-		"time_compress":    tCompressed.Sub(tMarshaled).Round(time.Millisecond),
-		"time_store":       tStored.Sub(tCompressed).Round(time.Millisecond),
+		"time_marshal":     dds.TMarshaled.Round(time.Millisecond),
+		"time_compress":    dds.TCompressed.Round(time.Millisecond),
+		"time_store":       tStored.Sub(tDumpedData).Round(time.Millisecond),
 		"time_total":       tStored.Sub(t0).Round(time.Millisecond),
-		"snapshot_size":    datasize.ByteSize(out.Len()).HumanReadable(),
+		"snapshot_size":    datasize.ByteSize(len(out)).HumanReadable(),
 		"snapshot_name":    name,
 		"txnID":            txnID,
 	}).Info("Stored snapshot")

@@ -46,6 +46,8 @@ func (it *TimestampedIterator) Next() (key []byte, err error) {
 func (it *TimestampedIterator) Merge(oldval []byte) (val []byte, err error) {
 	entry := it.Entries[it.current]
 	entryVal := entry.Value
+	//logrus.Debug("key = %s | old = %s | new = %s",
+	//	string(entry.Key), string(oldval), string(entryVal))
 	if len(oldval) == 0 {
 		// Not in destination db, add with timestamp
 		return it.addTS(entryVal, entry.TimestampNano, false)

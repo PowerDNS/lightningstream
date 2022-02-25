@@ -1,10 +1,7 @@
 package receiver
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
-	"io"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -94,23 +91,8 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 
 	// TODO: Distinguish between storage load errors and unpack errors
 
-	// Uncompress
-	dataBuffer := bytes.NewBuffer(data)
-	g, err := gzip.NewReader(dataBuffer)
+	msg, err := snapshot.LoadData(data)
 	if err != nil {
-		return err
-	}
-	pbData, err := io.ReadAll(g)
-	if err != nil {
-		return err
-	}
-	if err := g.Close(); err != nil {
-		return err
-	}
-
-	// Load protobuf
-	msg := new(snapshot.Snapshot)
-	if err := msg.Unmarshal(pbData); err != nil {
 		return err
 	}
 
@@ -122,8 +104,9 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 
 	t2 := time.Now()
 	d.l.WithFields(logrus.Fields{
-		"timestamp":         ni.TimestampString,
-		"generation":        ni.GenerationID,
+		"timestamp": ni.TimestampString,
+		//"generation":        ni.GenerationID,
+		"shorthash":         ni.ShortHash(),
 		"time_load_storage": utils.TimeDiff(t1, t0),
 		"time_load_total":   utils.TimeDiff(t2, t0),
 	}).Info("Snapshot downloaded")

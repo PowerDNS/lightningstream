@@ -32,10 +32,6 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		s.l,
 		s.instanceID(),
 	)
-	go func() {
-		err := r.Run(ctx)
-		s.l.WithError(err).Info("Receiver exited")
-	}()
 
 	return s.syncLoop(ctx, env, r)
 }
@@ -50,7 +46,101 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	}
 	lastTxnID := info.LastTxnID
 	warnedEmpty := false
+
+	// Wait for an initial snapshot listing
 	for {
+		err := r.RunOnce(ctx, true) // including own snapshots, only during startup
+		if err == nil {
+			break
+		}
+		s.l.WithError(err).Info("Waiting for initial receiver listing")
+		time.Sleep(time.Second) // TODO: Configurable?
+	}
+	hasSnapshots := r.HasSnapshots()
+	hasData := lastTxnID > 0
+
+	if hasData && !s.lc.SchemaTracksChanges {
+		// Sync to shadow using a time in the past to not overwrite newer data.
+		// At least is allows us to save newer entries that were added
+		// while the syncer was not running. it will not save updated entries.
+		s.l.Info("Syncing main to shadow, in case data was changed before start")
+		err := env.Update(func(txn *lmdb.Txn) error {
+			// TODO: use const
+			past := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+			pastNano := uint64(past.UnixNano())
+			return s.mainToShadow(ctx, txn, pastNano)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	// Store a snapshot of current data if there are no snapshots yet
+	if hasData && !hasSnapshots {
+		s.l.Info("Performing initial snapshot, because none exists yet")
+		actualTxnID, err := s.SendOnce(ctx, env)
+		if err != nil {
+			return err
+		}
+		lastTxnID = actualTxnID
+	} else {
+		s.l.Debug("Not performing a snapshot of current data before sync " +
+			"(empty database or some snapshot already exist)")
+	}
+
+	// Run receiver in background to get newer snapshot
+	go func() {
+		err := r.Run(ctx)
+		s.l.WithError(err).Info("Receiver exited")
+	}()
+
+	// There is no guarantee that the snapshots listed before have already been
+	// downloaded and are available for loading, but this is fine.
+	// The update loop will not cause any issues, even if a snapshot is generated.
+
+	for {
+		// Keep checking for new remote snapshots until we have local changes
+		for {
+			// Load all new snapshots that are available now
+			for {
+				instance, snap := r.Next()
+				if instance == "" {
+					break // no more remote snapshots
+				}
+				// New remote snapshot to load
+				actualTxnID, localChanged, err := s.LoadOnce(ctx, env, instance, snap, lastTxnID)
+				if err != nil {
+					return err
+				}
+				if !localChanged {
+					// Prevent triggering a local snapshot if there were no local
+					// changes by bumping the transaction ID we consider synced.
+					lastTxnID = actualTxnID
+				}
+			}
+
+			// Wait for change in local LMDB
+			info, err := env.Info()
+			if err != nil {
+				return err
+			}
+			logrus.WithFields(logrus.Fields{
+				"info.LastTxnID": info.LastTxnID,
+				"lastTxnID":      lastTxnID,
+			}).Trace("Checking if TxnID changed")
+			if info.LastTxnID > lastTxnID {
+				lastTxnID = info.LastTxnID
+				break // create new snapshot
+			}
+
+			// Sleep before next check for snapshots and local changes
+			s.l.Debug("Waiting for a new transaction")
+			if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
+				return err
+			}
+		}
+
+		s.l.WithField("LastTxnID", lastTxnID).Debug("LMDB changed locally, syncing")
 		// Store snapshot
 		// If lastTxnID == 0, the LMDB is empty, so we do not store anything
 		if lastTxnID > 0 {
@@ -64,43 +154,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			warnedEmpty = true
 		}
 
-		// Wait for change
-		s.l.Debug("Waiting for a new transaction")
-		for {
-			if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
-				return err
-			}
-
-			// Check for new remote snapshot to load
-			instance, snap := r.Next()
-			if instance != "" {
-				// New remote snapshot to load
-				actualTxnID, localChanged, err := s.LoadOnce(ctx, env, instance, snap, lastTxnID)
-				if err != nil {
-					return err
-				}
-				if !localChanged {
-					// Prevent triggering a local snapshot if there were no local
-					// changes by bumping the transaction ID we consider synced.
-					lastTxnID = actualTxnID
-				}
-			}
-
-			// Wait for change
-			info, err := env.Info()
-			if err != nil {
-				return err
-			}
-			logrus.WithFields(logrus.Fields{
-				"info.LastTxnID": info.LastTxnID,
-				"lastTxnID":      lastTxnID,
-			}).Trace("Checking if TxnID changed")
-			if info.LastTxnID > lastTxnID {
-				lastTxnID = info.LastTxnID
-				break // dump new version
-			}
-		}
-		s.l.WithField("LastTxnID", lastTxnID).Debug("LMDB changed locally, syncing")
 	}
 }
 
@@ -132,11 +185,11 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, s
 
 		// TODO: Would be useful to have the NameInfo here
 		l := s.l.WithFields(logrus.Fields{
-			"txnID":        txnID,
-			"lastTxnID":    lastTxnID,
-			"instance":     instance,
-			"timestamp":    snapshot.TimestampFromNano(snap.Meta.TimestampNano),
-			"localChanged": localChanged,
+			"txnID":             txnID,
+			"lastTxnID":         lastTxnID,
+			"snapshot_instance": instance,
+			"timestamp":         snapshot.TimestampFromNano(snap.Meta.TimestampNano),
+			"localChanged":      localChanged,
 		})
 		l.Debug("Started load")
 
@@ -181,7 +234,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, s
 			it := &TimestampedIterator{
 				Entries: dbiMsg.Entries,
 			}
-			err = strategy.Put(txn, targetDBI, it)
+			err = strategy.Update(txn, targetDBI, it)
 			if err != nil {
 				return err
 			}
@@ -224,16 +277,22 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, s
 		txnID = info.LastTxnID
 	}
 
-	s.l.WithFields(logrus.Fields{
+	ts := snapshot.TimestampFromNano(snap.Meta.TimestampNano)
+	l := s.l.WithFields(logrus.Fields{
+		"time_total":        utils.TimeDiff(tLoaded, t0),
+		"txnID":             txnID,
+		"snapshot_instance": instance,
+		"shorthash":         snapshot.ShortHash(snap.Meta.InstanceID, ts),
+		"timestamp":         ts,
+	})
+	l.Info("Loaded remote snapshot")
+
+	l.WithFields(logrus.Fields{
 		"time_acquire":      utils.TimeDiff(tTxnAcquire, t0),
 		"time_copy_shadow1": utils.TimeDiff(tShadow1End, tShadow1Start),
 		"time_copy_shadow2": utils.TimeDiff(tShadow2End, tShadow2Start),
 		"time_load":         utils.TimeDiff(tLoadEnd, tLoadStart),
-		"time_total":        utils.TimeDiff(tLoaded, t0),
-		"txnID":             txnID,
-		"instance":          instance,
-		"timestamp":         snapshot.TimestampFromNano(snap.Meta.TimestampNano),
-	}).Info("Loaded remote snapshot")
+	}).Debug("Loaded remote snapshot (with timings)")
 
 	return txnID, localChanged, nil
 }

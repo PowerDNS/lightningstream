@@ -54,9 +54,11 @@ type Receiver struct {
 	snapshotsByInstance   map[string]*snapshot.Snapshot
 	lastSeenByInstance    map[string]snapshot.NameInfo
 	downloadersByInstance map[string]*Downloader
+	hasSnapshots          bool
 }
 
 // Next returns the next remote snapshot to process if there is one
+// It is to be called by the Syncer.
 func (r *Receiver) Next() (instance string, snap *snapshot.Snapshot) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -71,9 +73,17 @@ func (r *Receiver) Next() (instance string, snap *snapshot.Snapshot) {
 	return instance, snap
 }
 
+// HasSnapshots indicates if there are any snapshots in the storage backend
+// for our prefix.
+func (r *Receiver) HasSnapshots() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.hasSnapshots
+}
+
 func (r *Receiver) Run(ctx context.Context) error {
 	for {
-		if err := r.RunOnce(ctx); err != nil {
+		if err := r.RunOnce(ctx, false); err != nil {
 			r.l.WithError(err).Error("Fetch error")
 		}
 
@@ -83,19 +93,21 @@ func (r *Receiver) Run(ctx context.Context) error {
 	}
 }
 
-func (r *Receiver) RunOnce(ctx context.Context) error {
+func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 	//r.l.Debug("RunOnce")
 	st := r.st
 	prefix := r.prefix
 
 	// The result is ordered lexicographically
-	metricSnapshotsListCalls.Inc()
 	ls, err := st.List(ctx, prefix)
+	metricSnapshotsListCalls.Inc()
 	if err != nil {
 		metricSnapshotsListFailed.WithLabelValues(r.lmdbname).Inc()
 		return err
 	}
 	names := ls.Names()
+
+	// Create a new map of the latest snapshots by instance to replace the old map
 	lastSeenByInstance := make(map[string]snapshot.NameInfo)
 	for _, name := range names {
 		if r.ignoredFilenames[name] {
@@ -109,13 +121,19 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 			r.ignoredFilenames[name] = true
 			continue
 		}
+		// Since the names are sorted alphabetically, this newer ones will
+		// always overwrite older ones.
 		lastSeenByInstance[ni.InstanceID] = ni
 	}
 
 	now := time.Now()
 
+	// It is safe to continue using the map after this, because the map is not
+	// mutated from this point on.
+	// This map is read by the Downloader.
 	r.mu.Lock()
 	r.lastSeenByInstance = lastSeenByInstance
+	r.hasSnapshots = len(lastSeenByInstance) > 0
 	r.mu.Unlock()
 
 	for inst, ni := range lastSeenByInstance {
@@ -126,20 +144,17 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 			continue // no change
 		}
 
-		if inst == r.ownInstance && lastNotified.FullName != "" {
-			// Own instance and already notified once.
-			// We only want to load our own snapshot once on startup, and ignore
-			// any further snapshots.
-			//r.l.WithField("filename", ni.FullName).Debug("Skipping own instance")
+		if !includingOwn && inst == r.ownInstance {
+			// Own instance. We only want these during startup.
 			continue
 		}
 
 		age := now.Sub(ni.Timestamp)
 		r.l.WithFields(logrus.Fields{
-			"instance":   inst,
-			"timestamp":  ni.TimestampString,
-			"generation": ni.GenerationID,
-			"age":        age.Round(10 * time.Millisecond),
+			"snapshot_instance": inst,
+			"timestamp":         ni.TimestampString,
+			"generation":        ni.GenerationID,
+			"age":               age.Round(10 * time.Millisecond),
 		}).Debug("New snapshot detected")
 
 		metricSnapshotsLastReceivedTimestamp.WithLabelValues(r.lmdbname, inst).
@@ -157,8 +172,9 @@ func (r *Receiver) RunOnce(ctx context.Context) error {
 
 func (r *Receiver) getDownloader(ctx context.Context, instance string) *Downloader {
 	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	d, exists := r.downloadersByInstance[instance]
-	r.mu.Unlock()
 
 	if exists {
 		return d
@@ -167,8 +183,9 @@ func (r *Receiver) getDownloader(ctx context.Context, instance string) *Download
 	d = &Downloader{
 		r: r,
 		l: r.l.WithFields(logrus.Fields{
-			"component": "downloader",
-			"instance":  instance,
+			"component":         "downloader",
+			"instance":          r.ownInstance,
+			"snapshot_instance": instance,
 		}),
 		c:                 r.c,
 		instance:          instance,
@@ -193,9 +210,7 @@ func (r *Receiver) getDownloader(ctx context.Context, instance string) *Download
 		r.mu.Unlock()
 	}()
 
-	r.mu.Lock()
 	r.downloadersByInstance[instance] = d
-	r.mu.Unlock()
 
 	return d
 }
