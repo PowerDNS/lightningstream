@@ -272,6 +272,7 @@ func New(st config.Storage) (*Backend, error) {
 				return aws.Endpoint{
 					URL:               opt.EndpointURL,
 					HostnameImmutable: true,
+					SigningRegion:     region,
 				}, nil
 			},
 		)
