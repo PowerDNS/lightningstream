@@ -102,6 +102,9 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		// Keep checking for new remote snapshots until we have local changes
 		for {
 			// Load all new snapshots that are available now
+			// This will not starve the syncer from sending local changes,
+			// because every load will implicitly trigger a snapshot when local
+			// changes are detected.
 			for {
 				instance, snap := r.Next()
 				if instance == "" {
