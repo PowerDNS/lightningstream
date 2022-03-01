@@ -47,7 +47,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 
 		isDupSort := dbiFlags&lmdb.DupSort > 0
 		if isDupSort && !s.lc.DupSortHack {
-			return fmt.Errorf("dupsort db %s found and dupsort_hack disabled", dbiName)
+			return fmt.Errorf("mainToShadow: dupsort db %q found and dupsort_hack disabled", dbiName)
 		}
 
 		// If the DBI has MDB_INTEGERKEY set, our shadow db will use the same
@@ -124,7 +124,7 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 
 		isDupSort := dbiFlags&lmdb.DupSort > 0
 		if isDupSort && !s.lc.DupSortHack {
-			return fmt.Errorf("dupsort db %s found and dupsort_hack disabled", dbiName)
+			return fmt.Errorf("shadowToMain: dupsort db %q found and dupsort_hack disabled", dbiName)
 		}
 
 		// Dump associated shadow database. We will ignore the timestamps.

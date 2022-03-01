@@ -133,7 +133,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	}
 	isDupSort := dbiFlags&lmdb.DupSort > 0
 	if isDupSort && !s.lc.DupSortHack {
-		return nil, fmt.Errorf("dupsort db %s found and dupsort_hack disabled", dbiName)
+		return nil, fmt.Errorf("readDBI: dupsort db %q found and dupsort_hack disabled", dbiName)
 	}
 	dbiMsg.Flags = uint64(dbiFlags)
 
