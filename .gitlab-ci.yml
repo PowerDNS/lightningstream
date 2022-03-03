@@ -4,12 +4,12 @@ stages:
   - test
   - build
 
-format:
+test:
   stage: test
   script:
     - ./test.sh -race
 
-compile:
+build:
   stage: build
   script:
     - ./build.sh

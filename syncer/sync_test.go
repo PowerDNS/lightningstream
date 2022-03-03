@@ -12,6 +12,7 @@ import (
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/PowerDNS/simpleblob/backends/memory"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/config/logger"
@@ -156,7 +157,7 @@ func listInstanceSnapshots(st simpleblob.Interface, instance string) simpleblob.
 func runSync(ctx context.Context, syncer *Syncer) {
 	err := syncer.Sync(ctx)
 	if err != nil && err != context.Canceled {
-		panic("Syncer A error: " + err.Error())
+		logrus.WithError(err).WithField("syncer", syncer.name).Error("Syncer Sync error")
 	}
 }
 
