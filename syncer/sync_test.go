@@ -22,7 +22,7 @@ import (
 
 const testLMDBName = "default"
 const testDBIName = "test"
-const tick = 50 * time.Millisecond
+const tick = 100 * time.Millisecond
 
 func TestSyncer_Sync_startup(t *testing.T) {
 	t.Run("with-timestamped-schema", func(t *testing.T) {
