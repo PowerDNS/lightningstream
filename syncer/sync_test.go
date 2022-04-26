@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
+	"github.com/PowerDNS/simpleblob"
+	"github.com/PowerDNS/simpleblob/backends/memory"
 	"github.com/stretchr/testify/assert"
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/config/logger"
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/storage"
-	"powerdns.com/platform/lightningstream/storage/memory"
 )
 
 const testLMDBName = "default"
@@ -118,7 +118,7 @@ func doTest(t *testing.T, timestamped bool) {
 	t.Log("Done")
 }
 
-func createInstance(t *testing.T, name string, st storage.Interface, timestamped bool) (*Syncer, *lmdb.Env) {
+func createInstance(t *testing.T, name string, st simpleblob.Interface, timestamped bool) (*Syncer, *lmdb.Env) {
 	env, tmp, err := createLMDB(t)
 	assert.NoError(t, err)
 
@@ -129,7 +129,7 @@ func createInstance(t *testing.T, name string, st storage.Interface, timestamped
 	return syncer, env
 }
 
-func logSnapshotList(t *testing.T, st storage.Interface) {
+func logSnapshotList(t *testing.T, st simpleblob.Interface) {
 	ctx := context.Background()
 	entries, _ := st.List(ctx, "")
 	var lines []string
@@ -148,7 +148,7 @@ func logSnapshotList(t *testing.T, st storage.Interface) {
 	t.Logf("Snapshots in storage:\n%s", strings.Join(lines, "\n"))
 }
 
-func listInstanceSnapshots(st storage.Interface, instance string) storage.BlobList {
+func listInstanceSnapshots(st simpleblob.Interface, instance string) simpleblob.BlobList {
 	prefix := testLMDBName + "__" + instance + "__"
 	entries, _ := st.List(context.Background(), prefix)
 	return entries

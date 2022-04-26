@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PowerDNS/simpleblob/backends/memory"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/storage/memory"
 )
 
 func emptySnapshot() []byte {

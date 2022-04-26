@@ -14,9 +14,9 @@ lmdbs:
 
 storage:
   #type: fs
-  #root_path: /snapshots
   type: s3
   options:
+    #root_path: /snapshots
     access_key: minioadmin
     secret_key: minioadmin
     region: us-east-1

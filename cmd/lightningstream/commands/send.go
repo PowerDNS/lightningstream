@@ -3,12 +3,12 @@ package commands
 import (
 	"context"
 
+	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
-	"powerdns.com/platform/lightningstream/status"
 
-	"powerdns.com/platform/lightningstream/storage"
+	"powerdns.com/platform/lightningstream/status"
 	"powerdns.com/platform/lightningstream/syncer"
 )
 
@@ -20,7 +20,7 @@ func runSend() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	st, err := storage.GetBackend(conf.Storage)
+	st, err := simpleblob.GetBackend(ctx, conf.Storage.Type, conf.Storage.Options)
 	if err != nil {
 		return err
 	}
