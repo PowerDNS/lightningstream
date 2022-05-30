@@ -112,10 +112,10 @@ type DBIOptions struct {
 }
 
 type Storage struct {
-	Type     string `yaml:"type"`
-	RootPath string `yaml:"root_path,omitempty"` // for the 'fs' backend
-
+	Type    string                 `yaml:"type"`    // "fs", "s3", "memory"
 	Options map[string]interface{} `yaml:"options"` // backend specific
+
+	RootPath string `yaml:"root_path,omitempty"` // Deprecated: use options.root_path for fs
 }
 
 // HTTP configures the HTTP server with Prometheus metrics and status page

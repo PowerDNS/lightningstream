@@ -3,12 +3,13 @@ package syncer
 import (
 	"fmt"
 
+	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
+
 	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/storage"
 )
 
-func New(name string, st storage.Interface, c config.Config, lc config.LMDB) (*Syncer, error) {
+func New(name string, st simpleblob.Interface, c config.Config, lc config.LMDB) (*Syncer, error) {
 	s := &Syncer{
 		name:       name,
 		st:         st,
@@ -33,7 +34,7 @@ func New(name string, st storage.Interface, c config.Config, lc config.LMDB) (*S
 
 type Syncer struct {
 	name       string
-	st         storage.Interface
+	st         simpleblob.Interface
 	c          config.Config
 	lc         config.LMDB
 	l          logrus.FieldLogger

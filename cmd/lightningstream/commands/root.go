@@ -45,6 +45,12 @@ var rootCmd = &cobra.Command{
 			logrus.Fatalf("Config file error: %v", err)
 		}
 
+		if conf.Storage.RootPath != "" {
+			logrus.Warn("storage.root_path is deprecated and will be removed, " +
+				"use storage.options.root_path instead")
+			conf.Storage.Options["root_path"] = conf.Storage.RootPath
+		}
+
 		conf.Log = conf.Log.Merge(logger.FlagConfig)
 		if debug {
 			conf.Log.Level = "debug"

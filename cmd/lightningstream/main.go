@@ -4,9 +4,9 @@ import (
 	"powerdns.com/platform/lightningstream/cmd/lightningstream/commands"
 
 	// Register storage backends
-	_ "powerdns.com/platform/lightningstream/storage/fs"
-	_ "powerdns.com/platform/lightningstream/storage/memory"
-	_ "powerdns.com/platform/lightningstream/storage/s3"
+	_ "github.com/PowerDNS/simpleblob/backends/fs"
+	_ "github.com/PowerDNS/simpleblob/backends/memory"
+	_ "github.com/PowerDNS/simpleblob/backends/s3"
 )
 
 // version is overridden during the build with the go linker

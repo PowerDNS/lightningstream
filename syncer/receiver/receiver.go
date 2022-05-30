@@ -5,15 +5,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
 
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/storage"
 	"powerdns.com/platform/lightningstream/utils"
 )
 
-func New(st storage.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string) *Receiver {
+func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string) *Receiver {
 	r := &Receiver{
 		st:                     st,
 		c:                      c,
@@ -37,7 +37,7 @@ func New(st storage.Interface, c config.Config, dbname string, l logrus.FieldLog
 // It spawns per-instance Downloader goroutines to take care of the actual
 // downloading.
 type Receiver struct {
-	st          storage.Interface
+	st          simpleblob.Interface
 	c           config.Config
 	lmdbname    string
 	prefix      string
