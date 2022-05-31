@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/PowerDNS/lmdb-go v1.9.0
-	github.com/PowerDNS/simpleblob v0.1.0
+	github.com/PowerDNS/simpleblob v0.1.1
 	github.com/bufbuild/buf v0.56.0
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/gogo/protobuf v1.3.2
