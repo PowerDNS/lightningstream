@@ -75,10 +75,10 @@ github.com/Masterminds/sprig v2.22.0+incompatible/go.mod h1:y6hNFY5UBTIWBxnzTeuN
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/OpenPeeDeeP/depguard v1.1.0 h1:pjK9nLPS1FwQYGGpPxoMYpe7qACHOhAWQMQzV71i49o=
 github.com/OpenPeeDeeP/depguard v1.1.0/go.mod h1:JtAMzWkmFEzDPyAd+W0NHl1lvpQKTvT9jnRVsohBKpc=
+github.com/PowerDNS/go-tlsconfig v0.0.0-20201014142732-fe6ff56e2a95 h1:jWxEVXkF1InUh1o5aCq4cc+ZjKKSwYsGV3yNK5Rpp6A=
+github.com/PowerDNS/go-tlsconfig v0.0.0-20201014142732-fe6ff56e2a95/go.mod h1:Q+i/He4WS46khYyqBUWBASsayUrenws7sOh964AK7TY=
 github.com/PowerDNS/lmdb-go v1.9.0 h1:pvdI8lzdeAfWJdkXc3XPZXCewX508awqfe5yMjSKNTE=
 github.com/PowerDNS/lmdb-go v1.9.0/go.mod h1:5beHlX2aYqXfMBI0+BBX3LDhV3YGHU5JgoDsirAFPlA=
-github.com/PowerDNS/simpleblob v0.1.0 h1:+XiqRjflLSBjr/bkNUyCx7RLpqpBzQOAqePgVeiaHuc=
-github.com/PowerDNS/simpleblob v0.1.0/go.mod h1:Tncu1tJCgpfGAE2HUiRDJee9nd4wndiGQNVozdT+EYQ=
 github.com/PowerDNS/simpleblob v0.1.1 h1:pvpt1rLDnsqRSHgOAFBDtDB9PxI5P8sNCY/jlne8rWw=
 github.com/PowerDNS/simpleblob v0.1.1/go.mod h1:0FDLI3tG8WKyj0k3rBAseMR0mqb8XaxNWH/RfIaF2Lk=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -262,6 +262,8 @@ github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vb
 github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
 github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
 github.com/go-logfmt/logfmt v0.5.0/go.mod h1:wCYkCAKZfumFQihp8CzCvQ3paCTfi41vtzG1KdI/P7A=
+github.com/go-logr/logr v0.2.1 h1:fV3MLmabKIZ383XifUjFSwcoGee0v9qgPp8wy5svibE=
+github.com/go-logr/logr v0.2.1/go.mod h1:z6/tIYblkpsD+a4lm/fGIIU9mZ+XfAiaFtq7xTgseGU=
 github.com/go-ole/go-ole v1.2.6/go.mod h1:pprOEPIfldk/42T2oK7lQ4v4JSDwmV0As9GaiUsvbm0=
 github.com/go-redis/redis v6.15.8+incompatible/go.mod h1:NAIEuMOZ/fxfXJIrKDQDz8wamY7mA7PouImQ2Jvg6kA=
 github.com/go-sql-driver/mysql v1.4.0/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
