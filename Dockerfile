@@ -1,4 +1,5 @@
-# Builder: Not using Alpine, because of CGo deps
+# Builder
+# Note: Not using Alpine, because of CGo deps
 FROM golang:1.17-buster as builder
 ENV GOBIN=/usr/local/bin
 ARG GOPROXY=
@@ -10,9 +11,8 @@ ADD . /src
 RUN go install ./cmd/...
 
 # Dist
-FROM alpine:3.15
-
-RUN apk add --no-cache libc6-compat
+# Note: When using Alpine, ls prevents auth api from correctly functioning (most likely some locking issue)
+FROM debian:buster-slim
 
 COPY --from=builder /usr/local/bin/lightningstream /usr/local/bin/lightningstream
 RUN mkdir /snapshots && chmod 777 /snapshots
