@@ -1,0 +1,29 @@
+---
+
+instance: instance-01
+lmdbs:
+  main:
+    path: /var/spool/powerdns/pdns.lmdb
+    dupsort_hack: true
+    options:
+      no_subdir: true
+      create: true
+  shard:
+    path: /var/spool/powerdns/pdns.lmdb-0
+    options:
+      no_subdir: true
+      create: true
+
+storage:
+  # type: fs
+  type: s3
+  options:
+    # root_path: /snapshots
+    access_key: minioadmin
+    secret_key: minioadmin
+    region: us-east-1
+    bucket: lightningstream
+    endpoint_url: http://127.0.0.1:9000
+
+http:
+  address: ":8500"

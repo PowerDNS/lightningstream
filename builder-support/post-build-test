@@ -1,0 +1,29 @@
+#!/bin/bash
+
+echo "*** This is builder-support/post-build-test"
+
+if [ "$BUILDER_TARGET" = "sdist" ]; then
+    echo "Skipping post-build-test for sdist target"
+    exit 0
+fi
+
+# Pretend to do some tests that require a redis server
+
+# This id is the container id, which is also used as the --link hostname.
+# redis_id=$(docker create redis:4-alpine)
+
+# Remove container on exit
+# function cleanup_container {
+#     docker stop "$redis_id" > /dev/null
+#     docker rm "$redis_id" > /dev/null
+#     echo "Redis container removed"
+# }
+# trap cleanup_container EXIT
+
+# docker start "$redis_id" 
+
+# Run redis-cli the built image (the last stage with install tests), connect
+# to our temporary Redis 4.x container and verify the Redis version is 4.x.
+# docker run -it --link "$redis_id" "$BUILDER_IMAGE" redis-cli -h "$redis_id" INFO server \
+#    | grep redis_version:4
+
