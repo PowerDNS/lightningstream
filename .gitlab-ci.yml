@@ -7,17 +7,17 @@ stages:
 # base for all jobs
 .base:
   tags:
-    - dind
+    # - dind
 
 .lint_job:
   stage: lint
-  environment:
-    name: $ENVIRONMENT
+  # environment:
+  #   name: $ENVIRONMENT
   image: python:3.9-slim
   allow_failure: true
   before_script:
     - echo $PWD
-    - echo $ENVIRONMENT
+    # - echo $ENVIRONMENT
 
     # Python dependencies
     - python -V
