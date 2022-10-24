@@ -1,16 +1,215 @@
-image: golang:1.19-buster
-
 stages:
-  - test
-  - build
+  - lint
+  - Build Artifacts
+  - Upload Artifacts
+  - Run All Tests
 
-test:
-  stage: test
+# base for all jobs
+.base:
+  tags:
+    # - dind
+
+.lint_job:
+  stage: lint
+  environment:
+    name: $ENVIRONMENT
+  image: python:3.9-slim
+  allow_failure: true
+  before_script:
+    - echo $PWD
+    - echo $ENVIRONMENT
+
+    # Python dependencies
+    - python -V
+    - python -m venv venv
+    - source venv/bin/activate
+    - python -m pip install --upgrade pip
+
+    # Install linter requiremets
+    - pip install -r pdns-linter/requirements.txt
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - $PIP_CACHE_DIR
+  rules:
+    - when: always
+
+##
+# Code Lint
+##
+
+yamllint_job:
+  extends: .lint_job
   script:
-    - ./test.sh -race
+    - yamllint -c pdns-linter/.yamllint  .
 
-build:
-  stage: build
+ansiblelint_job:
+  extends: .lint_job
+  needs: [yamllint_job]
   script:
-    - ./build.sh
+    - pip install ansible-lint==4.3.7 'rich>=10.0.0,<11.0.0'
+    - ansible-lint playbook.yml -c pdns-linter/.ansible-lint
 
+
+# base package builder, is used by all the jobs that use pdns_builder
+.build_pkgs_base:
+  extends: .base
+  stage: Build Artifacts
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+  before_script:
+    - apk add bash curl git grep perl sed tree
+  dependencies: []     # never download artifacts
+  only:
+    - branches
+  artifacts:
+    expire_in: 1 week  # by default, keep build artifacts for a week
+
+.run_tests_base:
+  extends: .base
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+
+Source Packages:
+  extends: .build_pkgs_base
+  script:
+    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests sdist
+  retry: 2
+  artifacts:
+    paths:
+      - builder/tmp/latest/sdist/*
+
+CentOS 7 Packages:
+  extends: .build_pkgs_base
+  script:
+    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests centos-7
+  retry: 2
+  artifacts:
+    paths:
+      - builder/tmp/latest/centos-7/dist/*
+
+CentOS 8 Packages:
+  extends: .build_pkgs_base
+  script:
+    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests centos-8
+  retry: 2
+  artifacts:
+    paths:
+      - builder/tmp/latest/centos-8/dist/*
+
+CentOS 9 Packages:
+  extends: .build_pkgs_base
+  script:
+    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests centos-9
+  retry: 2
+  artifacts:
+    paths:
+      - builder/tmp/latest/centos-9/dist/*
+
+
+Source Packages (Release):
+  extends: Source Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
+  artifacts:
+    expire_in: 10 years
+
+CentOS 7 Packages (Release):
+  extends: CentOS 7 Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
+  artifacts:
+    expire_in: 10 years
+
+CentOS 8 Packages (Release):
+  extends: CentOS 8 Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
+  artifacts:
+    expire_in: 10 years
+
+CentOS 9 Packages (Release):
+  extends: CentOS 9 Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
+  artifacts:
+    expire_in: 10 years
+
+.upload_pkgs_base:
+  extends: .base
+  stage: Upload Artifacts
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+  before_script:
+    - apk add bash git perl rsync
+
+Upload Artifacts:
+  extends: .upload_pkgs_base
+  dependencies:
+    - Source Packages
+    - CentOS 7 Packages
+    - CentOS 8 Packages
+    - CentOS 9 Packages
+  script:
+    - . .gitlab-ci/rsync_funcs.sh
+    - rsync_sdist_package
+    - rsync_rpm_package centos-7
+    - rsync_rpm_package centos-8
+    - rsync_rpm_package centos-9
+  retry: 2
+  only:
+    - branches
+  when: manual
+
+Upload Artifacts (Release):
+  extends: .upload_pkgs_base
+  variables:
+    IS_RELEASE: "YES"
+  dependencies:
+    - Source Packages (Release)
+    - CentOS 7 Packages (Release)
+    - CentOS 8 Packages (Release)
+    - CentOS 9 Packages (Release)
+  script:
+    - . .gitlab-ci/rsync_funcs.sh
+    - rsync_sdist_package
+    - rsync_rpm_package centos-7
+    - rsync_rpm_package centos-8
+    - rsync_rpm_package centos-9
+  retry: 2
+  only:
+    - tags
+
+
+# Uncomment (and probably update) this when you want to test GitLab CI
+# locally.  This is a merge of "dstore Tests" and its ancestors.
+#
+# The docker image version is important since newer `dind` images break
+# everything.
+# - `gitlab-runner exec docker --docker-privileged --docker-image=docker:18.09.7-dind "dstore Tests (local)"`
+#
+# TODO use caching to not build dstore and download elasticsearch and
+#      logstash every time
+#
+#dstore Tests (local):
+#  stage: Run All Tests
+#  variables:
+#    GIT_SUBMODULE_STRATEGY: normal
+#  before_script:
+#    - apk add tree bash grep git perl sed curl
+#    - dockerd --log-level warn &
+#    - sleep 4          # wait for Docker to finish initializing
+#    - docker info      # if not finished initializing, will abort here
+#  script:
+#    - ./builder/build.sh -b daily -P test
+#  dependencies: []     # never download artifacts (not supported)
+#  only:
+#    - branches
