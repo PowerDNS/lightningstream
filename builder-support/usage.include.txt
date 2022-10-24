@@ -1,0 +1,5 @@
+Modules (by default all are built):
+    a              - demo module A
+    b              - demo module B
+    vendor         - vendor packages
+

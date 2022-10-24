@@ -1,0 +1,67 @@
+# Generic RPM building, which should work for centos and oraclelinux
+
+##############################################################################
+# Shared package building base image
+
+FROM dist-base as package-builder-base
+RUN yum install -y rpm-build rpmdevtools && rpmdev-setuptree
+RUN yum install -y go 
+RUN mkdir -p /dist /build
+WORKDIR /build
+
+##############################################################################
+# Our package-builder target image
+
+FROM package-builder-base as package-builder
+
+# Only ADD/COPY the files you really need for efficient docker caching.
+ADD builder/helpers/ /build/builder/helpers/
+
+# Used for -p option to only build specific spec files
+ARG BUILDER_PACKAGE_MATCH
+
+# Enables the builder rpm file cache (requires -c flag).
+# This must only be used for vendor deps, because it is based on the hash of the spec.
+# It might slow down your second build if you have docker layer caching, but 
+# it's useful for Travis and if you build different modules and branches all 
+# the time.
+@IF [ ! -z "$BUILDER_CACHE" ]
+@EVAL ADD builder/cache/${BUILDER_TARGET}/ /cache/old/
+ENV BUILDER_CACHE 1
+RUN mkdir /cache/new
+@ENDIF
+
+# Vendor specs
+# These do not depend on code in this repository and have independent versioning.
+# Only vendor specs can safely use the builder cache for these reasons.
+@IF [ ! -z "$M_vendor" ]
+COPY builder-support/vendor-specs/ builder-support/vendor-specs/
+RUN BUILDER_CACHE_THIS=1 BUILDER_SOURCE_DATE_FROM_SPEC_MTIME=1 builder/helpers/build-specs.sh builder-support/vendor-specs/*.spec
+@ENDIF
+
+# You can override these build args for faster Python builds
+# by adding these to your local .env
+# For pip: http://doc.devpi.net/latest/quickstart-pypimirror.html
+#ARG PIP_INDEX_URL
+#ARG PIP_TRUSTED_HOST
+
+# Set after vendor builds to not invalidate their cached layers every time
+ARG BUILDER_VERSION
+ARG BUILDER_RELEASE
+ARG SOURCE_DATE_EPOCH
+COPY --from=sdist /sdist /sdist
+RUN for file in /sdist/* ; do ln -s $file /root/rpmbuild/SOURCES/ ; done && ls /root/rpmbuild/SOURCES/
+
+COPY builder-support/specs/ builder-support/specs/
+
+@IF [ ! -z "$M_all$M_a" ]
+RUN builder/helpers/build-specs.sh builder-support/specs/lightningstream.spec
+@ENDIF
+
+# mv accross layers with overlay2 is buggy in some kernel versions (results in empty dirs)
+# See: https://github.com/moby/moby/issues/33733
+#RUN mv /root/rpmbuild/RPMS/* /dist/
+RUN cp -R /root/rpmbuild/RPMS/* /dist/
+
+# Write text files with lists of all files in the rpms
+RUN rpm -qlp --queryformat '\n# %{RPMTAG_NAME}\n' /dist/*/*.rpm > /dist/rpm-contents-all.txt

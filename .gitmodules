@@ -1,0 +1,6 @@
+[submodule "builder"]
+	path = builder
+	url = https://github.com/PowerDNS/pdns-builder.git
+[submodule "pdns-linter"]
+	path = pdns-linter
+	url = ../../powerdns/pdns-linter
