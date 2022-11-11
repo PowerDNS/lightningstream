@@ -2,7 +2,6 @@
 package stats
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -233,7 +232,7 @@ func (c *Collector) doCollect(ch chan<- prometheus.Metric, t Target) {
 				return errors.Wrap(err, "full path")
 			}
 
-			data, err := ioutil.ReadFile("/proc/self/smaps")
+			data, err := os.ReadFile("/proc/self/smaps")
 			if err != nil {
 				if !os.IsNotExist(err) {
 					return errors.Wrap(err, "read smaps")

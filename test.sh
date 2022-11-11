@@ -15,6 +15,6 @@ go test -count=1 "$@" ./...
 go test -count=1 "$@" github.com/PowerDNS/simpleblob/...
 
 # Configure linters in .golangci.yml
-GOBIN="$PWD/bin" go install github.com/golangci/golangci-lint/cmd/golangci-lint
-./bin//golangci-lint run
+GOBIN="$PWD/bin" go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
+./bin/golangci-lint run
 

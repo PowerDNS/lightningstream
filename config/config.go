@@ -3,7 +3,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"time"
@@ -215,7 +214,7 @@ func (c *Config) LoadYAML(yamlContents []byte, expandEnv bool) error {
 // LoadYAMLFile loads config from a YAML file. Any set value overwrites any existing value,
 // but omitted keys are untouched.
 func (c *Config) LoadYAMLFile(fpath string, expandEnv bool) error {
-	contents, err := ioutil.ReadFile(fpath)
+	contents, err := os.ReadFile(fpath)
 	if err != nil {
 		return errors.Wrap(err, "open yaml file")
 	}
