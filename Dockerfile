@@ -1,5 +1,5 @@
 # Not using Alpine, because of CGo deps
-FROM golang:1.17-buster
+FROM golang:1.19-buster
 ENV GOBIN=/usr/local/bin
 ARG GOPROXY=
 RUN mkdir /src
