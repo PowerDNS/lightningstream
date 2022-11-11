@@ -2,7 +2,6 @@
 package stats
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
@@ -87,7 +86,7 @@ func Log(env *lmdb.Env, dbnames []string, withSmaps bool, log logrus.FieldLogger
 				return errors.Wrap(err, "full path")
 			}
 
-			data, err := ioutil.ReadFile("/proc/self/smaps")
+			data, err := os.ReadFile("/proc/self/smaps")
 			if err != nil {
 				if !os.IsNotExist(err) {
 					return errors.Wrap(err, "read smaps")

@@ -1,7 +1,6 @@
 package lmdbenv
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
@@ -14,7 +13,7 @@ type TestEnvFunc func(env *lmdb.Env) error
 // with the temporary LMDB Env. Any error returned by this function is returned
 // unmodified to the caller.
 func TestEnv(f TestEnvFunc) error {
-	tmpdir, err := ioutil.TempDir("", "lmdbtest_")
+	tmpdir, err := os.MkdirTemp("", "lmdbtest_")
 	if err != nil {
 		return errors.Wrap(err, "create tempdir")
 	}

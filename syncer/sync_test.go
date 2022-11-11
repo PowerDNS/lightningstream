@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -237,7 +236,7 @@ func createConfig(instance string, tmpdir string, timestamped bool) config.Confi
 }
 
 func createLMDB(t *testing.T) (env *lmdb.Env, tmpdir string, err error) {
-	tmpdir, err = ioutil.TempDir("", "lmdbtest_")
+	tmpdir, err = os.MkdirTemp("", "lmdbtest_")
 	if err != nil {
 		return nil, "", err
 	}
