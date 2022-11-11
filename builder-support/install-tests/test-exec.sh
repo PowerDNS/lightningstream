@@ -2,6 +2,5 @@
 
 set -ex
 
-# /usr/bin/demo-a | grep 'demo A'
-# /usr/bin/demo-b | grep 'demo B'
+/usr/bin/lightningstream --help | grep --silent instance
 

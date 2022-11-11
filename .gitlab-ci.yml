@@ -73,7 +73,7 @@ ansiblelint_job:
 Source Packages:
   extends: .build_pkgs_base
   script:
-    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests sdist
+    - ./builder/build.sh -b daily sdist
   retry: 2
   artifacts:
     paths:
@@ -82,7 +82,7 @@ Source Packages:
 CentOS 7 Packages:
   extends: .build_pkgs_base
   script:
-    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests centos-7
+    - ./builder/build.sh -b daily centos-7
   retry: 2
   artifacts:
     paths:
@@ -91,20 +91,20 @@ CentOS 7 Packages:
 CentOS 8 Packages:
   extends: .build_pkgs_base
   script:
-    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests centos-8
+    - ./builder/build.sh -b daily ol-8
   retry: 2
   artifacts:
     paths:
-      - builder/tmp/latest/centos-8/dist/*
+      - builder/tmp/latest/ol-8/dist/*
 
 CentOS 9 Packages:
   extends: .build_pkgs_base
   script:
-    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests centos-9
+    - ./builder/build.sh -b daily -B MYCOOLARG=iLikeTests ol-9
   retry: 2
   artifacts:
     paths:
-      - builder/tmp/latest/centos-9/dist/*
+      - builder/tmp/latest/ol-9/dist/*
 
 
 Source Packages (Release):
@@ -162,8 +162,8 @@ Upload Artifacts:
     - . .gitlab-ci/rsync_funcs.sh
     - rsync_sdist_package
     - rsync_rpm_package centos-7
-    - rsync_rpm_package centos-8
-    - rsync_rpm_package centos-9
+    - rsync_rpm_package ol-8
+    - rsync_rpm_package ol-9
   retry: 2
   only:
     - branches
@@ -182,8 +182,8 @@ Upload Artifacts (Release):
     - . .gitlab-ci/rsync_funcs.sh
     - rsync_sdist_package
     - rsync_rpm_package centos-7
-    - rsync_rpm_package centos-8
-    - rsync_rpm_package centos-9
+    - rsync_rpm_package ol-8
+    - rsync_rpm_package ol-9
   retry: 2
   only:
     - tags

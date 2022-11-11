@@ -3,6 +3,7 @@
 /tmp
 /bin/*
 **/*.swp
+**/*.swo
 /docker-compose*.yml
 .env
 .env.*
@@ -12,3 +13,7 @@
 **/*.mdb
 **/*.pb.gz
 /test-in-docker.sh
+/.gitlab-ci.yml
+/.gitmodules
+/builder/.git
+/pdns-linter/.git

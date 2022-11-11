@@ -5,9 +5,16 @@
 
 FROM dist-base as package-builder-base
 RUN yum install -y rpm-build rpmdevtools && rpmdev-setuptree
-RUN yum install -y go 
+RUN yum groupinstall -y "Development Tools"
 RUN mkdir -p /dist /build
 WORKDIR /build
+
+# Go
+# FIXME: Support arm64 builds
+RUN curl https://storage.googleapis.com/golang/go1.19.3.linux-amd64.tar.gz | tar -xz -C /usr/local
+ENV GOROOT /usr/local/go
+ENV GOPATH /go
+ENV PATH $PATH:$GOROOT/bin:$GOPATH/bin
 
 ##############################################################################
 # Our package-builder target image
@@ -19,31 +26,6 @@ ADD builder/helpers/ /build/builder/helpers/
 
 # Used for -p option to only build specific spec files
 ARG BUILDER_PACKAGE_MATCH
-
-# Enables the builder rpm file cache (requires -c flag).
-# This must only be used for vendor deps, because it is based on the hash of the spec.
-# It might slow down your second build if you have docker layer caching, but 
-# it's useful for Travis and if you build different modules and branches all 
-# the time.
-@IF [ ! -z "$BUILDER_CACHE" ]
-@EVAL ADD builder/cache/${BUILDER_TARGET}/ /cache/old/
-ENV BUILDER_CACHE 1
-RUN mkdir /cache/new
-@ENDIF
-
-# Vendor specs
-# These do not depend on code in this repository and have independent versioning.
-# Only vendor specs can safely use the builder cache for these reasons.
-@IF [ ! -z "$M_vendor" ]
-COPY builder-support/vendor-specs/ builder-support/vendor-specs/
-RUN BUILDER_CACHE_THIS=1 BUILDER_SOURCE_DATE_FROM_SPEC_MTIME=1 builder/helpers/build-specs.sh builder-support/vendor-specs/*.spec
-@ENDIF
-
-# You can override these build args for faster Python builds
-# by adding these to your local .env
-# For pip: http://doc.devpi.net/latest/quickstart-pypimirror.html
-#ARG PIP_INDEX_URL
-#ARG PIP_TRUSTED_HOST
 
 # Set after vendor builds to not invalidate their cached layers every time
 ARG BUILDER_VERSION

@@ -3,47 +3,27 @@
 # =========================================================================
 # Deliberately using alpine with incompatible libc to ensure we are
 # not sneaking in any binaries, and because it's light and up to date.
-FROM alpine:3.13 as sdist
+FROM alpine:3.16 as sdist
 ARG BUILDER_CACHE_BUSTER=
 RUN apk add --no-cache tar
 ARG BUILDER_VERSION
 ARG SOURCE_DATE_EPOCH
-
+RUN echo "::: SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"; if [ "$SOURCE_DATE_EPOCH" -lt "1000" ]; then echo "::: INVALID SOURCE_DATE_EPOCH" ; exit 99 ; fi
 
 # Copying minimal set of files to avoid cache invalidation
 RUN mkdir /build
 WORKDIR /build
-COPY files/ files/
-COPY bin/ bin/
-COPY build.sh build.sh 
-COPY cmd cmd 
-COPY config config 
-# COPY docker docker 
-# COPY docker-compose.yml docker-compose.yml 
-# COPY Dockerfile Dockerfile 
-#COPY .dockerignore .dockerignore 
-# COPY .git .git 
-# COPY .gitignore .gitignore 
-COPY .golangci.yml .golangci.yml 
-COPY go.mod go.mod 
-COPY go.sum go.sum 
-COPY lmdbenv lmdbenv 
-COPY README.md README.md 
-#COPY README-rpm-builder.md README-rpm-builder.md 
-COPY snapshot snapshot 
-COPY status status  
-COPY syncer syncer 
-# COPY test-in-docker.sh test-in-docker.sh
-COPY test.sh test.sh
-COPY tools tools
-COPY utils utils
-RUN mkdir /sdist
+COPY . /build
 
 # Test if the -B option works
 #ARG MYCOOLARG
 #RUN test "${MYCOOLARG}" = 'iLikeTests'
+RUN mkdir /sdist
 RUN ls -l
-RUN tar --clamp-mtime --mtime="$SOURCE_DATE_EPOCH" -cvzf /sdist/lightningstream-$BUILDER_VERSION.tar.gz --transform "s,^,lightningstream-$BUILDER_VERSION/," bin build.sh cmd config .golangci.yml go.mod go.sum lmdbenv README.md snapshot status syncer test.sh utils files
+RUN tar --clamp-mtime --mtime="$SOURCE_DATE_EPOCH" -cvzf /sdist/lightningstream-$BUILDER_VERSION.tar.gz \
+        --transform "s,^,lightningstream-$BUILDER_VERSION/," \
+        --exclude .git \
+        .
 
 # Show contents for build debugging
 RUN ls -l /sdist/*

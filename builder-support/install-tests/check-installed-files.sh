@@ -15,8 +15,7 @@ check_exec() {
     fi
 }
 
-#check_exec /usr/bin/demo-a
-#check_exec /usr/bin/demo-b
+check_exec /usr/bin/lightningstream
 
 [ "$failed" = "1" ] && exit 1
 exit 0
