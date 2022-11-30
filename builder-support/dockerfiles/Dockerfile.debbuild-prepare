@@ -1,0 +1,18 @@
+FROM dist-base as package-builder
+ARG APT_URL
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install --no-install-recommends devscripts dpkg-dev build-essential python3-venv equivs 
+
+RUN mkdir /dist /lightningstream
+WORKDIR /lightningstream
+
+ADD builder/helpers/ /lightningstream/builder/helpers/
+
+# Used for -p option to only build specific packages
+ARG BUILDER_PACKAGE_MATCH
+
+ARG BUILDER_VERSION
+ARG BUILDER_RELEASE
+
+COPY --from=sdist /sdist /sdist
+
+RUN tar xvf /sdist/lightningstream-${BUILDER_VERSION}.tar.gz -C /lightningstream

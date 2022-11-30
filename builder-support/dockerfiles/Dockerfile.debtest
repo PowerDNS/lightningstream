@@ -1,0 +1,24 @@
+# Install the built rpms and test them
+FROM dist-base as dist
+# If you want to install extra packages or do generic configuration,
+# do it before the COPY. Either here, or in the dist-base layer.
+
+# Test script requirements
+# RUN yum install -y redis
+
+COPY --from=sdist /sdist /sdist
+COPY --from=package-builder /dist /dist
+
+# Install built packages with dependencies
+RUN apt localinstall -y /dist/*/*.deb
+
+# Installation tests
+COPY builder-support/install-tests /build/builder-support/install-tests
+WORKDIR /build
+RUN builder-support/install-tests/check-installed-files.sh
+RUN builder-support/install-tests/test-exec.sh
+
+# Copy cache from package builder image, so that the builder can copy them out
+@IF [ ! -z "$BUILDER_CACHE" ]
+COPY --from=package-builder /cache/new /cache/new
+@ENDIF
