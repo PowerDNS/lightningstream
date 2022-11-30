@@ -1,6 +1,4 @@
 #
-# spec file for package pdns-prometheus-webhook-snmp
-#
 # Copyright (c) 2019-2020 SUSE LLC
 #
 # All modifications and additions to the file contributed by third parties
@@ -21,30 +19,38 @@
 %define confdir /etc/%{appname}
 %define changelog CHANGELOG.md
 %define readme README.md
+%define src_version %{getenv:BUILDER_VERSION}
+
+# FIXME: decide on user, depends on LMDB
+%global installuser lightningstream
+%global installgroup %{installuser}
 
 
 Name:           %{appname}
-Version:        %{getenv:BUILDER_VERSION}
-Release:        0
+Version:        %{getenv:BUILDER_RPM_VERSION}
+Release:        %{getenv:BUILDER_RPM_RELEASE}%{dist}
 Summary:        PowerDNS LightningStream
 License:        Proprietary
 Group:          System/Management
-Url:            https://gitlab.open-xchange.com/powerdns/lightningstream
-Source0:        %{name}-%{version}.tar.gz
-BuildArch:      x86_64
+Url:            https://powerdns.com/
+Source0:        %{name}-%{src_version}.tar.gz
+#BuildArch:      x86_64
+Requires(pre):  shadow-utils
+%systemd_requires
 
 BuildRequires:  epel-rpm-macros
 
 # Requires:       epel-release
 
 %description
-LMDB to S3 bucket syncer for the PowerDNS Auth LMDB backend
+LMDB to S3 bucket syncer
 
 %prep
-%setup -q -n %{appname}-%{version}
+%setup -q -n %{appname}-%{src_version}
 
 %build
 ./build.sh
+./test.sh
 
 %install
 mkdir -p %{buildroot}%{_bindir}/
@@ -60,14 +66,19 @@ sed -i 's|_BINARY_|%{_bindir}%{appname}|g' %{buildroot}/%{_unitdir}/%{appname}.s
 sed -i 's|_CONFIG_|%{confdir}/%{appname}.yaml|g' %{buildroot}/%{_unitdir}/%{appname}.service
 
 %pre
+getent group %{installgroup} > /dev/null || groupadd -r %{installgroup}
+getent passwd %{installuser} > /dev/null || useradd -r -g %{installgroup} -d / -s /sbin/nologin -c "%{installuser} user" %{installuser}
+exit 0
 
 %post
+# FIXNE: This needs to become a template service with support for multiple instances
+%systemd_post %{appname}.service
 
 %preun
 %systemd_preun %{appname}.service
 
 %postun
-%systemd_postun %{appname}.service
+%systemd_postun_with_restart %{appname}.service
 
 %clean
 rm -rf %{buildroot}

@@ -36,5 +36,5 @@ issues:
     exclude-rules:
         # Ignore complaints about using lmdbenv.KVString without labels in tests
         - path: _test\.go
-          text: lmdbenv.KVString` composite literal uses unkeyed fields
+          text: lmdbenv.KVString struct literal uses unkeyed fields
 

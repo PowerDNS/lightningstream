@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"context"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/snapshot"

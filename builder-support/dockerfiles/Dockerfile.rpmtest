@@ -18,7 +18,3 @@ WORKDIR /build
 RUN builder-support/install-tests/check-installed-files.sh
 RUN builder-support/install-tests/test-exec.sh
 
-# Copy cache from package builder image, so that the builder can copy them out
-@IF [ ! -z "$BUILDER_CACHE" ]
-COPY --from=package-builder /cache/new /cache/new
-@ENDIF
