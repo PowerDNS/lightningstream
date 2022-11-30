@@ -1,0 +1,5 @@
+%{_docdir}/README.md
+%{_docdir}/%{name}.example.yaml
+%{_bindir}/%{appname}
+%{_unitdir}/%{appname}.service
+%{confdir}/%{appname}.yaml

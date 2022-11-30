@@ -15,12 +15,7 @@ check_exec() {
     fi
 }
 
-<<<<<<< HEAD
-#check_exec /usr/bin/demo-a
-#check_exec /usr/bin/demo-b
-=======
 check_exec /usr/bin/lightningstream
->>>>>>> 7190c502c5f726c0c43e3710b2aeaf72d383239d
 
 [ "$failed" = "1" ] && exit 1
 exit 0

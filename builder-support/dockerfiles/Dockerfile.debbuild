@@ -1,0 +1,7 @@
+RUN if $(echo ${BUILDER_VERSION} | grep -q -E '^0\.0\.'); then \
+  sed -i '/lightningstream (<< .*/d' lightningstream-${BUILDER_VERSION}/debian/control; \
+fi
+
+RUN builder/helpers/build-debs.sh lightningstream-${BUILDER_VERSION}
+
+RUN mv lightningstream*.deb /dist; mv lightningstream*.ddeb /dist || true
