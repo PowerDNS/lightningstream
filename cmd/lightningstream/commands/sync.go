@@ -2,10 +2,12 @@ package commands
 
 import (
 	"context"
+	"os"
 
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/wojas/go-healthz"
 	"golang.org/x/sync/errgroup"
 	"powerdns.com/platform/lightningstream/status"
 
@@ -46,6 +48,12 @@ func runSync() error {
 			return err
 		})
 	}
+
+	healthz.AddBuildInfo()
+	if hostname, err := os.Hostname(); err == nil {
+		healthz.SetMeta("hostname", hostname)
+	}
+	healthz.SetMeta("version", version)
 
 	status.StartHTTPServer(conf)
 

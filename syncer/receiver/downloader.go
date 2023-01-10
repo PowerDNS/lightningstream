@@ -84,8 +84,16 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	data, err := d.r.st.Load(ctx, ni.FullName)
 	if err != nil {
 		metricSnapshotsLoadFailed.WithLabelValues(d.lmdbname, d.instance).Inc()
+
+		// Signal failure to health tracker
+		d.r.storageLoadHealth.AddFailure()
+
 		return err
 	}
+
+	// Signal success to health tracker
+	d.r.storageLoadHealth.AddSuccess()
+
 	metricSnapshotsLoadBytes.Add(float64(len(data)))
 	t1 := time.Now()
 

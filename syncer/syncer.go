@@ -7,16 +7,18 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"powerdns.com/platform/lightningstream/config"
+	"powerdns.com/platform/lightningstream/status/healthtracker"
 )
 
 func New(name string, st simpleblob.Interface, c config.Config, lc config.LMDB) (*Syncer, error) {
 	s := &Syncer{
-		name:       name,
-		st:         st,
-		c:          c,
-		lc:         lc,
-		shadow:     true,
-		generation: 0,
+		name:               name,
+		st:                 st,
+		c:                  c,
+		lc:                 lc,
+		shadow:             true,
+		generation:         0,
+		storageStoreHealth: healthtracker.New(c.Health.StorageStore, fmt.Sprintf("%s_storage_store", name), "write to storage backend"),
 	}
 	if s.instanceID() == "" {
 		return nil, fmt.Errorf("instance name could not be determined, please provide one with --instance")
@@ -40,4 +42,7 @@ type Syncer struct {
 	l          logrus.FieldLogger
 	shadow     bool // use shadow database for timestamps?
 	generation uint64
+
+	// Health trackers
+	storageStoreHealth *healthtracker.HealthTracker
 }
