@@ -8,6 +8,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+	"github.com/wojas/go-healthz"
 
 	"powerdns.com/platform/lightningstream/config"
 )
@@ -19,6 +20,7 @@ func StartHTTPServer(c config.Config) {
 	}
 	logrus.WithField("address", c.HTTP.Address).Info("HTTP stats server enabled")
 	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/healthz", healthz.Handler())
 	http.Handle("/", &Page{
 		c: c,
 	})
@@ -51,6 +53,8 @@ const statusTemplateString = `<!DOCTYPE html>
 	<h1>⚡ LightningStream Status</h1>
 	<p>
 		<a href="/metrics">Prometheus metrics</a>
+		|
+		<a href="/healthz">healthz</a>
 	</p>
 
 	<h2>Config</h2>
