@@ -33,18 +33,18 @@ http:
 #   storage_list:
 #     warn_duration: 5s
 #     error_duration: 15s
-#     error_sequence: 1000
-#     warn_sequence: 200
 #     interval: 1s
 #   storage_load:
 #     warn_duration: 5s
 #     error_duration: 15s
-#     error_sequence: 1000
-#     warn_sequence: 200
 #     interval: 1s
 #   storage_store:
 #     warn_duration: 5s
 #     error_duration: 15s
-#     error_sequence: 1000
-#     warn_sequence: 200
+#     interval: 1s
+#   start:
+#     warn_duration: 5s
+#     error_duration: 15s
+#     report_healthz: true
+#     report_metadata: true
 #     interval: 1s

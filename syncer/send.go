@@ -195,7 +195,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			metricSnapshotsStoreFailed.WithLabelValues(s.name).Inc()
 
 			// Signal failure to health tracker
-			s.storageStoreHealth.AddFailure()
+			s.storageStoreHealth.AddFailure(err)
 
 			if err := utils.SleepContext(ctx, s.c.StorageRetryInterval); err != nil {
 				return -1, err

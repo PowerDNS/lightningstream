@@ -57,8 +57,11 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		time.Sleep(time.Second) // TODO: Configurable?
 	}
 	hasSnapshots := r.HasSnapshots()
-	hasData := lastTxnID > 0
 
+	// Start tracker: Initial storage snapshots listed
+	s.startTracker.SetPassedInitialListing()
+
+	hasData := lastTxnID > 0
 	if hasData && !s.lc.SchemaTracksChanges {
 		// Sync to shadow using a time in the past to not overwrite newer data.
 		// At least is allows us to save newer entries that were added
@@ -88,16 +91,24 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			"(empty database or some snapshot already exist)")
 	}
 
+	// Start tracker: Initial snapshot stored
+	s.startTracker.SetPassedInitialStore()
+
 	// Run receiver in background to get newer snapshot
 	go func() {
 		err := r.Run(ctx)
 		s.l.WithError(err).Info("Receiver exited")
 	}()
 
+	// Start tracker: Track first receiving of snapshots
+	firstReceivePassed := false
+
+	// Start tracker: Track first load of snapshots after receiving
+	firstLoadAfterReceivePassed := false
+
 	// There is no guarantee that the snapshots listed before have already been
 	// downloaded and are available for loading, but this is fine.
 	// The update loop will not cause any issues, even if a snapshot is generated.
-
 	for {
 		// Keep checking for new remote snapshots until we have local changes
 		for {
@@ -134,6 +145,24 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			if info.LastTxnID > lastTxnID {
 				lastTxnID = info.LastTxnID
 				break // create new snapshot
+			}
+
+			// Start tracker: Track first load of receiving of snapshots
+			if !firstReceivePassed {
+				if r.HasFirstPassCompleted() {
+					s.startTracker.SetPassedInitialReceive()
+
+					firstReceivePassed = true
+				}
+			}
+
+			// Start tracker: Track first load of snapshots after receiving
+			if !firstLoadAfterReceivePassed {
+				if firstReceivePassed {
+					s.startTracker.SetPassedInitialLoad()
+
+					firstLoadAfterReceivePassed = true
+				}
 			}
 
 			// Sleep before next check for snapshots and local changes
