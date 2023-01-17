@@ -86,7 +86,7 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 		metricSnapshotsLoadFailed.WithLabelValues(d.lmdbname, d.instance).Inc()
 
 		// Signal failure to health tracker
-		d.r.storageLoadHealth.AddFailure()
+		d.r.storageLoadHealth.AddFailure(err)
 
 		return err
 	}

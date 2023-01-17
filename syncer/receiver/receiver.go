@@ -62,8 +62,9 @@ type Receiver struct {
 	hasSnapshots          bool
 
 	// Health trackers
-	storageListHealth *healthtracker.HealthTracker
-	storageLoadHealth *healthtracker.HealthTracker
+	storageListHealth  *healthtracker.HealthTracker
+	storageLoadHealth  *healthtracker.HealthTracker
+	firstPassCompleted bool
 }
 
 // Next returns the next remote snapshot.Update to process if there is one
@@ -106,6 +107,11 @@ func (r *Receiver) Run(ctx context.Context) error {
 			r.l.WithError(err).Error("Fetch error")
 		}
 
+		// Store first pass to allow startup tracking by parent syncer
+		if !r.firstPassCompleted {
+			r.firstPassCompleted = true
+		}
+
 		if err := utils.SleepContext(ctx, r.c.StoragePollInterval); err != nil {
 			return err
 		}
@@ -124,7 +130,7 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 		metricSnapshotsListFailed.WithLabelValues(r.lmdbname).Inc()
 
 		// Signal failure to health tracker
-		r.storageListHealth.AddFailure()
+		r.storageListHealth.AddFailure(err)
 
 		return err
 	}
@@ -160,6 +166,7 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 	// This map is read by the Downloader.
 	r.mu.Lock()
 	r.lastSeenByInstance = lastSeenByInstance
+
 	r.hasSnapshots = len(lastSeenByInstance) > 0
 	r.mu.Unlock()
 

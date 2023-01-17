@@ -14,6 +14,7 @@ import (
 	"powerdns.com/platform/lightningstream/config/logger"
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/status/healthtracker"
+	"powerdns.com/platform/lightningstream/status/starttracker"
 )
 
 const (
@@ -43,8 +44,6 @@ var (
 	DefaultHealthStorageList = healthtracker.HealthConfig{
 		ErrorDuration:      5 * time.Minute,
 		WarnDuration:       1 * time.Minute,
-		ErrorSequence:      50,
-		WarnSequence:       5,
 		EvaluationInterval: 5 * time.Second,
 	}
 
@@ -52,8 +51,6 @@ var (
 	DefaultHealthStorageLoad = healthtracker.HealthConfig{
 		ErrorDuration:      5 * time.Minute,
 		WarnDuration:       1 * time.Minute,
-		ErrorSequence:      50,
-		WarnSequence:       5,
 		EvaluationInterval: 5 * time.Second,
 	}
 
@@ -61,9 +58,16 @@ var (
 	DefaultHealthStorageStore = healthtracker.HealthConfig{
 		ErrorDuration:      5 * time.Minute,
 		WarnDuration:       1 * time.Minute,
-		ErrorSequence:      50,
-		WarnSequence:       5,
 		EvaluationInterval: 5 * time.Second,
+	}
+
+	// DefaultHealthStart is the default set of thresholds used by healthz to determine whether the startup phase has completed succesfully
+	DefaultHealthStart = starttracker.StartConfig{
+		ErrorDuration:      5 * time.Minute,
+		WarnDuration:       1 * time.Minute,
+		EvaluationInterval: 1 * time.Second,
+		ReportHealthz:      false,
+		ReportMetadata:     true,
 	}
 )
 
@@ -190,6 +194,7 @@ type Health struct {
 	StorageList  healthtracker.HealthConfig `yaml:"storage_list"`
 	StorageLoad  healthtracker.HealthConfig `yaml:"storage_load"`
 	StorageStore healthtracker.HealthConfig `yaml:"storage_store"`
+	Start        starttracker.StartConfig   `yaml:"start"`
 }
 
 // Check validates a Config instance
@@ -299,6 +304,7 @@ func Default() Config {
 			StorageList:  DefaultHealthStorageList,
 			StorageLoad:  DefaultHealthStorageLoad,
 			StorageStore: DefaultHealthStorageStore,
+			Start:        DefaultHealthStart,
 		},
 
 		LMDBScrapeSmaps:      true,
