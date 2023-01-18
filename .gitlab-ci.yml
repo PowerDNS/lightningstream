@@ -37,7 +37,7 @@ ubuntu-focal:
   variables:
     GIT_SUBMODULE_STRATEGY: normal
   before_script:
-    - apt install bash curl git grep perl sed tree
+    - apt install bash curl git grep perl sed
   dependencies: []     # never download artifacts
   only:
     - branches
