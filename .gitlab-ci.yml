@@ -23,6 +23,8 @@ ubuntu-focal:
     - echo $PWD
     - echo $ENVIRONMENT
     - find builder
+    - find /usr/bin
+    - uname -a
   script:
     - ./builder/build.sh ubuntu-focal
   artifacts:
@@ -37,7 +39,7 @@ ubuntu-focal:
 # base package builder, is used by all the jobs that use pdns_builder
 .build_pkgs_base:
   extends: .base
-  image: docker:stable
+  image: python:3.9-slim
   stage: artifacts
   variables:
     GIT_SUBMODULE_STRATEGY: normal
