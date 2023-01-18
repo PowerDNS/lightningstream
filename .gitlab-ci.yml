@@ -33,6 +33,7 @@ ubuntu-focal:
 # base package builder, is used by all the jobs that use pdns_builder
 .build_pkgs_base:
   extends: .base
+  image: docker:stable
   stage: artifacts
   variables:
     GIT_SUBMODULE_STRATEGY: normal
