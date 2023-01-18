@@ -1,0 +1,43 @@
+image: golang:1.19-buster
+
+stages:
+  - test
+  - build
+  - artifacts
+
+test:
+  stage: test
+  script:
+    - ./test.sh -race
+
+build:
+  stage: build
+  script:
+    - ./build.sh
+
+ubuntu-focal:
+  extends: .build_pkgs_base
+  script:
+    - ./builder/build.sh ubuntu-focal
+  artifacts:
+    paths:
+      - builder/tmp/latest/ubuntu-focal/dist/*deb
+
+# base for all jobs
+.base:
+  tags:
+    - dind
+
+# base package builder, is used by all the jobs that use pdns_builder
+.build_pkgs_base:
+  extends: .base
+  stage: artifacts
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+  before_script:
+    - apk add bash curl git grep perl sed tree
+  dependencies: []     # never download artifacts
+  only:
+    - branches
+  artifacts:
+    expire_in: 1 week  # by default, keep build artifacts for a week
