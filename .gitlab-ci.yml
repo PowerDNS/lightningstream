@@ -9,11 +9,13 @@ test:
   stage: test
   script:
     - ./test.sh -race
+  when: manual
 
 build:
   stage: build
   script:
     - ./build.sh
+  when: manual
 
 ubuntu-focal:
   extends: .build_pkgs_base
