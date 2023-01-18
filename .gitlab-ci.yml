@@ -39,7 +39,7 @@ ubuntu-focal:
 # base package builder, is used by all the jobs that use pdns_builder
 .build_pkgs_base:
   extends: .base
-  image: python:3.9-slim
+  image: docker:stable
   stage: artifacts
   variables:
     GIT_SUBMODULE_STRATEGY: normal
