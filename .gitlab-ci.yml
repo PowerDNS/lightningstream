@@ -23,7 +23,7 @@ ubuntu-focal:
     - echo $PWD
     - echo $ENVIRONMENT
     - uname -a
-    - apk add bash git perl rsync sed
+    - apk add bash git perl rsync sed grep
   script:
     - ./builder/build.sh ubuntu-focal
   artifacts:
