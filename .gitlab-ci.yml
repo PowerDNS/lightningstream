@@ -22,7 +22,7 @@ ubuntu-focal:
   before_script:
     - echo $PWD
     - echo $ENVIRONMENT
-    - ls -la 
+    - find builder
   script:
     - ./builder/build.sh ubuntu-focal
   artifacts:
