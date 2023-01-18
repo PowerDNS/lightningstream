@@ -23,7 +23,7 @@ ubuntu-focal:
     - echo $PWD
     - echo $ENVIRONMENT
     - uname -a
-    - apt-get update && apt-get install -y --no-install-recommends bash
+    - apk add bash git perl rsync
   script:
     - ./builder/build.sh ubuntu-focal
   artifacts:
