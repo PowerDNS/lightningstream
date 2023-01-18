@@ -19,6 +19,10 @@ build:
 
 ubuntu-focal:
   extends: .build_pkgs_base
+  before_script:
+    - echo $PWD
+    - echo $ENVIRONMENT
+    - ls -la 
   script:
     - ./builder/build.sh ubuntu-focal
   artifacts:
