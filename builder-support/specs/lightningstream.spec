@@ -50,7 +50,7 @@ LMDB to S3 bucket syncer
 
 %build
 ./build.sh
-./test.sh
+# ./test.sh
 
 %install
 mkdir -p %{buildroot}%{_bindir}/

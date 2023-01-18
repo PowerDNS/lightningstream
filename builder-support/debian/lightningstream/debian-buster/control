@@ -1,11 +1,8 @@
-Package: lightningstream
-Version: 1.0
-Description: LMDB syncer to s3
 Source: lightningstream
 Section: net
-Maintainer: PowerDNS Autobuilder <powerdns.support@powerdns.com>
-Priority: optional
-Standards-Version: 1.0
+Maintainer: PowerDNS.COM BV <powerdns.support@powerdns.com>
+
+Package: lightningstream
+Architecture: any
+Description: LMDB syncer to s3
 Homepage: https://www.powerdns.com/
-Rules-Requires-Root: no
-Architecture: arm64

@@ -1,5 +1,6 @@
 #!/usr/bin/make -f
 
+export DH_VERBOSE=1
 # Turn on all hardening flags, as we're a networked daemon.
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 # see EXAMPLES in dpkg-buildflags(1) and read /usr/share/dpkg/*
@@ -9,23 +10,21 @@ include /usr/share/dpkg/default.mk
 %:
 	dh $@
 
-override_dh_auto_clean:
-	dh_auto_clean
+override_dh_auto_build:
+	PATH=../go/bin:$$PATH;./build.sh
 
-ovverride_dh_auto_configure:
-	dh_auto_configure
-	wget -q https://go.dev/dl/go1.19.3.linux-amd64.tar.gz;tar xfz go1.19.3.linux-amd64.tar.gz
-	export PATH:=go/bin:$(PATH);./build.sh
+override_dh_auto_configure:
 
 override_dh_auto_install:
-	dh_auto_install
-	find debian/tmp/usr/lib -name '*.la' -delete
+	mkdir -p $(CURDIR)/debian/lightningstream/usr/bin/
+	install -o root -g root bin/lightningstream $(CURDIR)/debian/lightningstream/usr/bin/
+	mkdir -p $(CURDIR)/debian/lightningstream/etc/lightningstream
+	install -o root -g root files/lightningstream.yaml $(CURDIR)/debian/lightningstream/etc/lightningstream/lightningstream.example.yaml
 
 override_dh_installsystemd:
 	dh_installsystemd --no-start -plightningstream --name=lightningstream
 
 override_dh_install:
-	dh_install
 
 override_dh_auto_test:
 
