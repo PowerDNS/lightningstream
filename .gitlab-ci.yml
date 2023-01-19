@@ -1,6 +1,10 @@
-#image: golang:1.19-buster
+---
 
 stages:
+  # dev stages to test/build go app
+  - dev-test
+  - dev-build
+  # pkgs release stages
   - Build Artifacts
   - Upload Artifacts
   - Run All Tests
@@ -12,16 +16,18 @@ stages:
   tags:
     - dind
 
-## Jobs
+## Jobs for Dev
 
 test:
-  stage: Run All Tests
+  image: golang:1.19-buster
+  stage: dev-test
   script:
     - ./test.sh -race
   when: manual
 
 build:
-  stage: Build Artifacts
+  image: golang:1.19-buster
+  stage: build
   script:
     - ./build.sh
   when: manual
