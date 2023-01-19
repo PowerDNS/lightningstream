@@ -1,9 +1,18 @@
 image: golang:1.19-buster
 
 stages:
-  - test
-  - build
-  - artifacts
+  - Build Artifacts
+  - Upload Artifacts
+  - Run All Tests
+
+## Templates
+
+# base for all jobs
+.base:
+  tags:
+    - dind
+
+## Jobs
 
 test:
   stage: test
@@ -17,7 +26,53 @@ build:
     - ./build.sh
   when: manual
 
-ubuntu-focal:
+# base package builder, is used by all the jobs that use pdns_builder
+.build_pkgs_base:
+  extends: .base
+  stage: Build Artifacts
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+  before_script:
+    - apk add bash curl git grep perl sed tree
+  dependencies: []     # never download artifacts
+  only:
+    - branches
+  artifacts:
+    expire_in: 1 week  # by default, keep build artifacts for a week
+
+.run_tests_base:
+  extends: .base
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+
+Source Packages:
+  extends: .build_pkgs_base
+  script:
+    - ./builder/build.sh sdist
+  retry: 2
+  artifacts:
+    paths:
+      - builder/tmp/latest/sdist/*
+
+CentOS 7 Packages:
+  extends: .build_pkgs_base
+  script:
+    - ./builder/build.sh centos-7
+  retry: 2
+  artifacts:
+    paths:
+      - builder/tmp/latest/centos-7/dist/*
+
+CentOS 8 Packages:
+  extends: .build_pkgs_base
+  script:
+    - ./builder/build.sh centos-8
+  retry: 2
+  artifacts:
+    paths:
+      - builder/tmp/latest/centos-8/dist/*
+
+Ubuntu Focal Packages:
   extends: .build_pkgs_base
   before_script:
     - echo $PWD
@@ -30,20 +85,118 @@ ubuntu-focal:
     paths:
       - builder/tmp/latest/ubuntu-focal/dist/*deb
 
-# base for all jobs
-.base:
-  tags:
-    - dind
+Source Packages (Release):
+  extends: Source Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
+  artifacts:
+    expire_in: 10 years
 
-# base package builder, is used by all the jobs that use pdns_builder
-.build_pkgs_base:
+CentOS 7 Packages (Release):
+  extends: CentOS 7 Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
+  artifacts:
+    expire_in: 10 years
+
+CentOS 8 Packages (Release):
+  extends: CentOS 8 Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
+  artifacts:
+    expire_in: 10 years
+
+Ubuntu Focal Packages (Release):
+  extends: Ubuntu Focal Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
+  artifacts:
+    expire_in: 10 years
+
+.upload_pkgs_base:
   extends: .base
-  image: docker:stable
-  stage: artifacts
+  stage: Upload Artifacts
   variables:
     GIT_SUBMODULE_STRATEGY: normal
-  dependencies: []     # never download artifacts
+  before_script:
+    - apk add bash git perl rsync
+
+Upload Artifacts:
+  extends: .upload_pkgs_base
+  dependencies:
+    - Source Packages
+    - CentOS 7 Packages
+    - CentOS 8 Packages
+    - Ubuntu Focal Packages
+  script:
+    - . .gitlab-ci/rsync_funcs.sh
+    - rsync_sdist_package
+    - rsync_rpm_package centos-7
+    - rsync_rpm_package centos-8
+    - rsync_deb_package ubuntu-focal
+  retry: 2
   only:
     - branches
+  when: manual
+
+Ubuntu Focal Packages (Release):
+  extends: Ubuntu Focal Packages
+  variables:
+    IS_RELEASE: "YES"
+  only:
+    - tags
   artifacts:
-    expire_in: 1 week  # by default, keep build artifacts for a week
+    expire_in: 10 years
+
+.upload_pkgs_base:
+  extends: .base
+  stage: Upload Artifacts
+  variables:
+    GIT_SUBMODULE_STRATEGY: normal
+  before_script:
+    - apk add bash git perl rsync
+
+Upload Artifacts:
+  extends: .upload_pkgs_base
+  dependencies:
+    - Source Packages
+    - CentOS 7 Packages
+    - CentOS 8 Packages
+    - Ubuntu Focal Packages
+  script:
+    - . .gitlab-ci/rsync_funcs.sh
+    - rsync_sdist_package
+    - rsync_rpm_package centos-7
+    - rsync_rpm_package centos-8
+    - rsync_deb_package ubuntu-focal
+  retry: 2
+  only:
+    - branches
+  when: manual
+
+Upload Artifacts (Release):
+  extends: .upload_pkgs_base
+  variables:
+    IS_RELEASE: "YES"
+  dependencies:
+    - Source Packages (Release)
+    - CentOS 7 Packages (Release)
+    - CentOS 8 Packages (Release)
+    - Ubuntu Focal Packages (Release)
+  script:
+    - . .gitlab-ci/rsync_funcs.sh
+    - rsync_sdist_package
+    - rsync_rpm_package centos-7
+    - rsync_rpm_package centos-8
+    - rsync_deb_package ubuntu-focal
+  retry: 2
+  only:
+    - tags

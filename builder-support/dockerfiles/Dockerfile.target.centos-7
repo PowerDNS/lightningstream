@@ -15,4 +15,3 @@ RUN yum install -y /usr/bin/python3 make redhat-rpm-config epel-rpm-macros pytho
 # Do a test install and verify
 # Can be skipped with skiptests=1 in the environment
 @EXEC [ "$skiptests" = "" ] && include Dockerfile.rpmtest
-
