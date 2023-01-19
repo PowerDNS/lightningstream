@@ -42,32 +42,48 @@ const (
 var (
 	// DefaultHealthStorageList is the default set of thresholds used by healthz to determine health of storage list operations
 	DefaultHealthStorageList = healthtracker.HealthConfig{
-		ErrorDuration:      5 * time.Minute,
-		WarnDuration:       1 * time.Minute,
+		// ErrorDuration is the duration after which a failing List operation will report 'error' to healthz
+		ErrorDuration: 5 * time.Minute,
+		// WarnDuration is the duration after which a failing List operation will report 'warning' to healthz
+		WarnDuration: 1 * time.Minute,
+		// EvaluationInterval is the interval between healthz evaluation of the List operation
 		EvaluationInterval: 5 * time.Second,
 	}
 
 	// DefaultHealthStorageLoad is the default set of thresholds used by healthz to determine health of storage load operations
 	DefaultHealthStorageLoad = healthtracker.HealthConfig{
-		ErrorDuration:      5 * time.Minute,
-		WarnDuration:       1 * time.Minute,
+		// ErrorDuration is the duration after which a failing Load operation will report 'error' to healthz
+		ErrorDuration: 5 * time.Minute,
+		// WarnDuration is the duration after which a failing Load operation will report 'warning' to healthz
+		WarnDuration: 1 * time.Minute,
+		// EvaluationInterval is the interval between healthz evaluation of the Load operation
 		EvaluationInterval: 5 * time.Second,
 	}
 
 	// DefaultHealthStorageStore is the default set of thresholds used by healthz to determine health of storage store operations
 	DefaultHealthStorageStore = healthtracker.HealthConfig{
-		ErrorDuration:      5 * time.Minute,
-		WarnDuration:       1 * time.Minute,
+		// ErrorDuration is the duration after which a failing Store operation will report 'error' to healthz
+		ErrorDuration: 5 * time.Minute,
+		// WarnDuration is the duration after which a failing Store operation will report 'warning' to healthz
+		WarnDuration: 1 * time.Minute,
+		// EvaluationInterval is the interval between healthz evaluation of the Store operation
 		EvaluationInterval: 5 * time.Second,
 	}
 
 	// DefaultHealthStart is the default set of thresholds used by healthz to determine whether the startup phase has completed succesfully
 	DefaultHealthStart = starttracker.StartConfig{
-		ErrorDuration:      5 * time.Minute,
-		WarnDuration:       1 * time.Minute,
+		// ErrorDuration is the duration after which a failing startup sequence will report 'error' to healthz
+		ErrorDuration: 5 * time.Minute,
+		// WarnDuration is the duration after which a failing startup sequence will report 'warning' to healthz
+		WarnDuration: 1 * time.Minute,
+		// EvaluationInterval is the interval between healthz evaluation of the startup sequence
 		EvaluationInterval: 1 * time.Second,
-		ReportHealthz:      false,
-		ReportMetadata:     true,
+		// ReportHealthz controls whether or not a failing startup sequence will be included in healthz's overall status
+		// This can be used to prevent unwanted activity before LightningStream has completed an initial sync
+		ReportHealthz: false,
+		// ReportHealthz controls whether or not healthz's 'startupCompleted' metadata field will be used to store the status of the startup sequence
+		// This can be used to prevent unwanted activity before LightningStream has completed an initial sync
+		ReportMetadata: true,
 	}
 )
 
