@@ -15,13 +15,13 @@ stages:
 ## Jobs
 
 test:
-  stage: test
+  stage: Run All Tests
   script:
     - ./test.sh -race
   when: manual
 
 build:
-  stage: build
+  stage: Build Artifacts
   script:
     - ./build.sh
   when: manual
