@@ -23,7 +23,7 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 		ownInstance:            inst,
 		lastNotifiedByInstance: make(map[string]snapshot.NameInfo),
 		ignoredFilenames:       make(map[string]bool),
-		snapshotsByInstance:    make(map[string]*snapshot.Snapshot),
+		snapshotsByInstance:    make(map[string]snapshot.Update),
 		lastSeenByInstance:     make(map[string]snapshot.NameInfo),
 		downloadersByInstance:  make(map[string]*Downloader),
 	}
@@ -51,26 +51,26 @@ type Receiver struct {
 	// The following fields are protected by this mutex, because they
 	// are accessed by multiple goroutines.
 	mu                    sync.Mutex
-	snapshotsByInstance   map[string]*snapshot.Snapshot
+	snapshotsByInstance   map[string]snapshot.Update
 	lastSeenByInstance    map[string]snapshot.NameInfo
 	downloadersByInstance map[string]*Downloader
 	hasSnapshots          bool
 }
 
-// Next returns the next remote snapshot to process if there is one
+// Next returns the next remote snapshot.Update to process if there is one
 // It is to be called by the Syncer.
-func (r *Receiver) Next() (instance string, snap *snapshot.Snapshot) {
+func (r *Receiver) Next() (instance string, update snapshot.Update) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for instance, snap = range r.snapshotsByInstance {
+	for instance, update = range r.snapshotsByInstance {
 		break // first is assigned to return values now
 	}
 	if instance != "" {
 		// Consider handled
 		delete(r.snapshotsByInstance, instance)
 	}
-	return instance, snap
+	return instance, update
 }
 
 // HasSnapshots indicates if there are any snapshots in the storage backend

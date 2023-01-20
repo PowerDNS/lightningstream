@@ -99,7 +99,10 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	// Make snapshot available to the syncer, replacing any previous one
 	// that has not been loaded yet.
 	d.r.mu.Lock()
-	d.r.snapshotsByInstance[d.instance] = msg
+	d.r.snapshotsByInstance[d.instance] = snapshot.Update{
+		Snapshot: msg,
+		NameInfo: ni,
+	}
 	d.r.mu.Unlock()
 
 	t2 := time.Now()

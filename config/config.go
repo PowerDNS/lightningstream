@@ -114,7 +114,35 @@ type Storage struct {
 	Type    string                 `yaml:"type"`    // "fs", "s3", "memory"
 	Options map[string]interface{} `yaml:"options"` // backend specific
 
+	Cleanup Cleanup `yaml:"cleanup"`
+
 	RootPath string `yaml:"root_path,omitempty"` // Deprecated: use options.root_path for fs
+}
+
+// Cleanup contains storage cleanup configuration. When enabled, this will clean
+// old snapshots for any instance, not just itself.
+type Cleanup struct {
+	Enabled bool `yaml:"enabled"`
+
+	// Interval determines how often we run a cleaning session.
+	// The actual interval is subject to intentional perturbation.
+	Interval time.Duration
+
+	// MustKeepInterval determines how long snapshots must be kept after they
+	// appear in the bucket, even if a newer snapshot is available.
+	// This is a fairly short period (typically less than an hour) that is just
+	// long enough to give clients time to download this snapshot after they
+	// perform a listing, even if the snapshot is large and the connection slow.
+	// Note that the latest snapshot will be retained as long as no new one
+	// comes in for the same instance.
+	MustKeepInterval time.Duration `yaml:"must_keep_interval"`
+
+	// RemoveOldInstancesInterval determines when an instance is considered
+	// stale and the latest snapshot for the instance can be considered for
+	// removal. The actual removal only happens when the current instance has
+	// loaded and merged that snapshot, and written its own snapshot with this
+	// data, to ensure that this is also safe after extended downtime.
+	RemoveOldInstancesInterval time.Duration `yaml:"remove_old_instances_interval"`
 }
 
 // HTTP configures the HTTP server with Prometheus metrics and status page
@@ -232,5 +260,14 @@ func Default() Config {
 		StoragePollInterval:  DefaultStoragePollInterval,
 		StorageRetryInterval: DefaultStorageRetryInterval,
 		StorageRetryCount:    DefaultStorageRetryCount,
+
+		Storage: Storage{
+			Cleanup: Cleanup{
+				Enabled:                    false, // TODO: Enable by default in future
+				Interval:                   5 * time.Minute,
+				MustKeepInterval:           10 * time.Minute,
+				RemoveOldInstancesInterval: 7 * 24 * time.Hour,
+			},
+		},
 	}
 }
