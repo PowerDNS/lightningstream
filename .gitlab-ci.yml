@@ -27,7 +27,7 @@ test:
 
 build:
   image: golang:1.19-buster
-  stage: build
+  stage: dev-build
   script:
     - ./build.sh
   when: manual
