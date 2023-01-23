@@ -1,5 +1,6 @@
 Source: lightningstream
 Section: net
+Priority: extra
 Maintainer: PowerDNS.COM BV <powerdns.support@powerdns.com>
 
 Package: lightningstream
