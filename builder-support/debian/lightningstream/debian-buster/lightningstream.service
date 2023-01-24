@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 EnvironmentFile=-_CONFIG_
-ExecStart=_BINARY_ -c _CONFIG_ sync
+ExecStart=/usr/bin/lightningstream -c /etc/lightningstream/lightningstream.yaml sync
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 
