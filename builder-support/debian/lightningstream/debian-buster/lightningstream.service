@@ -3,7 +3,6 @@ Description=LightingStream Service Unit
 After=network.target
 
 [Service]
-EnvironmentFile=-_CONFIG_
 ExecStart=/usr/bin/lightningstream -c /etc/lightningstream/lightningstream.yaml sync
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
