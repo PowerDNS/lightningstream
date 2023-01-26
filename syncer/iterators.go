@@ -12,7 +12,12 @@ import (
 	"powerdns.com/platform/lightningstream/snapshot"
 )
 
-func NewNativeIterator(formatVersion uint32, entries []snapshot.KV, defaultTS, txnID uint64) (*NativeIterator, error) {
+func NewNativeIterator(
+	formatVersion uint32,
+	entries []snapshot.KV,
+	defaultTS header.Timestamp,
+	txnID header.TxnID,
+) (*NativeIterator, error) {
 	if formatVersion == 0 {
 		return nil, errors.New("no snapshot formatVersion provided, or 0")
 	}
@@ -43,10 +48,10 @@ func NewNativeIterator(formatVersion uint32, entries []snapshot.KV, defaultTS, t
 // The LMDB values the iterator operates on MUST always have a header. If no
 // header is present, an error is returned.
 type NativeIterator struct {
-	Entries              []snapshot.KV // LMDB contents as raw values without header
-	DefaultTimestampNano uint64        // Timestamp to add to entries that do not have one
-	TxnID                uint64        // Current write TxnID (required)
-	FormatVersion        uint32        // Snapshot FormatVersion
+	Entries              []snapshot.KV    // LMDB contents as raw values without header
+	DefaultTimestampNano header.Timestamp // Timestamp to add to entries that do not have one
+	TxnID                header.TxnID     // Current write TxnID (required)
+	FormatVersion        uint32           // Snapshot FormatVersion
 
 	current int
 	started bool
@@ -76,7 +81,11 @@ func (it *NativeIterator) Merge(oldval []byte) (val []byte, err error) {
 	//	string(entry.Key), string(oldval), string(entryVal))
 	if len(oldval) == 0 {
 		// Not in destination db, add with header
-		return it.addHeader(entryVal, entry.TimestampNano, entry.MaskedFlags(), false)
+		return it.addHeader(
+			entryVal,
+			header.Timestamp(entry.TimestampNano),
+			entry.MaskedFlags(),
+			false)
 	}
 	h, appVal, err := header.Parse(oldval)
 	if err != nil {
@@ -85,8 +94,8 @@ func (it *NativeIterator) Merge(oldval []byte) (val []byte, err error) {
 		return nil, fmt.Errorf("merge: oldval header parse error (%v = %v): %v",
 			entry.Key, oldval, err)
 	}
-	oldTS := uint64(h.Timestamp.UnixNano()) // TODO: inefficient double conversion
-	newTS := entry.TimestampNano
+	oldTS := h.Timestamp
+	newTS := header.Timestamp(entry.TimestampNano)
 	actualOldVal := appVal
 	if newTS == 0 {
 		// Special handling for main to shadow copy that uses a default timestamp
@@ -134,7 +143,12 @@ func (it *NativeIterator) logDebugValue(val []byte) {
 // entryVal is the plain application value.
 // The TxnID is also mandatory.
 // fromClean indicates if this was called from Clean
-func (it *NativeIterator) addHeader(entryVal []byte, ts uint64, flags header.Flags, fromClean bool) (val []byte, err error) {
+func (it *NativeIterator) addHeader(
+	entryVal []byte,
+	ts header.Timestamp,
+	flags header.Flags,
+	fromClean bool,
+) (val []byte, err error) {
 	// The minimum size is sufficient as long as we do not add extensions here
 	if cap(it.buf) < header.MinHeaderSize {
 		it.buf = make([]byte, header.MinHeaderSize, 1024)
@@ -200,6 +214,7 @@ func (it *PlainIterator) Merge(oldval []byte) (val []byte, err error) {
 	if len(mainVal) == 0 {
 		// Signal that we want deletion in case the strategy distinguishes
 		// between nil and an empty value
+		// FIXME: do we still want to do this with the new FlagDeleted?
 		mainVal = nil
 	}
 	return mainVal, nil

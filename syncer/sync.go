@@ -9,6 +9,7 @@ import (
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/sirupsen/logrus"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/syncer/receiver"
@@ -46,7 +47,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	if err != nil {
 		return err
 	}
-	lastTxnID := info.LastTxnID
+	lastTxnID := header.TxnID(info.LastTxnID)
 	warnedEmpty := false
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -79,11 +80,12 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		// Sync to shadow using a time in the past to not overwrite newer data.
 		// At least is allows us to save newer entries that were added
 		// while the syncer was not running. it will not save updated entries.
+		// FIXME: Perhaps just use timestamp 0 (1970) here? Why disallow that in iterator?
 		s.l.Info("Syncing main to shadow, in case data was changed before start")
 		err := env.Update(func(txn *lmdb.Txn) error {
 			// TODO: use const
 			past := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-			pastNano := uint64(past.UnixNano())
+			pastNano := header.TimestampFromTime(past)
 			return s.mainToShadow(ctx, txn, pastNano)
 		})
 		if err != nil {
@@ -183,8 +185,8 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				"info.LastTxnID": info.LastTxnID,
 				"lastTxnID":      lastTxnID,
 			}).Trace("Checking if TxnID changed")
-			if info.LastTxnID > lastTxnID {
-				lastTxnID = info.LastTxnID
+			if header.TxnID(info.LastTxnID) > lastTxnID {
+				lastTxnID = header.TxnID(info.LastTxnID)
 				break // create new snapshot
 			}
 
@@ -212,7 +214,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	}
 }
 
-func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, update snapshot.Update, lastTxnID int64) (txnID int64, localChanged bool, err error) {
+func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, update snapshot.Update, lastTxnID header.TxnID) (txnID header.TxnID, localChanged bool, err error) {
 
 	t0 := time.Now() // for performance measurements
 	snap := update.Snapshot
@@ -230,8 +232,8 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 	err = env.Update(func(txn *lmdb.Txn) error {
 		ts := time.Now()
 		tTxnAcquire = ts
-		tsNano := uint64(ts.UnixNano())
-		txnID = int64(txn.ID())
+		tsNano := header.TimestampFromTime(ts)
+		txnID = header.TxnID(txn.ID())
 
 		// There was a local change if the update transaction ID was more than 1
 		// higher than the last transaction ID we took a snapshot of.
@@ -244,7 +246,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 			"txnID":             txnID,
 			"lastTxnID":         lastTxnID,
 			"snapshot_instance": instance,
-			"timestamp":         snapshot.TimestampFromNano(snap.Meta.TimestampNano),
+			"timestamp":         snapshot.NameTimestampFromNano(header.Timestamp(snap.Meta.TimestampNano)),
 			"localChanged":      localChanged,
 		})
 		l.Debug("Started load")
@@ -291,7 +293,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				snap.FormatVersion,
 				dbiMsg.Entries,
 				0, // no default timestamp
-				uint64(txn.ID()),
+				header.TxnID(txn.ID()),
 			)
 			if err != nil {
 				return fmt.Errorf("create native iterator: %w", err)
@@ -322,7 +324,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 	})
 	if err != nil {
 		// We always return LMDB reading errors, as these are really unexpected
-		return -1, false, err
+		return 0, false, err
 	}
 	tLoaded := time.Now()
 
@@ -330,16 +332,16 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 	// and reuse the ID the next time, so we need to adjust the txnID we return.
 	info, err := env.Info()
 	if err != nil {
-		return -1, false, err
+		return 0, false, err
 	}
-	if info.LastTxnID < txnID {
+	if header.TxnID(info.LastTxnID) < txnID {
 		// Transaction was empty, no changes
 		s.l.WithField("prevTxnID", txnID).WithField("txnID", info.LastTxnID).
 			Debug("Adjusting TxnID (no changes)")
-		txnID = info.LastTxnID
+		txnID = header.TxnID(info.LastTxnID)
 	}
 
-	ts := snapshot.TimestampFromNano(snap.Meta.TimestampNano)
+	ts := snapshot.NameTimestampFromNano(header.Timestamp(snap.Meta.TimestampNano))
 	l := s.l.WithFields(logrus.Fields{
 		"time_total":        utils.TimeDiff(tLoaded, t0),
 		"txnID":             txnID,

@@ -50,10 +50,10 @@ func TestParse(t *testing.T) {
 
 	h, v, err := Parse(testVal)
 	assert.NoError(t, err)
-	assert.Equal(t, ts, h.Timestamp)
-	assert.Equal(t, int64(123), h.TxnID)
+	assert.Equal(t, TimestampFromTime(ts), h.Timestamp)
+	assert.Equal(t, TxnID(123), h.TxnID)
 	assert.Equal(t, 0, h.Version)
-	assert.Equal(t, uint8(0x1), h.Flags)
+	assert.Equal(t, Flags(0x1), h.Flags)
 	assert.Equal(t, []byte{1, 2, 3, 4, 5, 6, 7, 8}, h.Extra)
 	assert.Equal(t, []byte("test"), v)
 
@@ -127,7 +127,7 @@ func BenchmarkPutBasic(b *testing.B) {
 
 func BenchmarkHeader_Bytes_basic(b *testing.B) {
 	h := Header{
-		Timestamp: time.Now(),
+		Timestamp: TimestampFromTime(time.Now()),
 		TxnID:     123,
 		Version:   0,
 		Flags:     0x01,
@@ -142,7 +142,7 @@ func BenchmarkHeader_Bytes_basic(b *testing.B) {
 
 func BenchmarkHeader_Bytes_extra(b *testing.B) {
 	h := Header{
-		Timestamp: time.Now(),
+		Timestamp: TimestampFromTime(time.Now()),
 		TxnID:     123,
 		Version:   0,
 		Flags:     0x01,
@@ -158,7 +158,7 @@ func BenchmarkHeader_Bytes_extra(b *testing.B) {
 func BenchmarkHeader_Bytes_extra_large_allocates(b *testing.B) {
 	numOverflow := (PreAllocSize-MinHeaderSize)/8 + 1
 	h := Header{
-		Timestamp: time.Now(),
+		Timestamp: TimestampFromTime(time.Now()),
 		TxnID:     123,
 		Version:   0,
 		Flags:     0x01,
@@ -173,7 +173,7 @@ func BenchmarkHeader_Bytes_extra_large_allocates(b *testing.B) {
 
 func TestHeader_Bytes_alloc(t *testing.T) {
 	h := Header{
-		Timestamp: time.Now(),
+		Timestamp: TimestampFromTime(time.Now()),
 		TxnID:     123,
 		Version:   0,
 		Flags:     0x01,
@@ -189,7 +189,7 @@ func TestHeader_Bytes_alloc(t *testing.T) {
 func TestHeader_Bytes_alloc_large_extra(t *testing.T) {
 	numOverflow := (PreAllocSize-MinHeaderSize)/8 + 1
 	h := Header{
-		Timestamp: time.Now(),
+		Timestamp: TimestampFromTime(time.Now()),
 		TxnID:     123,
 		Version:   0,
 		Flags:     0x01,

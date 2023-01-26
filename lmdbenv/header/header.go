@@ -7,10 +7,29 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Timestamp is the number of nanoseconds since the UNIX epoch, which
+// is how we write it to the header.
+type Timestamp uint64
+
+// Time converts a Timestamp into Time
+func (ts Timestamp) Time() time.Time {
+	return time.Unix(0, int64(ts))
+}
+
+// TimestampFromTime creates a Timestamp from a Time
+func TimestampFromTime(t time.Time) Timestamp {
+	return Timestamp(t.UnixNano())
+}
+
+// TxnID is the LMDB transaction ID.
+// The Go lmdb library inconsistently uses int64 and uintptr for this in
+// different places.
+type TxnID uint64
+
 // Header describes the header of a native schema value
 type Header struct {
-	Timestamp time.Time // time of last change
-	TxnID     uint64    // type matches lmdb.EnvInfo.LastTxnID
+	Timestamp Timestamp // time of last change
+	TxnID     TxnID     // lmdb Go lib uses uint64 and uintptr
 	Version   int       // header version (currently always 0)
 	Flags     Flags     // header flags
 	NumExtra  int       // extra number of 8-byte blocks (set automatically in .Bytes())
@@ -53,8 +72,8 @@ func (h Header) doBytes(b []byte) []byte {
 		}
 	}
 
-	binary.BigEndian.PutUint64(b[:8], uint64(h.Timestamp.UnixNano()))
-	binary.BigEndian.PutUint64(b[8:16], h.TxnID)
+	binary.BigEndian.PutUint64(b[:8], uint64(h.Timestamp))
+	binary.BigEndian.PutUint64(b[8:16], uint64(h.TxnID))
 	b[VersionOffset] = uint8(h.Version)
 	b[FlagsOffset] = uint8(h.Flags)
 	b[NumExtraOffset] = uint8(n)
@@ -135,8 +154,8 @@ func Parse(val []byte) (header Header, value []byte, err error) {
 	}
 
 	header = Header{
-		Timestamp: time.Unix(0, int64(binary.BigEndian.Uint64(val[:8]))),
-		TxnID:     binary.BigEndian.Uint64(val[8:16]),
+		Timestamp: Timestamp(binary.BigEndian.Uint64(val[:8])),
+		TxnID:     TxnID(binary.BigEndian.Uint64(val[8:16])),
 		Version:   int(val[VersionOffset]),
 		Flags:     Flags(val[FlagsOffset]),
 		NumExtra:  numExtra,
@@ -171,10 +190,10 @@ func Skip(val []byte) (value []byte, err error) {
 
 // PutBasic creates a basic header in the provided slice. The slice must
 // have a length of at least MinHeaderSize.
-func PutBasic(b []byte, ts uint64, txnid uint64, flags Flags) {
+func PutBasic(b []byte, ts Timestamp, txnid TxnID, flags Flags) {
 	b = b[:MinHeaderSize] // Prevents further bounds checks
-	binary.BigEndian.PutUint64(b[:8], ts)
-	binary.BigEndian.PutUint64(b[8:16], txnid)
+	binary.BigEndian.PutUint64(b[:8], uint64(ts))
+	binary.BigEndian.PutUint64(b[8:16], uint64(txnid))
 	b[VersionOffset] = 0
 	b[FlagsOffset] = uint8(flags)
 	b[reserved1Offset] = 0

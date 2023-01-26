@@ -10,6 +10,7 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
@@ -36,7 +37,7 @@ func (s *Syncer) sendLoop(ctx context.Context, env *lmdb.Env) error {
 	if err != nil {
 		return err
 	}
-	lastTxnID := info.LastTxnID
+	lastTxnID := header.TxnID(info.LastTxnID)
 	warnedEmpty := false
 	for {
 		// Store snapshot
@@ -68,8 +69,8 @@ func (s *Syncer) sendLoop(ctx context.Context, env *lmdb.Env) error {
 				"info.LastTxnID": info.LastTxnID,
 				"lastTxnID":      lastTxnID,
 			}).Trace("Checking if TxnID changed")
-			if info.LastTxnID > lastTxnID {
-				lastTxnID = info.LastTxnID
+			if header.TxnID(info.LastTxnID) > lastTxnID {
+				lastTxnID = header.TxnID(info.LastTxnID)
 				break // dump new version
 			}
 		}
@@ -77,7 +78,7 @@ func (s *Syncer) sendLoop(ctx context.Context, env *lmdb.Env) error {
 	}
 }
 
-func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err error) {
+func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnID, err error) {
 	var msg = new(snapshot.Snapshot)
 	msg.FormatVersion = snapshot.CurrentFormatVersion
 	msg.Meta.DatabaseName = s.name
@@ -106,15 +107,15 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 		// Determine snapshot timestamp after we opened the transaction
 		ts = time.Now()
 		tTxnAcquire = ts
-		tsNano := uint64(ts.UnixNano())
-		msg.Meta.TimestampNano = tsNano
+		tsNano := header.TimestampFromTime(ts)
+		msg.Meta.TimestampNano = uint64(tsNano)
 
 		// Get the actual transaction ID we ended up opening, which could be
 		// higher than the one we received from env.Info() if a new one was
 		// created in the meantime.
 		// int64 matches the type we get from env.Info()
 		// If we update, it may be higher than from Info
-		txnID = int64(txn.ID())
+		txnID = header.TxnID(txn.ID())
 		s.l.WithField("txnID", txnID).Debug("Started dump of transaction")
 
 		// First update the shadow dbs
@@ -157,7 +158,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	})
 	if err != nil {
 		// We always return LMDB reading errors, as these are really unexpected
-		return -1, err
+		return 0, err
 	}
 	tDumped := time.Now()
 
@@ -165,19 +166,19 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	// and reuse the ID the next time, so we need to adjust the txnID we return.
 	info, err := env.Info()
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
-	if info.LastTxnID < txnID {
+	if header.TxnID(info.LastTxnID) < txnID {
 		// Transaction was empty, no changes
 		s.l.WithField("prevTxnID", txnID).WithField("txnID", info.LastTxnID).
 			Debug("Adjusting TxnID (no changes)")
-		txnID = info.LastTxnID
+		txnID = header.TxnID(info.LastTxnID)
 	}
-	msg.Meta.LmdbTxnID = txnID
+	msg.Meta.LmdbTxnID = int64(txnID)
 
 	out, dds, err := snapshot.DumpData(msg)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 	tDumpedData := time.Now()
 
@@ -194,7 +195,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 			s.l.WithError(err).Warn("Store failed, retrying")
 			metricSnapshotsStoreFailed.WithLabelValues(s.name).Inc()
 			if err := utils.SleepContext(ctx, s.c.StorageRetryInterval); err != nil {
-				return -1, err
+				return 0, err
 			}
 			continue
 		}
@@ -205,7 +206,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 	if err != nil {
 		s.l.WithError(err).Warn("Store failed too many times, giving up")
 		metricSnapshotsStoreFailedPermenantly.WithLabelValues(s.name).Inc()
-		return -1, err
+		return 0, err
 	}
 	tStored := time.Now()
 
