@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -286,8 +287,14 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				return err
 			}
 
-			it := &TimestampedIterator{
-				Entries: dbiMsg.Entries,
+			it, err := NewNativeIterator(
+				snap.FormatVersion,
+				dbiMsg.Entries,
+				0, // no default timestamp
+				uint64(txn.ID()),
+			)
+			if err != nil {
+				return fmt.Errorf("create native iterator: %w", err)
 			}
 			err = strategy.Update(txn, targetDBI, it)
 			if err != nil {

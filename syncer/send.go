@@ -79,7 +79,7 @@ func (s *Syncer) sendLoop(ctx context.Context, env *lmdb.Env) error {
 
 func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err error) {
 	var msg = new(snapshot.Snapshot)
-	msg.FormatVersion = 1
+	msg.FormatVersion = snapshot.CurrentFormatVersion
 	msg.Meta.DatabaseName = s.name
 	msg.Meta.Hostname = hostname
 	msg.Meta.InstanceID = s.instanceID()

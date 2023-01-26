@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
+	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
 
@@ -72,9 +73,14 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 			return err
 		}
 
-		it := &TimestampedIterator{
-			Entries:              dbiMsg.Entries,
-			DefaultTimestampNano: tsNano,
+		it, err := NewNativeIterator(
+			snapshot.CurrentFormatVersion,
+			dbiMsg.Entries,
+			tsNano,
+			uint64(txn.ID()),
+		)
+		if err != nil {
+			return fmt.Errorf("create native iterator: %w", err)
 		}
 		err = strategy.IterUpdate(txn, targetDBI, it)
 		if err != nil {
