@@ -9,6 +9,9 @@ message KV {
   bytes key = 1;
   bytes value = 2;
   fixed64 timestampNano = 3;
+  uint32 flags = 4; // only flags in header.FlagSyncMask are allowed here
+  // TODO: add this in the future
+  //bytes extraHeader = 5;
 }
 
 message DBI {
