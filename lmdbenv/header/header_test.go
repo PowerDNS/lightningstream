@@ -117,6 +117,14 @@ func TestSkip(t *testing.T) {
 	assert.Equal(t, []byte{}, v)
 }
 
+func BenchmarkPutBasic(b *testing.B) {
+	buf := make([]byte, MinHeaderSize)
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		PutBasic(buf, 1234567890, 121212, FlagDeleted)
+	}
+}
+
 func BenchmarkHeader_Bytes_basic(b *testing.B) {
 	h := Header{
 		Timestamp: time.Now(),
@@ -148,7 +156,7 @@ func BenchmarkHeader_Bytes_extra(b *testing.B) {
 }
 
 func BenchmarkHeader_Bytes_extra_large_allocates(b *testing.B) {
-	numOverflow := (HeaderPreAllocSize-MinHeaderSize)/8 + 1
+	numOverflow := (PreAllocSize-MinHeaderSize)/8 + 1
 	h := Header{
 		Timestamp: time.Now(),
 		TxnID:     123,
@@ -179,7 +187,7 @@ func TestHeader_Bytes_alloc(t *testing.T) {
 }
 
 func TestHeader_Bytes_alloc_large_extra(t *testing.T) {
-	numOverflow := (HeaderPreAllocSize-MinHeaderSize)/8 + 1
+	numOverflow := (PreAllocSize-MinHeaderSize)/8 + 1
 	h := Header{
 		Timestamp: time.Now(),
 		TxnID:     123,
