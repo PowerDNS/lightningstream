@@ -13,7 +13,7 @@ const (
 	DupSortHackMaxKeySize = 255
 )
 
-// dupSortHackEncodeOne encodes DopSort key-values in a way that hopefully makes
+// dupSortHackEncodeOne encodes DupSort key-values in a way that hopefully makes
 // the key unique.
 // It appends to the original key:
 // - a separator consisting on 0 bytes
@@ -22,8 +22,9 @@ const (
 // The value remains unchanged.
 // The original key size is limited to 255 bytes.
 // Examples:
-//   "key" = "val"  --->  "key\0\0\0\0val\x03" = "val"
-//   "key" = "<very-long-val>"  --->  "key\0\0\0\0<503-bytes-that-fit>\x03" = "<very-long-val>"
+//
+//	"key" = "val"  --->  "key\0\0\0\0val\x03" = "val"
+//	"key" = "<very-long-val>"  --->  "key\0\0\0\0<503-bytes-that-fit>\x03" = "<very-long-val>"
 func dupSortHackEncodeOne(e snapshot.KV) (result snapshot.KV, err error) {
 	if len(e.Key) == 0 {
 		return result, fmt.Errorf("empty key not supported by dupsort_hack")
