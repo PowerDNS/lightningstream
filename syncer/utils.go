@@ -24,7 +24,7 @@ const (
 	// must not be synced.
 	SyncDBIPrefix = "_sync"
 	// SyncDBIShadowPrefix is the DBI name prefix of shadow databases.
-	SyncDBIShadowPrefix = "_sync_"
+	SyncDBIShadowPrefix = "_sync_shadow_"
 )
 
 // ErrEntry is returned when an entry is invalid, for example due to a missing

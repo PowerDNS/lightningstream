@@ -58,7 +58,7 @@ func TestSyncer_shadow(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Read shadow DBI
-			shadowDBI, err := txn.OpenDBI("_sync_foo", 0)
+			shadowDBI, err := txn.OpenDBI("_sync_shadow_foo", 0)
 			assert.NoError(t, err)
 			vals, err := lmdbenv.ReadDBIString(txn, shadowDBI)
 			assert.NoError(t, err)
@@ -100,7 +100,7 @@ func TestSyncer_shadow(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Read shadow DBI
-			shadowDBI, err := txn.OpenDBI("_sync_foo", 0)
+			shadowDBI, err := txn.OpenDBI("_sync_shadow_foo", 0)
 			assert.NoError(t, err)
 			vals, err := lmdbenv.ReadDBIString(txn, shadowDBI)
 			assert.NoError(t, err)
@@ -123,7 +123,7 @@ func TestSyncer_shadow(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Read shadow DBI
-			shadowDBI, err := txn.OpenDBI("_sync_foo", 0)
+			shadowDBI, err := txn.OpenDBI("_sync_shadow_foo", 0)
 			assert.NoError(t, err)
 			vals, err := lmdbenv.ReadDBIString(txn, shadowDBI)
 			assert.NoError(t, err)
