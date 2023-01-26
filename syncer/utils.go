@@ -156,6 +156,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 		prev = item.Key
 		val := item.Val
 		var ts header.Timestamp
+		var flags header.Flags
 		if !rawValues {
 			h, appVal, err := header.Parse(val)
 			if err != nil {
@@ -166,12 +167,15 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 				}
 			}
 			ts = h.Timestamp
+			flags = h.Flags
 			val = appVal
 		}
+
 		dbiMsg.Entries = append(dbiMsg.Entries, snapshot.KV{
 			Key:           item.Key,
 			Value:         val,
 			TimestampNano: uint64(ts),
+			Flags:         uint32(flags.Masked()),
 		})
 	}
 

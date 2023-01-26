@@ -48,6 +48,7 @@ func dupSortHackEncodeOne(e snapshot.KV) (result snapshot.KV, err error) {
 	key = append(key, uint8(len(e.Key))) // limits DupSortHackMaxKeySize
 	result.Key = key
 	result.Value = e.Value
+	result.Flags = e.Flags
 	return result, nil
 }
 
@@ -66,6 +67,7 @@ func dupSortHackDecodeOne(e snapshot.KV) (result snapshot.KV, err error) {
 	key := e.Key[:keyLen]
 	result.Key = key
 	result.Value = e.Value
+	result.Flags = e.Flags
 	return result, nil
 }
 
