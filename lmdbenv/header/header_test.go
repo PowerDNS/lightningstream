@@ -57,16 +57,16 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, []byte{1, 2, 3, 4, 5, 6, 7, 8}, h.Extra)
 	assert.Equal(t, []byte("test"), v)
 
-	h, v, err = Parse(testVal[:20])
+	_, _, err = Parse(testVal[:20])
 	assert.Equal(t, ErrTooShort, err)
 
-	h, v, err = Parse(testVal[:25])
+	_, _, err = Parse(testVal[:25])
 	assert.Equal(t, ErrTooShort, err)
 
-	h, v, err = Parse(testVal[:31])
+	_, _, err = Parse(testVal[:31])
 	assert.Equal(t, ErrTooShort, err)
 
-	h, v, err = Parse(testVal[:32])
+	_, v, err = Parse(testVal[:32])
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{}, v)
 }
@@ -103,13 +103,13 @@ func TestSkip(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("test"), v)
 
-	v, err = Skip(testVal[:20])
+	_, err = Skip(testVal[:20])
 	assert.Equal(t, ErrTooShort, err)
 
-	v, err = Skip(testVal[:25])
+	_, err = Skip(testVal[:25])
 	assert.Equal(t, ErrTooShort, err)
 
-	v, err = Skip(testVal[:31])
+	_, err = Skip(testVal[:31])
 	assert.Equal(t, ErrTooShort, err)
 
 	v, err = Skip(testVal[:32])
