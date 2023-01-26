@@ -69,6 +69,9 @@ type Config struct {
 	// after failure, before giving up.
 	StorageRetryCount int `yaml:"storage_retry_count"`
 
+	// If set, StorageRetryCount will be ignored, and we retry forever
+	StorageRetryForever bool `yaml:"storage_retry_forever"`
+
 	// LMDBScrapeSmaps enabled the scraping of /proc/smaps for LMDB stats
 	LMDBScrapeSmaps bool `yaml:"lmdb_scrape_smaps"`
 
@@ -118,6 +121,7 @@ type Storage struct {
 	Type    string                 `yaml:"type"`    // "fs", "s3", "memory"
 	Options map[string]interface{} `yaml:"options"` // backend specific
 
+	// FIXME: Configure per LMDB instead, since we run a cleaner per LMDB?
 	Cleanup Cleanup `yaml:"cleanup"`
 
 	RootPath string `yaml:"root_path,omitempty"` // Deprecated: use options.root_path for fs

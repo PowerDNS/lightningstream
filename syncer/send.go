@@ -187,7 +187,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 
 	// Send it to storage
 	name := snapshot.Name(s.name, s.instanceID(), s.generationID(), ts)
-	for i := 0; i < s.c.StorageRetryCount; i++ {
+	for i := 0; i < s.c.StorageRetryCount || s.c.StorageRetryForever; i++ {
 		metricSnapshotsStoreCalls.Inc()
 		err = s.st.Store(ctx, name, out)
 		if err != nil {
