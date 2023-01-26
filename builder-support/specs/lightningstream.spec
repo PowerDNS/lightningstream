@@ -62,8 +62,10 @@ mkdir -p %{buildroot}/usr/lib/systemd/system/
 mkdir -p %{buildroot}/%{confdir}/
 cp files/%{appname}.service %{buildroot}/%{_unitdir}/%{appname}.service
 cp files/%{appname}.yaml %{buildroot}%{confdir}/%{appname}.yaml
+cp files/%{appname}.env %{buildroot}%{confdir}/%{appname}.env
 sed -i 's|_BINARY_|%{_bindir}%{appname}|g' %{buildroot}/%{_unitdir}/%{appname}.service
 sed -i 's|_CONFIG_|%{confdir}/%{appname}.yaml|g' %{buildroot}/%{_unitdir}/%{appname}.service
+sed -i 's|_ENVFILE_|%{confdir}/%{appname}.env|g' %{buildroot}/%{_unitdir}/%{appname}.service
 
 %pre
 getent group %{installgroup} > /dev/null || groupadd -r %{installgroup}
@@ -89,3 +91,4 @@ rm -rf %{buildroot}
 %{_bindir}/%{appname}
 %{_unitdir}/%{appname}.service
 %{confdir}/%{appname}.yaml
+%{confdir}/%{appname}.env

@@ -3,7 +3,7 @@ Description=LightingStream Service Unit
 After=network.target
 
 [Service]
-EnvironmentFile=-_CONFIG_
+EnvironmentFile=_ENVFILE_
 ExecStart=_BINARY_ -c _CONFIG_ sync
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
