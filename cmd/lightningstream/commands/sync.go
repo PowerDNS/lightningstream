@@ -8,17 +8,25 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"powerdns.com/platform/lightningstream/status"
-
 	"powerdns.com/platform/lightningstream/syncer"
+)
+
+var (
+	onlyOnce bool
 )
 
 func init() {
 	rootCmd.AddCommand(syncCmd)
+	syncCmd.Flags().BoolVar(&onlyOnce, "only-once", false, "Only do a single run and exit")
 }
 
 func runSync() error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
+
+	if onlyOnce {
+		conf.OnlyOnce = true
+	}
 
 	st, err := simpleblob.GetBackend(ctx, conf.Storage.Type, conf.Storage.Options)
 	if err != nil {
@@ -47,7 +55,11 @@ func runSync() error {
 		})
 	}
 
-	status.StartHTTPServer(conf)
+	if !conf.OnlyOnce {
+		status.StartHTTPServer(conf)
+	} else {
+		logrus.Info("Not starting the HTTP server, because OnlyOnce is set")
+	}
 
 	logrus.Info("All syncers running")
 	return eg.Wait()

@@ -1,13 +1,15 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/config/logger"
 )
@@ -22,8 +24,38 @@ var (
 	instanceName string
 	debug        bool
 	minimumPID   int
+	timeout      time.Duration
 	conf         config.Config
 )
+
+var (
+	// These are ste by Execute
+	rootCtx    context.Context
+	rootCancel context.CancelFunc
+)
+
+const (
+	TimeoutExitCode = 75 // picked EX_TEMPFAIL from sysexits.h
+)
+
+func applyTimeout() {
+	if timeout <= 0 {
+		return
+	}
+	logrus.WithField("timeout", timeout).Info("Setting command timeout")
+	go func() {
+		time.Sleep(timeout)
+		logrus.Warn("Timeout reached")
+		t := time.AfterFunc(10*time.Second, func() {
+			logrus.Error("Shutdown took too long, forcing exit")
+			os.Exit(TimeoutExitCode)
+		})
+		rootCancel()
+		t.Stop()
+		logrus.Error("Exiting due to timeout")
+		os.Exit(TimeoutExitCode)
+	}()
+}
 
 var rootHelp = `This tool syncs one or more LMDB databases with an S3 bucket
 `
@@ -61,6 +93,7 @@ var rootCmd = &cobra.Command{
 		logger.Configure(conf.Log)
 		ensureMinimumPID()
 		logrus.WithField("version", version).Debug("Running")
+		applyTimeout()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		_ = cmd.Help()
@@ -74,11 +107,19 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().IntVar(&minimumPID, "minimum-pid", 0, fmt.Sprintf(
 		"Try to fork processes until we reach a minimum PID to avoid LMDB lock PID clashes when running in a container. The maximum allowed value is %d", MaximumMinPID))
+	rootCmd.PersistentFlags().DurationVar(&timeout, "timeout", 0,
+		fmt.Sprintf("Timeout for command execution (exit code %d)", TimeoutExitCode))
 	logger.RegisterFlagsWith(rootCmd.PersistentFlags().StringVar)
 }
 
 func Execute() {
+	rootCtx, rootCancel = context.WithCancel(context.Background())
+	defer rootCancel()
 	if err := rootCmd.Execute(); err != nil {
+		if errors.Is(err, context.Canceled) && timeout > 0 {
+			logrus.Error("Context cancelled, likely due to timeout")
+			os.Exit(TimeoutExitCode)
+		}
 		logrus.WithError(err).Error("Error")
 		os.Exit(1)
 	}
