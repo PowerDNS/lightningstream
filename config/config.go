@@ -126,7 +126,7 @@ type Cleanup struct {
 
 	// Interval determines how often we run a cleaning session.
 	// The actual interval is subject to intentional perturbation.
-	Interval time.Duration
+	Interval time.Duration `yaml:"interval"`
 
 	// MustKeepInterval determines how long snapshots must be kept after they
 	// appear in the bucket, even if a newer snapshot is available.
