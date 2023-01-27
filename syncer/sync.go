@@ -48,6 +48,15 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	lastTxnID := info.LastTxnID
 	warnedEmpty := false
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Run cleaner in background to clean old snapshots
+	go func() {
+		err := s.cleaner.Run(ctx)
+		s.l.WithError(err).Info("Cleaner exited")
+	}()
+
 	// Wait for an initial snapshot listing
 	for {
 		err := r.RunOnce(ctx, true) // including own snapshots, only during startup
@@ -113,13 +122,13 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			// because every load will implicitly trigger a snapshot when local
 			// changes are detected.
 			for {
-				instance, snap := r.Next()
+				instance, update := r.Next()
 				if instance == "" {
 					break // no more remote snapshots
 				}
 				// New remote snapshot to load
 				delete(waitingForInstances, instance)
-				actualTxnID, localChanged, err := s.LoadOnce(ctx, env, instance, snap, lastTxnID)
+				actualTxnID, localChanged, err := s.LoadOnce(ctx, env, instance, update, lastTxnID)
 				if err != nil {
 					return err
 				}
@@ -202,9 +211,10 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	}
 }
 
-func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, snap *snapshot.Snapshot, lastTxnID int64) (txnID int64, localChanged bool, err error) {
+func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, update snapshot.Update, lastTxnID int64) (txnID int64, localChanged bool, err error) {
 
 	t0 := time.Now() // for performance measurements
+	snap := update.Snapshot
 
 	var tTxnAcquire time.Time
 	var tShadow1Start time.Time
@@ -338,6 +348,8 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, s
 		"time_copy_shadow2": utils.TimeDiff(tShadow2End, tShadow2Start),
 		"time_load":         utils.TimeDiff(tLoadEnd, tLoadStart),
 	}).Debug("Loaded remote snapshot (with timings)")
+
+	s.lastByInstance[instance] = update.NameInfo.Timestamp
 
 	return txnID, localChanged, nil
 }

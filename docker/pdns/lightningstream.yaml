@@ -22,6 +22,11 @@ storage:
     region: us-east-1
     bucket: lightningstream
     endpoint_url: http://minio:9000
+  cleanup:
+    enabled: true
+    interval: 15m
+    must_keep_interval: 24h
+    remove_old_instances_interval: 168h
 
 http:
   address: ":8500"

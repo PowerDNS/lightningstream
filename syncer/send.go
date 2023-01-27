@@ -222,5 +222,9 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID int64, err 
 		"txnID":            txnID,
 	}).Info("Stored snapshot")
 
+	// Tell the cleaner which snapshots made by other instances have been
+	// incorporated in the last snapshot that we sent.
+	s.cleaner.SetCommitted(s.lastByInstance)
+
 	return txnID, nil
 }

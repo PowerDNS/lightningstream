@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 )
@@ -19,6 +20,18 @@ func SleepContext(ctx context.Context, d time.Duration) error {
 	case <-t.C:
 		return nil
 	}
+}
+
+// SleepContextPerturb sleeps for given duration like SleepContent, but it
+// perturbs the duration with a 20% random component to avoid multiple instances
+// running at the exact same time.
+// If the context closes in the meantime, it returns immediately with a
+// context.Canceled error.
+func SleepContextPerturb(ctx context.Context, d time.Duration) error {
+	r := rand.Intn(400)
+	// Random duration between 80% and 120% of original
+	d = time.Duration(800+r) * d / 1000
+	return SleepContext(ctx, d)
 }
 
 // IsCanceled checks if the context has been canceled.
