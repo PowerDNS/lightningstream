@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"time"
 
@@ -65,8 +66,13 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		s.l.WithError(err).Info("Waiting for initial receiver listing")
 		time.Sleep(time.Second) // TODO: Configurable?
 	}
+
 	hasSnapshots := r.HasSnapshots()
 	hasData := lastTxnID > 0
+	waitingForInstances := make(map[string]bool)
+	for _, instance := range r.SeenInstances() {
+		waitingForInstances[instance] = true
+	}
 
 	if hasData && !s.lc.SchemaTracksChanges {
 		// Sync to shadow using a time in the past to not overwrite newer data.
@@ -97,7 +103,8 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			"(empty database or some snapshot already exist)")
 	}
 
-	// Run receiver in background to get newer snapshot
+	// Run receiver in background to get newer snapshot after loading the
+	// initial batch of snapshots.
 	go func() {
 		err := r.Run(ctx)
 		s.l.WithError(err).Info("Receiver exited")
@@ -120,6 +127,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 					break // no more remote snapshots
 				}
 				// New remote snapshot to load
+				delete(waitingForInstances, instance)
 				actualTxnID, localChanged, err := s.LoadOnce(ctx, env, instance, update, lastTxnID)
 				if err != nil {
 					return err
@@ -131,12 +139,46 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				}
 			}
 
+			// Check if any of the instances we are waiting for have disappeared,
+			// which can happen when a cleaner removes stale snapshots.
+			if len(waitingForInstances) > 0 {
+				// Check if the instance still has snapshots
+				current := make(map[string]bool)
+				for _, instance := range r.SeenInstances() {
+					current[instance] = true
+				}
+				// No need to wait for these any longer, remove them from the map
+				var toDelete []string
+				for instance := range waitingForInstances {
+					if !current[instance] {
+						toDelete = append(toDelete, instance)
+					}
+				}
+				for _, instance := range toDelete {
+					delete(waitingForInstances, instance)
+				}
+				// Sort alphabetically for log message
+				var instances []string
+				for instance := range waitingForInstances {
+					instances = append(instances, instance)
+				}
+				sort.Strings(instances)
+				istr := strings.Join(instances, " ")
+				s.l.WithField("instances", istr).Info("Still waiting for snapshots from instances")
+			}
+
+			// If set, we are done now
+			if s.c.OnlyOnce && len(waitingForInstances) == 0 {
+				s.l.Info("Stopping, because requested to only do a single pass")
+				return nil
+			}
+
 			// Wait for change in local LMDB
 			info, err := env.Info()
 			if err != nil {
 				return err
 			}
-			logrus.WithFields(logrus.Fields{
+			s.l.WithFields(logrus.Fields{
 				"info.LastTxnID": info.LastTxnID,
 				"lastTxnID":      lastTxnID,
 			}).Trace("Checking if TxnID changed")

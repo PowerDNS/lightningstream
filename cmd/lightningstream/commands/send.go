@@ -17,7 +17,7 @@ func init() {
 }
 
 func runSend() error {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
 
 	st, err := simpleblob.GetBackend(ctx, conf.Storage.Type, conf.Storage.Options)

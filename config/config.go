@@ -72,6 +72,10 @@ type Config struct {
 	// LMDBScrapeSmaps enabled the scraping of /proc/smaps for LMDB stats
 	LMDBScrapeSmaps bool `yaml:"lmdb_scrape_smaps"`
 
+	// OnlyOnce requests the program to exit ofter once batch has been completed,
+	// e.g. after the initial listing of snapshots have been loaded.
+	OnlyOnce bool `yaml:"only_once"`
+
 	// Set to current version by main
 	Version string `yaml:"-"`
 }

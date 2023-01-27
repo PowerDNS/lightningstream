@@ -81,6 +81,16 @@ func (r *Receiver) HasSnapshots() bool {
 	return r.hasSnapshots
 }
 
+// SeenInstances returns all seen instance names
+func (r *Receiver) SeenInstances() (names []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for name := range r.lastSeenByInstance {
+		names = append(names, name)
+	}
+	return names
+}
+
 func (r *Receiver) Run(ctx context.Context) error {
 	for {
 		if err := r.RunOnce(ctx, false); err != nil {
