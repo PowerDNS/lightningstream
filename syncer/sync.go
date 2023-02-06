@@ -178,9 +178,9 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				return nil
 			}
 
-			// Update start tracker if first pass has completed
+			// Update start tracker if pass has completed
 			if len(waitingForInstances) == 0 {
-				s.startTracker.SetPassedInitialReceiveAndLoad()
+				s.startTracker.SetPassCompleted()
 			}
 
 			// Wait for change in local LMDB

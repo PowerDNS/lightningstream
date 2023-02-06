@@ -87,19 +87,23 @@ func (st *StartTracker) RegisterTracker() {
 	st.logger.Info("registered tracker for startup phase")
 }
 
+// SetPassedInitialListing is called once initial storage snapshot listing has been obtained
 func (st *StartTracker) SetPassedInitialListing() {
 	st.initialListing.Store(true)
 
 	st.logger.Debug("tracked successful initial listing")
 }
 
+// SetPassedInitialStore is called once initial storage snapshot has been stored (or skipped)
 func (st *StartTracker) SetPassedInitialStore() {
 	st.initialStore.Store(true)
 
 	st.logger.Debug("tracked successful initial snapshot store")
 }
 
-func (st *StartTracker) SetPassedInitialReceiveAndLoad() {
+// SetPassCompleted is called repeatedly the main sync loop has completed a pass
+// We only track the first time this occurs in the starttracker; subsequent passes are ignored
+func (st *StartTracker) SetPassCompleted() {
 	if !st.initialReceiveAndLoad.Load() {
 		st.initialReceiveAndLoad.Store(true)
 
