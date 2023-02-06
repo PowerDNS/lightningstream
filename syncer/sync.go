@@ -116,12 +116,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		s.l.WithError(err).Info("Receiver exited")
 	}()
 
-	// // Start tracker: Track first receiving of snapshots
-	// firstReceivePassed := false
-
-	// // Start tracker: Track first load of snapshots after receiving
-	// firstLoadAfterReceivePassed := false
-
 	// There is no guarantee that the snapshots listed before have already been
 	// downloaded and are available for loading, but this is fine.
 	// The update loop will not cause any issues, even if a snapshot is generated.
@@ -184,6 +178,11 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				return nil
 			}
 
+			// Update start tracker if first pass has completed
+			if len(waitingForInstances) == 0 {
+				s.startTracker.SetPassedInitialReceiveAndLoad()
+			}
+
 			// Wait for change in local LMDB
 			info, err := env.Info()
 			if err != nil {
@@ -197,24 +196,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				lastTxnID = info.LastTxnID
 				break // create new snapshot
 			}
-
-			// // Start tracker: Track first load of receiving of snapshots
-			// if !firstReceivePassed {
-			// 	if r.HasFirstPassCompleted() {
-			// 		s.startTracker.SetPassedInitialReceive()
-
-			// 		firstReceivePassed = true
-			// 	}
-			// }
-
-			// // Start tracker: Track first load of snapshots after receiving
-			// if !firstLoadAfterReceivePassed {
-			// 	if firstReceivePassed {
-			// 		s.startTracker.SetPassedInitialLoad()
-
-			// 		firstLoadAfterReceivePassed = true
-			// 	}
-			// }
 
 			// Sleep before next check for snapshots and local changes
 			s.l.Debug("Waiting for a new transaction")

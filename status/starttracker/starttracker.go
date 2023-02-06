@@ -10,28 +10,28 @@ import (
 )
 
 type StartTracker struct {
-	Config         StartConfig
-	initialListing atomic.Bool
-	initialStore   atomic.Bool
-	initialReceive atomic.Bool
-	initialLoad    atomic.Bool
-	since          atomic.Time
-	prefix         string
-	logger         logrus.FieldLogger
+	Config                StartConfig
+	initialListing        atomic.Bool
+	initialStore          atomic.Bool
+	initialReceiveAndLoad atomic.Bool
+	since                 atomic.Time
+	prefix                string
+	metaFieldStartup      string
+	logger                logrus.FieldLogger
 }
 
 func New(sc StartConfig, prefix string) *StartTracker {
 	st := &StartTracker{
-		Config: sc.Validated(),
-		prefix: prefix,
-		logger: logrus.WithField("starttracker", prefix),
+		Config:           sc.Validated(),
+		prefix:           prefix,
+		metaFieldStartup: fmt.Sprintf("startup_%s", prefix),
+		logger:           logrus.WithField("starttracker", prefix),
 	}
 
 	// Default startup state to false (not finished)
 	st.initialListing.Store(false)
 	st.initialStore.Store(false)
-	st.initialReceive.Store(false)
-	st.initialLoad.Store(false)
+	st.initialReceiveAndLoad.Store(false)
 
 	// Set current time as begin of startup phase
 	st.since.Store(time.Now())
@@ -44,7 +44,7 @@ func New(sc StartConfig, prefix string) *StartTracker {
 
 func (st *StartTracker) RegisterTracker() {
 	if st.Config.ReportMetadata {
-		healthz.SetMeta("startupCompleted", false)
+		healthz.SetMeta(st.metaFieldStartup, false)
 	}
 
 	trackerName := fmt.Sprintf("%s_startup_in_progress", st.prefix)
@@ -54,7 +54,8 @@ func (st *StartTracker) RegisterTracker() {
 		// Calculated values
 		failingFor := time.Since(st.since.Load())
 
-		if !st.initialListing.Load() || !st.initialStore.Load() || !st.initialReceive.Load() || !st.initialLoad.Load() {
+		// Tests for pending activities
+		if !st.initialListing.Load() || !st.initialStore.Load() || !st.initialReceiveAndLoad.Load() {
 			if st.Config.ReportHealthz {
 				if failingFor >= st.Config.ErrorDuration {
 					st.logger.Debugf("succesful startup pending after %s is violating the error threshold (%s)", failingFor.Round(time.Second), st.Config.ErrorDuration)
@@ -65,13 +66,14 @@ func (st *StartTracker) RegisterTracker() {
 
 					return healthz.Warnf("succesful startup pending after %s", failingFor.Round(time.Second))
 				}
-			} else {
-				return nil
 			}
+
+			return nil
 		}
 
+		// Handle finished startup phase
 		if st.Config.ReportMetadata {
-			healthz.SetMeta("startupCompleted", true)
+			healthz.SetMeta(st.metaFieldStartup, true)
 		}
 
 		st.logger.Info("startup phase completed succesfully")
@@ -97,14 +99,10 @@ func (st *StartTracker) SetPassedInitialStore() {
 	st.logger.Debug("tracked succesful initial snapshot store")
 }
 
-func (st *StartTracker) SetPassedInitialReceive() {
-	st.initialReceive.Store(true)
+func (st *StartTracker) SetPassedInitialReceiveAndLoad() {
+	if !st.initialReceiveAndLoad.Load() {
+		st.initialReceiveAndLoad.Store(true)
 
-	st.logger.Debug("tracked succesful initial receive")
-}
-
-func (st *StartTracker) SetPassedInitialLoad() {
-	st.initialLoad.Store(true)
-
-	st.logger.Debug("tracked succesful initial load")
+		st.logger.Debug("tracked succesful initial receive & load")
+	}
 }

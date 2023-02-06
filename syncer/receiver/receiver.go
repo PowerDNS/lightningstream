@@ -62,9 +62,8 @@ type Receiver struct {
 	hasSnapshots          bool
 
 	// Health trackers
-	storageListHealth  *healthtracker.HealthTracker
-	storageLoadHealth  *healthtracker.HealthTracker
-	firstPassCompleted bool
+	storageListHealth *healthtracker.HealthTracker
+	storageLoadHealth *healthtracker.HealthTracker
 }
 
 // Next returns the next remote snapshot.Update to process if there is one
@@ -101,25 +100,10 @@ func (r *Receiver) SeenInstances() (names []string) {
 	return names
 }
 
-// // HasFirstPassCompleted indicates if the first iteration of RunOnce has been
-// // completed.
-// func (r *Receiver) HasFirstPassCompleted() bool {
-// 	r.mu.Lock()
-// 	defer r.mu.Unlock()
-// 	return r.firstPassCompleted
-// }
-
 func (r *Receiver) Run(ctx context.Context) error {
 	for {
 		if err := r.RunOnce(ctx, false); err != nil {
 			r.l.WithError(err).Error("Fetch error")
-		}
-
-		// Store first pass to allow startup tracking by parent syncer
-		if !r.firstPassCompleted {
-			r.mu.Lock()
-			r.firstPassCompleted = true
-			r.mu.Unlock()
 		}
 
 		if err := utils.SleepContext(ctx, r.c.StoragePollInterval); err != nil {
