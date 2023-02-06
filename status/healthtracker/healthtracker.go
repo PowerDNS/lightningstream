@@ -81,5 +81,5 @@ func (ht *HealthTracker) AddSuccess() {
 	ht.sequence.Store(0)
 	ht.lastErr.Store("")
 
-	ht.logger.Debug("tracked succesful attempt")
+	ht.logger.Debug("tracked successful attempt")
 }

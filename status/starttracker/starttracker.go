@@ -58,13 +58,13 @@ func (st *StartTracker) RegisterTracker() {
 		if !st.initialListing.Load() || !st.initialStore.Load() || !st.initialReceiveAndLoad.Load() {
 			if st.Config.ReportHealthz {
 				if failingFor >= st.Config.ErrorDuration {
-					st.logger.Debugf("succesful startup pending after %s is violating the error threshold (%s)", failingFor.Round(time.Second), st.Config.ErrorDuration)
+					st.logger.Debugf("successful startup pending after %s is violating the error threshold (%s)", failingFor.Round(time.Second), st.Config.ErrorDuration)
 
-					return fmt.Errorf("succesful startup pending after %s", failingFor.Round(time.Second))
+					return fmt.Errorf("successful startup pending after %s", failingFor.Round(time.Second))
 				} else if failingFor >= st.Config.WarnDuration {
-					st.logger.Debugf("succesful startup pending after %s is violating the warning threshold (%s)", failingFor.Round(time.Second), st.Config.WarnDuration)
+					st.logger.Debugf("successful startup pending after %s is violating the warning threshold (%s)", failingFor.Round(time.Second), st.Config.WarnDuration)
 
-					return healthz.Warnf("succesful startup pending after %s", failingFor.Round(time.Second))
+					return healthz.Warnf("successful startup pending after %s", failingFor.Round(time.Second))
 				}
 			}
 
@@ -76,7 +76,7 @@ func (st *StartTracker) RegisterTracker() {
 			healthz.SetMeta(st.metaFieldStartup, true)
 		}
 
-		st.logger.Info("startup phase completed succesfully")
+		st.logger.Info("startup phase completed successfully")
 
 		// Deregister the tracker - startup phase is irrelevant after passing once
 		healthz.Deregister(trackerName)
@@ -90,19 +90,19 @@ func (st *StartTracker) RegisterTracker() {
 func (st *StartTracker) SetPassedInitialListing() {
 	st.initialListing.Store(true)
 
-	st.logger.Debug("tracked succesful initial listing")
+	st.logger.Debug("tracked successful initial listing")
 }
 
 func (st *StartTracker) SetPassedInitialStore() {
 	st.initialStore.Store(true)
 
-	st.logger.Debug("tracked succesful initial snapshot store")
+	st.logger.Debug("tracked successful initial snapshot store")
 }
 
 func (st *StartTracker) SetPassedInitialReceiveAndLoad() {
 	if !st.initialReceiveAndLoad.Load() {
 		st.initialReceiveAndLoad.Store(true)
 
-		st.logger.Debug("tracked succesful initial receive & load")
+		st.logger.Debug("tracked successful initial receive & load")
 	}
 }

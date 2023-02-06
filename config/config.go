@@ -70,7 +70,7 @@ var (
 		EvaluationInterval: 5 * time.Second,
 	}
 
-	// DefaultHealthStart is the default set of thresholds used by healthz to determine whether the startup phase has completed succesfully
+	// DefaultHealthStart is the default set of thresholds used by healthz to determine whether the startup phase has completed successfully
 	DefaultHealthStart = starttracker.StartConfig{
 		// ErrorDuration is the duration after which a failing startup sequence will report 'error' to healthz
 		ErrorDuration: 5 * time.Minute,
