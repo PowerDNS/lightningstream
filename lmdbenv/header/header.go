@@ -76,7 +76,7 @@ func (h Header) doBytes(b []byte) []byte {
 	binary.BigEndian.PutUint64(b[8:16], uint64(h.TxnID))
 	b[VersionOffset] = uint8(h.Version)
 	b[FlagsOffset] = uint8(h.Flags)
-	b[NumExtraOffset] = uint8(n)
+	binary.BigEndian.PutUint16(b[NumExtraOffsetHigh:NumExtraOffsetHigh+2], uint16(n))
 	return b
 }
 
@@ -96,15 +96,15 @@ const (
 )
 
 const (
-	VersionOffset  = 16
-	FlagsOffset    = 17
-	NumExtraOffset = 23
+	VersionOffset      = 16
+	FlagsOffset        = 17
+	NumExtraOffsetHigh = 22 // uint16 high byte
+	NumExtraOffsetLow  = 23 // uint16 low byte
 
 	reserved1Offset = 18
 	reserved2Offset = 19
 	reserved3Offset = 20
 	reserved4Offset = 21
-	reserved5Offset = 22
 )
 
 type Flags uint8
@@ -141,7 +141,7 @@ func Parse(val []byte) (header Header, value []byte, err error) {
 	}
 
 	offset := MinHeaderSize
-	numExtra := int(val[NumExtraOffset])
+	numExtra := getNumExtra(val)
 	var numExtraBytes int
 	var extra []byte
 	if numExtra > 0 {
@@ -176,7 +176,7 @@ func Skip(val []byte) (value []byte, err error) {
 	}
 
 	offset := MinHeaderSize
-	numExtra := int(val[NumExtraOffset])
+	numExtra := getNumExtra(val)
 	if numExtra > 0 {
 		numExtraBytes := BlockSize * numExtra
 		if len(val) < MinHeaderSize+numExtraBytes {
@@ -186,6 +186,10 @@ func Skip(val []byte) (value []byte, err error) {
 	}
 
 	return val[offset:], nil
+}
+
+func getNumExtra(val []byte) int {
+	return int(binary.BigEndian.Uint16(val[NumExtraOffsetHigh : NumExtraOffsetHigh+2]))
 }
 
 // PutBasic creates a basic header in the provided slice. The slice must
@@ -200,6 +204,6 @@ func PutBasic(b []byte, ts Timestamp, txnid TxnID, flags Flags) {
 	b[reserved2Offset] = 0
 	b[reserved3Offset] = 0
 	b[reserved4Offset] = 0
-	b[reserved5Offset] = 0
-	b[NumExtraOffset] = 0
+	b[NumExtraOffsetHigh] = 0
+	b[NumExtraOffsetLow] = 0
 }
