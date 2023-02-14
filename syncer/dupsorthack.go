@@ -16,7 +16,7 @@ const (
 // dupSortHackEncodeOne encodes DupSort key-values in a way that hopefully makes
 // the key unique.
 // It appends to the original key:
-// - a separator consisting on 0 bytes
+// - a separator consisting of four '0' bytes
 // - the value, or part of it if the maximum key size would be exceeded
 // - a byte with the original length of the key, up to 255
 // The value remains unchanged.
@@ -55,14 +55,17 @@ func dupSortHackEncodeOne(e snapshot.KV) (result snapshot.KV, err error) {
 // dupSortHackDecodeOne does the opposite of dupSortHackEncodeOne
 func dupSortHackDecodeOne(e snapshot.KV) (result snapshot.KV, err error) {
 	if len(e.Key) < 6 { // 4 for separator + 1 minimum key size + key length byte
-		return result, fmt.Errorf("not a valid dupsort_hack dump (key)")
+		return result, fmt.Errorf("not a valid dupsort_hack dump (key): %s",
+			utils.DisplayASCII(e.Key))
 	}
 	keyLen := int(e.Key[len(e.Key)-1]) // last byte
 	if len(e.Key) < keyLen+5 {         // 4 for separator, 1 for length byte
-		return result, fmt.Errorf("not a valid dupsort_hack dump (key len)")
+		return result, fmt.Errorf("not a valid dupsort_hack dump (key len): %s",
+			utils.DisplayASCII(e.Key))
 	}
 	if e.Key[keyLen] != 0 || e.Key[keyLen+1] != 0 || e.Key[keyLen+2] != 0 || e.Key[keyLen+3] != 0 {
-		return result, fmt.Errorf("not a valid dupsort_hack dump (no separator)")
+		return result, fmt.Errorf("not a valid dupsort_hack dump (no separator): %s",
+			utils.DisplayASCII(e.Key))
 	}
 	key := e.Key[:keyLen]
 	result.Key = key
@@ -89,7 +92,7 @@ func dupSortHackEncode(entries []snapshot.KV) error {
 		if cmp > 0 {
 			// Can only happen if the separator can be found in keys and beginning
 			// of values.
-			// The separator itself was chosen a zeros to not affect ordering.
+			// The separator itself was chosen as zeros to not affect ordering.
 			return fmt.Errorf(
 				"dupsort_hack results in reverse sort order for key %s",
 				utils.DisplayASCII(e.Key))
