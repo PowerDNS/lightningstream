@@ -9,20 +9,24 @@ import (
 	"powerdns.com/platform/lightningstream/syncer/cleaner"
 
 	"powerdns.com/platform/lightningstream/config"
+	"powerdns.com/platform/lightningstream/status/healthtracker"
+	"powerdns.com/platform/lightningstream/status/starttracker"
 )
 
 func New(name string, st simpleblob.Interface, c config.Config, lc config.LMDB) (*Syncer, error) {
 	l := logrus.WithField("db", name)
 	cl := cleaner.New(name, st, c.Storage.Cleanup, l)
 	s := &Syncer{
-		name:           name,
-		st:             st,
-		c:              c,
-		lc:             lc,
-		shadow:         true,
-		generation:     0,
-		lastByInstance: make(map[string]time.Time),
-		cleaner:        cl,
+		name:               name,
+		st:                 st,
+		c:                  c,
+		lc:                 lc,
+		shadow:             true,
+		generation:         0,
+		lastByInstance:     make(map[string]time.Time),
+		cleaner:            cl,
+		storageStoreHealth: healthtracker.New(c.Health.StorageStore, fmt.Sprintf("%s_storage_store", name), "write to storage backend"),
+		startTracker:       starttracker.New(c.Health.Start, name),
 	}
 	if s.instanceID() == "" {
 		return nil, fmt.Errorf("instance name could not be determined, please provide one with --instance")
@@ -53,4 +57,8 @@ type Syncer struct {
 
 	// cleaner cleans old snapshots in the background
 	cleaner *cleaner.Worker
+
+	// Health trackers
+	storageStoreHealth *healthtracker.HealthTracker
+	startTracker       *starttracker.StartTracker
 }
