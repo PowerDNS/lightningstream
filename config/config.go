@@ -94,9 +94,8 @@ type LMDB struct {
 
 	// Both important and dangerous: set to true if the LMDB schema already tracks
 	// changes in the exact way that this tool expects. This includes:
-	// - Every value is prefixed with an 8-byte big-endian timestamp containing
-	//   the number of *nanoseconds* since the UNIX epoch that it was last modified.
-	// - Deleted entries are recorded with the same timestamp and an empty value.
+	// - Every value is prefixed with an 24+ byte LS header.
+	// - Deleted entries are recorded with the same timestamp and a Deleted flag.
 	// When enabled, a shadow database is no longer needed to merge snapshots and
 	// conflict resolution is both more accurate and more efficient, but do note
 	// that THIS MUST BE SUPPORTED IN THE LMDB SCHEMA THE APPLICATION USES!
