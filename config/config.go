@@ -106,6 +106,11 @@ type LMDB struct {
 	// Not compatible with schema_tracks_changes=true
 	DupSortHack bool `yaml:"dupsort_hack"`
 
+	// HeaderExtraPaddingBlock adds an extra 8 all-zero bytes to the LS header
+	// to make it 32 bytes. This is useful to test an application's handling of
+	// the numExtra header field. This does not apply to shadow tables.
+	HeaderExtraPaddingBlock bool `yaml:"header_extra_padding_block"`
+
 	// Stats logging options
 	ScrapeSmaps      bool          `yaml:"scrape_smaps"` // Reading proc smaps can be expensive in some situations
 	LogStats         bool          `yaml:"log_stats"`

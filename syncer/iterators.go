@@ -37,6 +37,7 @@ func NewNativeIterator(
 		DefaultTimestampNano: defaultTS,
 		TxnID:                txnID,
 		FormatVersion:        formatVersion,
+		HeaderPaddingBlock:   false,
 	}, nil
 }
 
@@ -52,6 +53,7 @@ type NativeIterator struct {
 	DefaultTimestampNano header.Timestamp // Timestamp to add to entries that do not have one
 	TxnID                header.TxnID     // Current write TxnID (required)
 	FormatVersion        uint32           // Snapshot FormatVersion
+	HeaderPaddingBlock   bool             // Extra padding block for testing
 
 	current int
 	started bool
@@ -182,6 +184,11 @@ func (it *NativeIterator) addHeader(
 		entryVal = nil
 	}
 	header.PutBasic(it.buf, ts, it.TxnID, flags)
+	if it.HeaderPaddingBlock {
+		// Add an extra all-zero padding block to test application handling
+		it.buf[header.NumExtraOffsetLow] = 1
+		it.buf = append(it.buf, 0, 0, 0, 0, 0, 0, 0, 0)
+	}
 	it.buf = append(it.buf, entryVal...)
 	val = it.buf
 	return val, nil

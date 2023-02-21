@@ -298,6 +298,9 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 			if err != nil {
 				return fmt.Errorf("create native iterator: %w", err)
 			}
+			if s.lc.HeaderExtraPaddingBlock {
+				it.HeaderPaddingBlock = true
+			}
 			err = strategy.Update(txn, targetDBI, it)
 			if err != nil {
 				return err
