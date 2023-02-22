@@ -194,6 +194,10 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		if err != nil {
 			s.l.WithError(err).Warn("Store failed, retrying")
 			metricSnapshotsStoreFailed.WithLabelValues(s.name).Inc()
+
+			// Signal failure to health tracker
+			s.storageStoreHealth.AddFailure(err)
+
 			if err := utils.SleepContext(ctx, s.c.StorageRetryInterval); err != nil {
 				return 0, err
 			}
@@ -201,6 +205,10 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		}
 		s.l.Debug("Store succeeded")
 		metricSnapshotsStoreBytes.Add(float64(len(out)))
+
+		// Signal success to health tracker
+		s.storageStoreHealth.AddSuccess()
+
 		break
 	}
 	if err != nil {

@@ -78,6 +78,9 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		time.Sleep(time.Second)
 	}
 
+	// Start tracker: Initial storage snapshots listed
+	s.startTracker.SetPassedInitialListing()
+
 	hasSnapshots := r.HasSnapshots()
 	ownInstanceID := s.instanceID()
 
@@ -134,9 +137,17 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			return err
 		}
 		lastSyncedTxnID = actualTxnID
+		// Start tracker: Initial snapshot stored
+		s.startTracker.SetPassedInitialStore()
 	} else {
 		s.l.Debug("Not performing a snapshot of current data before sync " +
 			"(empty database or some snapshot already exist)")
+	}
+
+	if !hasDataAtStart {
+		// Start tracker: Initial snapshot stored
+		// To make sure it is set
+		s.startTracker.SetPassedInitialStore()
 	}
 
 	// Run receiver in background to get newer snapshot after loading the
@@ -203,6 +214,11 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			}
 		}
 
+		// Update start tracker if pass has completed
+		if waitingForInstances.Done() {
+			s.startTracker.SetPassCompleted()
+		}
+
 		// Check for change in local LMDB
 		info, err := env.Info()
 		if err != nil {
@@ -238,6 +254,8 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 						return err
 					}
 					lastSyncedTxnID = actualTxnID
+					// Start tracker: Initial snapshot stored
+					s.startTracker.SetPassedInitialStore()
 				} else if !warnedEmpty {
 					s.l.Warn("LMDB is empty, waiting for data")
 					warnedEmpty = true

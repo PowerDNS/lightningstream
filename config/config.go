@@ -13,6 +13,8 @@ import (
 
 	"powerdns.com/platform/lightningstream/config/logger"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/status/healthtracker"
+	"powerdns.com/platform/lightningstream/status/starttracker"
 )
 
 const (
@@ -37,6 +39,54 @@ const (
 	DefaultStorageRetryCount = 100
 )
 
+var (
+	// DefaultHealthStorageList is the default set of thresholds used by healthz to determine health of storage list operations
+	DefaultHealthStorageList = healthtracker.HealthConfig{
+		// ErrorDuration is the duration after which a failing List operation will report 'error' to healthz
+		ErrorDuration: 5 * time.Minute,
+		// WarnDuration is the duration after which a failing List operation will report 'warning' to healthz
+		WarnDuration: 1 * time.Minute,
+		// EvaluationInterval is the interval between healthz evaluation of the List operation
+		EvaluationInterval: 5 * time.Second,
+	}
+
+	// DefaultHealthStorageLoad is the default set of thresholds used by healthz to determine health of storage load operations
+	DefaultHealthStorageLoad = healthtracker.HealthConfig{
+		// ErrorDuration is the duration after which a failing Load operation will report 'error' to healthz
+		ErrorDuration: 5 * time.Minute,
+		// WarnDuration is the duration after which a failing Load operation will report 'warning' to healthz
+		WarnDuration: 1 * time.Minute,
+		// EvaluationInterval is the interval between healthz evaluation of the Load operation
+		EvaluationInterval: 5 * time.Second,
+	}
+
+	// DefaultHealthStorageStore is the default set of thresholds used by healthz to determine health of storage store operations
+	DefaultHealthStorageStore = healthtracker.HealthConfig{
+		// ErrorDuration is the duration after which a failing Store operation will report 'error' to healthz
+		ErrorDuration: 5 * time.Minute,
+		// WarnDuration is the duration after which a failing Store operation will report 'warning' to healthz
+		WarnDuration: 1 * time.Minute,
+		// EvaluationInterval is the interval between healthz evaluation of the Store operation
+		EvaluationInterval: 5 * time.Second,
+	}
+
+	// DefaultHealthStart is the default set of thresholds used by healthz to determine whether the startup phase has completed successfully
+	DefaultHealthStart = starttracker.StartConfig{
+		// ErrorDuration is the duration after which a failing startup sequence will report 'error' to healthz
+		ErrorDuration: 5 * time.Minute,
+		// WarnDuration is the duration after which a failing startup sequence will report 'warning' to healthz
+		WarnDuration: 1 * time.Minute,
+		// EvaluationInterval is the interval between healthz evaluation of the startup sequence
+		EvaluationInterval: 1 * time.Second,
+		// ReportHealthz controls whether or not a failing startup sequence will be included in healthz's overall status
+		// This can be used to prevent unwanted activity before LightningStream has completed an initial sync
+		ReportHealthz: false,
+		// ReportHealthz controls whether or not healthz's 'startup_[db name]' metadata field will be used to store the status of the startup sequence for each db
+		// This can be used to prevent unwanted activity before LightningStream has completed an initial sync
+		ReportMetadata: true,
+	}
+)
+
 // Config is the config root object
 type Config struct {
 	Instance string          `yaml:"instance"`
@@ -44,6 +94,7 @@ type Config struct {
 	Storage  Storage         `yaml:"storage"`
 	HTTP     HTTP            `yaml:"http"`
 	Log      logger.Config   `yaml:"log"`
+	Health   Health          `yaml:"health"`
 
 	// LMDBPollInterval is the minimum time between checking for new LMDB
 	// transactions. The check itself is fast, but this also serves to rate limit
@@ -162,6 +213,14 @@ type HTTP struct {
 	Address string `yaml:"address"` // Address like ":8000"
 }
 
+// Health configures the healthz error & warn thresholds
+type Health struct {
+	StorageList  healthtracker.HealthConfig `yaml:"storage_list"`
+	StorageLoad  healthtracker.HealthConfig `yaml:"storage_load"`
+	StorageStore healthtracker.HealthConfig `yaml:"storage_store"`
+	Start        starttracker.StartConfig   `yaml:"start"`
+}
+
 // Check validates a Config instance
 func (c Config) Check() error {
 	if err := c.Log.Check(); err != nil {
@@ -265,6 +324,12 @@ func (c *Config) LoadYAMLFile(fpath string, expandEnv bool) error {
 func Default() Config {
 	return Config{
 		Log: logger.DefaultConfig,
+		Health: Health{
+			StorageList:  DefaultHealthStorageList,
+			StorageLoad:  DefaultHealthStorageLoad,
+			StorageStore: DefaultHealthStorageStore,
+			Start:        DefaultHealthStart,
+		},
 
 		LMDBScrapeSmaps:      true,
 		LMDBPollInterval:     DefaultLMDBPollInterval,

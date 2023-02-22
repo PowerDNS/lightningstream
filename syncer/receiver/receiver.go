@@ -2,6 +2,7 @@ package receiver
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/snapshot"
+	"powerdns.com/platform/lightningstream/status/healthtracker"
 	"powerdns.com/platform/lightningstream/utils"
 )
 
@@ -27,7 +29,10 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 		lastSeenByInstance:     make(map[string]snapshot.NameInfo),
 		downloadersByInstance:  make(map[string]*Downloader),
 		corruptSnapshots:       make(map[string]error),
+		storageListHealth:      healthtracker.New(c.Health.StorageList, fmt.Sprintf("%s_storage_list", dbname), "list snapshots on storage backend"),
+		storageLoadHealth:      healthtracker.New(c.Health.StorageLoad, fmt.Sprintf("%s_storage_load", dbname), "load a snapshot from storage backend"),
 	}
+
 	return r
 }
 
@@ -57,6 +62,10 @@ type Receiver struct {
 	downloadersByInstance map[string]*Downloader
 	hasSnapshots          bool
 	corruptSnapshots      map[string]error
+
+	// Health trackers
+	storageListHealth *healthtracker.HealthTracker
+	storageLoadHealth *healthtracker.HealthTracker
 }
 
 // Next returns the next remote snapshot.Update to process if there is one
@@ -132,8 +141,16 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 	metricSnapshotsListCalls.Inc()
 	if err != nil {
 		metricSnapshotsListFailed.WithLabelValues(r.lmdbname).Inc()
+
+		// Signal failure to health tracker
+		r.storageListHealth.AddFailure(err)
+
 		return err
 	}
+
+	// Signal success to health tracker
+	r.storageListHealth.AddSuccess()
+
 	names := ls.Names()
 
 	// Update ignoredFilenames from corruptSnapshots.

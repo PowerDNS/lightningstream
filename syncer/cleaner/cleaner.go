@@ -219,6 +219,7 @@ func (w *Worker) RunOnce(ctx context.Context, now time.Time) error {
 		}
 		l.WithField("instance", ni.InstanceID).Info(
 			"Cleaning stale instance snapshot, merge proven")
+		nCleaned++
 	}
 
 	w.l.WithFields(logrus.Fields{
