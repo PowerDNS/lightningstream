@@ -214,11 +214,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			}
 		}
 
-		// Update start tracker if pass has completed
-		if waitingForInstances.Done() {
-			s.startTracker.SetPassCompleted()
-		}
-
 		// Check for change in local LMDB
 		info, err := env.Info()
 		if err != nil {
@@ -261,6 +256,11 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 					warnedEmpty = true
 				}
 			}
+		}
+
+		// Update start tracker if pass has completed
+		if waitingForInstances.Done() {
+			s.startTracker.SetPassCompleted()
 		}
 
 		// If set, we are done now.
