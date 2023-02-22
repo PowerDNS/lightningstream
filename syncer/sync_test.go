@@ -110,9 +110,32 @@ func doTest(t *testing.T, withHeader bool) {
 	// Check is the contents of A are still correct after restart
 	assertKey(t, envA, "foo", "v2", withHeader)
 	entries = listInstanceSnapshots(st, "a")
-	// None should have been created on startup, because there already exist
-	// snapshots and no new data was added that could implicitly trigger one.
-	assert.Len(t, entries, 1, "A")
+	// A new snapshot should always be created on startup, in case the LMDB
+	// was modified while it was down.
+	assert.Len(t, entries, 2, "A")
+
+	// Stopping syncer for A
+	t.Log("Stopping syncer A")
+	cancelA()
+
+	// Now set something in A while its syncer is down
+	t.Log("Modifying data in A while the syncer is down")
+	setKey(t, envA, "new", "hello", withHeader)
+
+	t.Log("----------")
+	t.Log("Starting syncer A again")
+	ctxA, cancelA = context.WithCancel(ctx)
+	go runSync(ctxA, syncerA)
+	t.Log("----------")
+	time.Sleep(6 * tick)
+	t.Log("----------")
+
+	// Check if the contents of A are still correct after restart
+	assertKey(t, envA, "new", "hello", withHeader)
+	// It should also be synced to B
+	assertKey(t, envB, "new", "hello", withHeader)
+	entries = listInstanceSnapshots(st, "a")
+	assert.Len(t, entries, 3, "A")
 
 	cancelA()
 	cancelB()

@@ -32,6 +32,13 @@ func (d *Downloader) NotifyNewSnapshot() {
 	}
 }
 
+// Run keeps downloading and unpacking new snapshots, and offering them to
+// the update loop.
+// It checks the Receiver for the latest version that it has seen, and downloads
+// that snapshot if it has not been loaded yet.
+// When a download or load fails, it keeps retrying the latest snapshots with
+// a delay in between. Eventually either the load succeeds, or a new snapshot
+// becomes available that can be loaded.
 func (d *Downloader) Run(ctx context.Context) error {
 	for {
 		select {

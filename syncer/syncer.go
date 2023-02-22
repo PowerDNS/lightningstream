@@ -39,7 +39,7 @@ func New(name string, st simpleblob.Interface, c config.Config, lc config.LMDB) 
 }
 
 type Syncer struct {
-	name       string
+	name       string // database name
 	st         simpleblob.Interface
 	c          config.Config
 	lc         config.LMDB

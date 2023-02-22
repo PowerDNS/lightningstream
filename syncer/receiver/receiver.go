@@ -81,7 +81,9 @@ func (r *Receiver) HasSnapshots() bool {
 	return r.hasSnapshots
 }
 
-// SeenInstances returns all seen instance names
+// SeenInstances returns all seen instance names.
+// This includes our own instance, even if RunOnce was called with includingOwn
+// set to false.
 func (r *Receiver) SeenInstances() (names []string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -117,7 +119,9 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 	}
 	names := ls.Names()
 
-	// Create a new map of the latest snapshots by instance to replace the old map
+	// Create a new map of the latest snapshots by instance to replace the old map.
+	// Note that this always includes our own instance, even if includingOwn is false,
+	// which is important during startup in the sync loop.
 	lastSeenByInstance := make(map[string]snapshot.NameInfo)
 	for _, name := range names {
 		if r.ignoredFilenames[name] {
