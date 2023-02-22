@@ -15,69 +15,6 @@ import (
 	"powerdns.com/platform/lightningstream/utils"
 )
 
-// Send opens the env and starts the send-loop. No data is received from the
-// storage.
-func (s *Syncer) Send(ctx context.Context) error {
-	// Open the env
-	env, err := s.openEnv()
-	if err != nil {
-		return err
-	}
-	s.startStatsLogger(ctx, env)
-	s.registerCollector(env)
-	defer s.closeEnv(env)
-	return s.sendLoop(ctx, env)
-}
-
-// sendLoop enters a send-loop and only returns when an error that cannot be
-// handled occurs.
-// TODO: evolve this into a more generic sync loop with send-only option
-func (s *Syncer) sendLoop(ctx context.Context, env *lmdb.Env) error {
-	info, err := env.Info()
-	if err != nil {
-		return err
-	}
-	lastTxnID := header.TxnID(info.LastTxnID)
-	warnedEmpty := false
-	for {
-		// Store snapshot
-		// If lastTxnID == 0, the LMDB is empty, so we do not store anything
-		if lastTxnID > 0 {
-			actualTxnID, err := s.SendOnce(ctx, env)
-			if err != nil {
-				return err
-			}
-			lastTxnID = actualTxnID
-		} else if !warnedEmpty {
-			s.l.Warn("LMDB is empty, waiting for data")
-			warnedEmpty = true
-		}
-
-		// Wait for change
-		s.l.Debug("Waiting for a new transaction")
-		for {
-			if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
-				return err
-			}
-
-			// Wait for change
-			info, err := env.Info()
-			if err != nil {
-				return err
-			}
-			logrus.WithFields(logrus.Fields{
-				"info.LastTxnID": info.LastTxnID,
-				"lastTxnID":      lastTxnID,
-			}).Trace("Checking if TxnID changed")
-			if header.TxnID(info.LastTxnID) > lastTxnID {
-				lastTxnID = header.TxnID(info.LastTxnID)
-				break // dump new version
-			}
-		}
-		s.l.WithField("LastTxnID", lastTxnID).Debug("LMDB changed, syncing")
-	}
-}
-
 func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnID, err error) {
 	var msg = new(snapshot.Snapshot)
 	msg.FormatVersion = snapshot.CurrentFormatVersion

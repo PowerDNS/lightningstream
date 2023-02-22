@@ -47,7 +47,6 @@ func (s *Syncer) Sync(ctx context.Context) error {
 
 // syncLoop enters a two-way sync-loop and only returns when an error that cannot be
 // handled occurs.
-// TODO: merge with sendLoop
 func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiver) error {
 	info, err := env.Info()
 	if err != nil {
