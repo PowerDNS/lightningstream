@@ -75,25 +75,26 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			break
 		}
 		s.l.WithError(err).Info("Waiting for initial receiver listing")
-		time.Sleep(time.Second) // TODO: Configurable?
+		time.Sleep(time.Second)
 	}
 
 	hasSnapshots := r.HasSnapshots()
 	ownInstanceID := s.instanceID()
 
 	// The waitingForInstances are to:
-	// - decide when on exit if OnlyOnce is true
-	// - decide when to mark the instance as ready
+	// - decide when to exit if OnlyOnce is true
+	// - decide when to mark this instance as 'ready'
 	//
 	// There is a risk that we will never finish loading all of these instance.
 	// This situation could happen when:
-	// - The latest snapshot for an instance is corrupt, and that instance no
-	//   longer produces new snapshots.
+	// - The download of the latest snapshot for an instance keeps failing due
+	//   to network errors.
 	//
-	// TODO: Perhaps keep track of snapshot corruption issues in the downloader,
-	//       so that the sync loop can remove those instances from the
-	//       waitingForInstances list. Perhaps by filtering out specific snapshots
-	//       marked as broken by the downloader from the listing.
+	// The following scenarios are handled appropriately:
+	// - Corrupt snapshots will be ignored (see Receiver.MarkCorrupt)
+	// - When the last snapshot of an instance has been cleaned/ignored, we will
+	//   remove the instance from this set.
+	//
 	waitingForInstances := NewInstanceSet()
 	for _, instance := range r.SeenInstances() {
 		if instance == ownInstanceID {

@@ -96,10 +96,11 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	metricSnapshotsLoadBytes.Add(float64(len(data)))
 	t1 := time.Now()
 
-	// TODO: Distinguish between storage load errors and unpack errors
-
 	msg, err := snapshot.LoadData(data)
 	if err != nil {
+		// This snapshot is considered corrupt, we will ignore it from now on
+		d.r.MarkCorrupt(ni.FullName, err)
+		d.last = ni
 		return err
 	}
 
