@@ -32,6 +32,13 @@ func (d *Downloader) NotifyNewSnapshot() {
 	}
 }
 
+// Run keeps downloading and unpacking new snapshots, and offering them to
+// the update loop.
+// It checks the Receiver for the latest version that it has seen, and downloads
+// that snapshot if it has not been loaded yet.
+// When a download or load fails, it keeps retrying the latest snapshots with
+// a delay in between. Eventually either the load succeeds, or a new snapshot
+// becomes available that can be loaded.
 func (d *Downloader) Run(ctx context.Context) error {
 	for {
 		select {
@@ -97,10 +104,11 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	metricSnapshotsLoadBytes.Add(float64(len(data)))
 	t1 := time.Now()
 
-	// TODO: Distinguish between storage load errors and unpack errors
-
 	msg, err := snapshot.LoadData(data)
 	if err != nil {
+		// This snapshot is considered corrupt, we will ignore it from now on
+		d.r.MarkCorrupt(ni.FullName, err)
+		d.last = ni
 		return err
 	}
 

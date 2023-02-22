@@ -1,15 +1,15 @@
 package syncer
 
 import (
-	"encoding/binary"
+	"context"
 	"testing"
 	"time"
 
-	"context"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/stretchr/testify/assert"
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/snapshot"
 )
 
@@ -17,12 +17,15 @@ func b(s string) []byte {
 	return []byte(s)
 }
 
-func testTS(i int) (uint64, string) {
-	tsNano := uint64(time.Date(2022, 2, i, 3, 4, 5, 123456789, time.UTC).UnixNano())
-	tsNanoBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(tsNanoBytes, tsNano)
-	tsNanoString := string(tsNanoBytes)
-	return tsNano, tsNanoString
+func h(ts header.Timestamp, txnID header.TxnID, flags header.Flags) string {
+	buf := make([]byte, header.MinHeaderSize)
+	header.PutBasic(buf, ts, txnID, flags)
+	return string(buf)
+}
+
+func testTS(i int) header.Timestamp {
+	tsNano := header.TimestampFromTime(time.Date(2022, 2, i, 3, 4, 5, 123456789, time.UTC))
+	return tsNano
 }
 
 func TestSyncer_shadow(t *testing.T) {
@@ -32,9 +35,9 @@ func TestSyncer_shadow(t *testing.T) {
 		{Key: b("c"), Value: b("cccccc")},
 	}
 
-	ts1, ts1s := testTS(1)
-	ts2, ts2s := testTS(2)
-	ts3, _ := testTS(3)
+	ts1 := testTS(1)
+	ts2 := testTS(2)
+	ts3 := testTS(3)
 
 	s, err := New("test", nil, config.Config{}, config.LMDB{})
 	assert.NoError(t, err)
@@ -55,16 +58,16 @@ func TestSyncer_shadow(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Read shadow DBI
-			shadowDBI, err := txn.OpenDBI("_sync_foo", 0)
+			shadowDBI, err := txn.OpenDBI("_sync_shadow_foo", 0)
 			assert.NoError(t, err)
 			vals, err := lmdbenv.ReadDBIString(txn, shadowDBI)
 			assert.NoError(t, err)
 
 			// Verify contents
 			assert.Equal(t, []lmdbenv.KVString{
-				{Key: "a", Val: ts1s + "abc"},
-				{Key: "b", Val: ts1s + "xyz"},
-				{Key: "c", Val: ts1s + "cccccc"},
+				{Key: "a", Val: h(ts1, 1, 0) + "abc"},
+				{Key: "b", Val: h(ts1, 1, 0) + "xyz"},
+				{Key: "c", Val: h(ts1, 1, 0) + "cccccc"},
 			}, vals)
 
 			// Reverse sync should not change the original data
@@ -97,17 +100,17 @@ func TestSyncer_shadow(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Read shadow DBI
-			shadowDBI, err := txn.OpenDBI("_sync_foo", 0)
+			shadowDBI, err := txn.OpenDBI("_sync_shadow_foo", 0)
 			assert.NoError(t, err)
 			vals, err := lmdbenv.ReadDBIString(txn, shadowDBI)
 			assert.NoError(t, err)
 
 			// Verify contents
 			assert.Equal(t, []lmdbenv.KVString{
-				{Key: "a", Val: ts1s + "abc"}, // timestamp unchanged
-				{Key: "b", Val: ts2s},         // deleted, empty value
-				{Key: "c", Val: ts2s + "CCC"}, // changed
-				{Key: "d", Val: ts2s + "ddd"}, // new
+				{Key: "a", Val: h(ts1, 1, 0) + "abc"},          // timestamp unchanged
+				{Key: "b", Val: h(ts2, 2, header.FlagDeleted)}, // deleted, empty value
+				{Key: "c", Val: h(ts2, 2, 0) + "CCC"},          // changed
+				{Key: "d", Val: h(ts2, 2, 0) + "ddd"},          // new
 			}, vals)
 			return nil
 		})
@@ -120,17 +123,17 @@ func TestSyncer_shadow(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Read shadow DBI
-			shadowDBI, err := txn.OpenDBI("_sync_foo", 0)
+			shadowDBI, err := txn.OpenDBI("_sync_shadow_foo", 0)
 			assert.NoError(t, err)
 			vals, err := lmdbenv.ReadDBIString(txn, shadowDBI)
 			assert.NoError(t, err)
 
 			// Verify contents
 			assert.Equal(t, []lmdbenv.KVString{
-				{Key: "a", Val: ts1s + "abc"}, // timestamp unchanged
-				{Key: "b", Val: ts2s},         // deleted, empty value
-				{Key: "c", Val: ts2s + "CCC"}, // changed
-				{Key: "d", Val: ts2s + "ddd"}, // new
+				{Key: "a", Val: h(ts1, 1, 0) + "abc"},          // timestamp unchanged
+				{Key: "b", Val: h(ts2, 2, header.FlagDeleted)}, // deleted, empty value
+				{Key: "c", Val: h(ts2, 2, 0) + "CCC"},          // changed
+				{Key: "d", Val: h(ts2, 2, 0) + "ddd"},          // new
 			}, vals)
 
 			// Reverse sync should not change the original data

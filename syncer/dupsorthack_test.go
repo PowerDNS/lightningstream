@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/snapshot"
 )
 
@@ -21,6 +22,7 @@ func concat(slices ...[]byte) []byte {
 }
 
 func Test_dupSortHackEncodeOne(t *testing.T) {
+	const flagDeleted = uint32(header.FlagDeleted)
 	tests := []struct {
 		name       string
 		orig       snapshot.KV
@@ -28,15 +30,15 @@ func Test_dupSortHackEncodeOne(t *testing.T) {
 		wantErr    bool
 	}{
 		{
-			"empty-not-allowed",
+			"empty-key-not-allowed",
 			snapshot.KV{Key: []byte(""), Value: []byte("foo")},
 			snapshot.KV{},
 			true,
 		},
 		{
 			"normal",
-			snapshot.KV{Key: []byte("key"), Value: []byte("foo")},
-			snapshot.KV{Key: []byte("key\x00\x00\x00\x00foo\x03"), Value: []byte("foo")},
+			snapshot.KV{Key: []byte("key"), Value: []byte("foo1")},
+			snapshot.KV{Key: []byte("key\x00\x00\x00\x00foo1\x03"), Value: []byte("foo1")},
 			false,
 		},
 		{
@@ -53,6 +55,12 @@ func Test_dupSortHackEncodeOne(t *testing.T) {
 			snapshot.KV{Key: rep('K', 256), Value: []byte("value")},
 			snapshot.KV{},
 			true,
+		},
+		{
+			"preserve-deleted-flag",
+			snapshot.KV{Key: []byte("key"), Value: []byte(""), Flags: flagDeleted},
+			snapshot.KV{Key: []byte("key\x00\x00\x00\x00\x03"), Value: []byte(""), Flags: flagDeleted},
+			false,
 		},
 	}
 	for _, tt := range tests {

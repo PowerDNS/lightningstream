@@ -3,7 +3,6 @@ package syncer
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"os"
 	"regexp"
@@ -11,35 +10,44 @@ import (
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/stats"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
-
-// HeaderSize is the size of the timestamp header for each LMDB value in bytes
-const HeaderSize = 8
 
 const (
 	// SyncDBIPrefix is the shared DBI name prefix for all special tables that
 	// must not be synced.
 	SyncDBIPrefix = "_sync"
 	// SyncDBIShadowPrefix is the DBI name prefix of shadow databases.
-	SyncDBIShadowPrefix = "_sync_"
+	SyncDBIShadowPrefix = "_sync_shadow_"
 )
 
-// ErrNoTimestamp is returned when an entry does not contain a timestamp, or the
-// timestamp is 0.
-type ErrNoTimestamp struct {
+// ErrEntry is returned when an entry is invalid, for example due to a missing
+// or invalid header.
+type ErrEntry struct {
 	DBIName string
 	Key     []byte
+	Err     error
 }
 
-func (e ErrNoTimestamp) Error() string {
+func (e ErrEntry) Error() string {
 	k := utils.DisplayASCII(e.Key)
-	return fmt.Sprintf("no timestamp for entry (dbi %s, key %s)", e.DBIName, k)
+	return fmt.Sprintf("invalid entry (dbi %s, key %s): %v", e.DBIName, k, e.Err)
 }
+
+func (e ErrEntry) Unwrap() error {
+	return e.Err
+}
+
+var (
+	ErrNoTimestamp = errors.New("no timestamp to use for entry")
+	ErrNoTxnID     = errors.New("no TxnID set on iterator")
+)
 
 var hostname string
 
@@ -100,9 +108,9 @@ func (s *Syncer) closeEnv(env *lmdb.Env) {
 }
 
 // readDBI reads a DBI into a snapshot DBI.
-// By default, the timestamp of values will be split out to the TimestampNano field.
-// If rawValues is true, the value will be stored as is and the timestamp will
-// not be extracted. This is useful when reading a database without timestamps.
+// By default, the headers of values will be split out to the corresponding snapshot fields.
+// If rawValues is true, the value will be stored as is and the headers will
+// not be extracted. This is useful when reading a database without headers.
 func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg *snapshot.DBI, err error) {
 	l := s.l.WithField("dbi", dbiName)
 
@@ -147,21 +155,27 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 		}
 		prev = item.Key
 		val := item.Val
-		var ts uint64
+		var ts header.Timestamp
+		var flags header.Flags
 		if !rawValues {
-			if len(val) < HeaderSize {
-				return nil, ErrNoTimestamp{
+			h, appVal, err := header.Parse(val)
+			if err != nil {
+				return nil, ErrEntry{
 					DBIName: dbiName,
 					Key:     item.Key,
+					Err:     err,
 				}
 			}
-			ts = binary.BigEndian.Uint64(val[:HeaderSize])
-			val = val[HeaderSize:]
+			ts = h.Timestamp
+			flags = h.Flags
+			val = appVal
 		}
+
 		dbiMsg.Entries = append(dbiMsg.Entries, snapshot.KV{
 			Key:           item.Key,
 			Value:         val,
-			TimestampNano: ts,
+			TimestampNano: uint64(ts),
+			Flags:         uint32(flags.Masked()),
 		})
 	}
 

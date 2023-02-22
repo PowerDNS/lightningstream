@@ -28,6 +28,7 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 		snapshotsByInstance:    make(map[string]snapshot.Update),
 		lastSeenByInstance:     make(map[string]snapshot.NameInfo),
 		downloadersByInstance:  make(map[string]*Downloader),
+		corruptSnapshots:       make(map[string]error),
 		storageListHealth:      healthtracker.New(c.Health.StorageList, fmt.Sprintf("%s_storage_list", dbname), "list snapshots on storage backend"),
 		storageLoadHealth:      healthtracker.New(c.Health.StorageLoad, fmt.Sprintf("%s_storage_load", dbname), "load a snapshot from storage backend"),
 	}
@@ -60,6 +61,7 @@ type Receiver struct {
 	lastSeenByInstance    map[string]snapshot.NameInfo
 	downloadersByInstance map[string]*Downloader
 	hasSnapshots          bool
+	corruptSnapshots      map[string]error
 
 	// Health trackers
 	storageListHealth *healthtracker.HealthTracker
@@ -90,7 +92,9 @@ func (r *Receiver) HasSnapshots() bool {
 	return r.hasSnapshots
 }
 
-// SeenInstances returns all seen instance names
+// SeenInstances returns all seen instance names.
+// This includes our own instance, even if RunOnce was called with includingOwn
+// set to false.
 func (r *Receiver) SeenInstances() (names []string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -98,6 +102,21 @@ func (r *Receiver) SeenInstances() (names []string) {
 		names = append(names, name)
 	}
 	return names
+}
+
+// MarkCorrupt marks a snapshot as corrupt.
+// We will ignore the filename in the future. This can cause a previous
+// snapshot to be promoted to the latest for an instance, or for the instance
+// to disappear from the SeenInstances() if this was the only remaining snapshot.
+func (r *Receiver) MarkCorrupt(filename string, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.corruptSnapshots[filename]; exists {
+		return // already marked
+	}
+	r.corruptSnapshots[filename] = err
+	r.l.WithField("filename", filename).WithError(err).Warn(
+		"Snapshot marked as corrupt and will be ignored")
 }
 
 func (r *Receiver) Run(ctx context.Context) error {
@@ -134,7 +153,17 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 
 	names := ls.Names()
 
-	// Create a new map of the latest snapshots by instance to replace the old map
+	// Update ignoredFilenames from corruptSnapshots.
+	// Under normal circumstances the corruptSnapshots map should always be empty.
+	r.mu.Lock()
+	for filename := range r.corruptSnapshots {
+		r.ignoredFilenames[filename] = true
+	}
+	r.mu.Unlock()
+
+	// Create a new map of the latest snapshots by instance to replace the old map.
+	// Note that this always includes our own instance, even if includingOwn is false,
+	// which is important during startup in the sync loop.
 	lastSeenByInstance := make(map[string]snapshot.NameInfo)
 	for _, name := range names {
 		if r.ignoredFilenames[name] {

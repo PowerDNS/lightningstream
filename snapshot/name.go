@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/utils"
 )
 
@@ -15,20 +16,19 @@ const (
 	dotIndex   = 15                          // position of the '.'
 )
 
-func Timestamp(ts time.Time) string {
+func NameTimestamp(ts time.Time) string {
 	fileTimestamp := strings.Replace(
 		ts.UTC().Format(timeFormat),
 		".", "-", 1)
 	return fileTimestamp
 }
 
-func TimestampFromNano(tsNano uint64) string {
-	ts := time.Unix(0, int64(tsNano))
-	return Timestamp(ts)
+func NameTimestampFromNano(tsNano header.Timestamp) string {
+	return NameTimestamp(tsNano.Time())
 }
 
 func Name(syncerName, instanceID, generationID string, ts time.Time) string {
-	fileTimestamp := Timestamp(ts)
+	fileTimestamp := NameTimestamp(ts)
 	name := fmt.Sprintf("%s__%s__%s__%s.pb.gz",
 		syncerName,
 		instanceID,

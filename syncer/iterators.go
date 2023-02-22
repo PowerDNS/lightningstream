@@ -2,32 +2,65 @@ package syncer
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/sirupsen/logrus"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/snapshot"
 )
 
-// TimestampedIterator iterates over a snapshot DBI and updates the LMDB with
-// values that are prefixed with a timestamp header.
+func NewNativeIterator(
+	formatVersion uint32,
+	entries []snapshot.KV,
+	defaultTS header.Timestamp,
+	txnID header.TxnID,
+) (*NativeIterator, error) {
+	if formatVersion == 0 {
+		return nil, errors.New("no snapshot formatVersion provided, or 0")
+	}
+	if formatVersion < snapshot.CompatFormatVersion {
+		return nil, fmt.Errorf("snapshot formatVersion no longer supported (%d < %d)",
+			formatVersion, snapshot.CompatFormatVersion)
+	}
+	if formatVersion > snapshot.CurrentFormatVersion {
+		return nil, fmt.Errorf("snapshot formatVersion too new for this version (%d > %d)",
+			formatVersion, snapshot.CurrentFormatVersion)
+	}
+	if txnID == 0 {
+		return nil, ErrNoTxnID
+	}
+	return &NativeIterator{
+		Entries:              entries,
+		DefaultTimestampNano: defaultTS,
+		TxnID:                txnID,
+		FormatVersion:        formatVersion,
+		HeaderPaddingBlock:   false,
+	}, nil
+}
+
+// NativeIterator iterates over a snapshot DBI and updates the LMDB with
+// values that are prefixed with a native header.
 // This iterator has two uses:
 // * Merge the main database into a shadow database with a default timestamp.
-// * Merge a remote snapshot with the timestamp values into a DBI with timestamps.
-// The LMDB values the iterator operates MUST always have a timestamp. If no
-// timestamp is present (or it is 0), an error is returned.
-type TimestampedIterator struct {
-	Entries              []snapshot.KV // LMDB contents as raw values without timestamp
-	DefaultTimestampNano uint64        // Timestamp to add to entries that do not have one
+// * Merge a remote snapshot with the timestamp values into a DBI with headers.
+// The LMDB values the iterator operates on MUST always have a header. If no
+// header is present, an error is returned.
+type NativeIterator struct {
+	Entries              []snapshot.KV    // LMDB contents as raw values without header
+	DefaultTimestampNano header.Timestamp // Timestamp to add to entries that do not have one
+	TxnID                header.TxnID     // Current write TxnID (required)
+	FormatVersion        uint32           // Snapshot FormatVersion
+	HeaderPaddingBlock   bool             // Extra padding block for testing
 
 	current int
 	started bool
 	buf     []byte
 }
 
-func (it *TimestampedIterator) Next() (key []byte, err error) {
+func (it *NativeIterator) Next() (key []byte, err error) {
 	if it.started {
 		it.current++
 	} else {
@@ -42,24 +75,30 @@ func (it *TimestampedIterator) Next() (key []byte, err error) {
 
 // Merge compares the old LMDB value currently stored and the current iterator
 // value from the dump, and decides which value the LMDB should take.
-// The LMDB entries are always prefixed with a big endian 64 bit timestamp.
-func (it *TimestampedIterator) Merge(oldval []byte) (val []byte, err error) {
+// The LMDB entries are always prefixed with a header.
+func (it *NativeIterator) Merge(oldval []byte) (val []byte, err error) {
 	entry := it.Entries[it.current]
 	entryVal := entry.Value
 	//logrus.Debug("key = %s | old = %s | new = %s",
 	//	string(entry.Key), string(oldval), string(entryVal))
 	if len(oldval) == 0 {
-		// Not in destination db, add with timestamp
-		return it.addTS(entryVal, entry.TimestampNano, false)
+		// Not in destination db, add with header
+		return it.addHeader(
+			entryVal,
+			header.Timestamp(entry.TimestampNano),
+			entry.MaskedFlags(),
+			false)
 	}
-	if len(oldval) < HeaderSize {
+	h, appVal, err := header.Parse(oldval)
+	if err != nil {
 		// Should never happen
 		it.logDebugValue(oldval)
-		return nil, fmt.Errorf("merge: oldval in db too short: %v = %v", entry.Key, oldval)
+		return nil, fmt.Errorf("merge: oldval header parse error (%v = %v): %v",
+			entry.Key, oldval, err)
 	}
-	oldTS := binary.BigEndian.Uint64(oldval[:HeaderSize])
-	newTS := entry.TimestampNano
-	actualOldVal := oldval[HeaderSize:]
+	oldTS := h.Timestamp
+	newTS := header.Timestamp(entry.TimestampNano)
+	actualOldVal := appVal
 	if newTS == 0 {
 		// Special handling for main to shadow copy that uses a default timestamp
 		if bytes.Equal(actualOldVal, entryVal) {
@@ -72,22 +111,27 @@ func (it *TimestampedIterator) Merge(oldval []byte) (val []byte, err error) {
 		return oldval, nil
 	}
 	if newTS == oldTS && bytes.Compare(actualOldVal, entryVal) <= 0 {
-		// Same timestamp, lexicographic lower value wins for deterministic values,
+		// Same timestamp, lexicographic lower app value wins for deterministic values,
 		// so return the old value if the plain value was lower or equal.
 		return oldval, nil
 	}
 	// Update LMDB value
-	return it.addTS(entryVal, newTS, false)
+	return it.addHeader(entryVal, newTS, entry.MaskedFlags(), false)
 }
 
-func (it *TimestampedIterator) Clean(oldval []byte) (val []byte, err error) {
-	if len(oldval) == HeaderSize {
-		return oldval, nil // already deleted, only timestamp
+func (it *NativeIterator) Clean(oldval []byte) (val []byte, err error) {
+	// Clean effectively instructs us to delete the entry
+	h, _, err := header.Parse(oldval)
+	if err != nil {
+		return nil, err
 	}
-	return it.addTS(nil, 0, true)
+	if h.Flags.IsDeleted() {
+		return oldval, nil // already deleted
+	}
+	return it.addHeader(nil, 0, header.FlagDeleted, true)
 }
 
-func (it *TimestampedIterator) logDebugValue(val []byte) {
+func (it *NativeIterator) logDebugValue(val []byte) {
 	entry := it.Entries[it.current]
 	logrus.WithFields(logrus.Fields{
 		"key": hex.Dump(entry.Key),
@@ -95,27 +139,56 @@ func (it *TimestampedIterator) logDebugValue(val []byte) {
 	}).Debug("LMDB value dump")
 }
 
-// addTS prepends a timestamp header to a plain value. It uses the ts parameter
+// addHeader prepends a header to a plain value. It uses the ts parameter
 // passed in if non-zero, or the default one set on the iterator.
-// A timestamp is mandatory. If both are 0, an ErrNoTimestamp error is returned.
-func (it *TimestampedIterator) addTS(entryVal []byte, ts uint64, fromClean bool) (val []byte, err error) {
-	if cap(it.buf) < HeaderSize {
-		it.buf = make([]byte, HeaderSize, 1024)
+// A timestamp is mandatory. If both are 0, an error is returned.
+// entryVal is the plain application value.
+// The TxnID is also mandatory.
+// fromClean indicates if this was called from Clean
+func (it *NativeIterator) addHeader(
+	entryVal []byte,
+	ts header.Timestamp,
+	flags header.Flags,
+	fromClean bool,
+) (val []byte, err error) {
+	// The minimum size is sufficient as long as we do not add extensions here
+	if cap(it.buf) < header.MinHeaderSize {
+		it.buf = make([]byte, header.MinHeaderSize, 1024)
 	} else {
-		it.buf = it.buf[:HeaderSize]
+		it.buf = it.buf[:header.MinHeaderSize]
 	}
 	if ts == 0 {
 		ts = it.DefaultTimestampNano
 		if ts == 0 {
+			// When we write an entry, it MUST have a valid timestamp.
+			// Only applications are allowed to use 0 when they migrate old
+			// data to the native schema, but there is no reason for us
+			// to ever do that.
 			if fromClean {
-				return nil, ErrNoTimestamp{} // no extra info here
+				return nil, ErrNoTimestamp // no extra info here
 			} else {
 				key := it.Entries[it.current].Key
-				return nil, ErrNoTimestamp{Key: key}
+				return nil, ErrEntry{
+					Key: key,
+					Err: ErrNoTimestamp,
+				}
 			}
 		}
 	}
-	binary.BigEndian.PutUint64(it.buf, ts)
+	if len(entryVal) == 0 && it.FormatVersion < 2 {
+		// Earlier snapshots did not have a deleted flag and indicated deleted
+		// entries with an empty application value.
+		flags |= header.FlagDeleted
+	}
+	if flags.IsDeleted() {
+		entryVal = nil
+	}
+	header.PutBasic(it.buf, ts, it.TxnID, flags)
+	if it.HeaderPaddingBlock {
+		// Add an extra all-zero padding block to test application handling
+		it.buf[header.NumExtraOffsetLow] = 1
+		it.buf = append(it.buf, 0, 0, 0, 0, 0, 0, 0, 0)
+	}
 	it.buf = append(it.buf, entryVal...)
 	val = it.buf
 	return val, nil
@@ -148,6 +221,7 @@ func (it *PlainIterator) Merge(oldval []byte) (val []byte, err error) {
 	if len(mainVal) == 0 {
 		// Signal that we want deletion in case the strategy distinguishes
 		// between nil and an empty value
+		// FIXME: do we still want to do this with the new FlagDeleted?
 		mainVal = nil
 	}
 	return mainVal, nil

@@ -17,6 +17,7 @@ import (
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/config/logger"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/snapshot"
 )
 
@@ -33,22 +34,22 @@ func TestSyncer_Sync_startup(t *testing.T) {
 	})
 }
 
-func doTest(t *testing.T, timestamped bool) {
+func doTest(t *testing.T, withHeader bool) {
 	// This test reproduces a bug where an instance ends up with an old version
 	// after a restart when not using a native timestamped schema.
 
 	st := memory.New()
 
 	// This test starts two Syncer instances, "a" and "b".
-	syncerA, envA := createInstance(t, "a", st, timestamped)
-	syncerB, envB := createInstance(t, "b", st, timestamped)
+	syncerA, envA := createInstance(t, "a", st, withHeader)
+	syncerB, envB := createInstance(t, "b", st, withHeader)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	ctxA, cancelA := context.WithCancel(ctx)
 	ctxB, cancelB := context.WithCancel(ctx)
 
-	setKey(t, envA, "foo", "v1", timestamped)
+	setKey(t, envA, "foo", "v1", withHeader)
 
 	// Start syncer A with one key
 	t.Log("Starting syncer A")
@@ -76,10 +77,10 @@ func doTest(t *testing.T, timestamped bool) {
 	entries = listInstanceSnapshots(st, "b")
 	assert.Len(t, entries, 0, "B")
 
-	assertKey(t, envB, "foo", "v1", timestamped)
+	assertKey(t, envB, "foo", "v1", withHeader)
 
 	// Now set something in B
-	setKey(t, envB, "foo", "v2", timestamped)
+	setKey(t, envB, "foo", "v2", withHeader)
 
 	t.Log("----------")
 	time.Sleep(3 * tick)
@@ -93,7 +94,7 @@ func doTest(t *testing.T, timestamped bool) {
 	assert.Len(t, entries, 1, "A")
 
 	// New value should be present in A
-	assertKey(t, envB, "foo", "v2", timestamped)
+	assertKey(t, envB, "foo", "v2", withHeader)
 
 	// Restart syncer for A
 	t.Log("Restarting syncer A")
@@ -107,11 +108,34 @@ func doTest(t *testing.T, timestamped bool) {
 	t.Log("----------")
 
 	// Check is the contents of A are still correct after restart
-	assertKey(t, envA, "foo", "v2", timestamped)
+	assertKey(t, envA, "foo", "v2", withHeader)
 	entries = listInstanceSnapshots(st, "a")
-	// None should have been created on startup, because there already exist
-	// snapshots and no new data was added that could implicitly trigger one.
-	assert.Len(t, entries, 1, "A")
+	// A new snapshot should always be created on startup, in case the LMDB
+	// was modified while it was down.
+	assert.Len(t, entries, 2, "A")
+
+	// Stopping syncer for A
+	t.Log("Stopping syncer A")
+	cancelA()
+
+	// Now set something in A while its syncer is down
+	t.Log("Modifying data in A while the syncer is down")
+	setKey(t, envA, "new", "hello", withHeader)
+
+	t.Log("----------")
+	t.Log("Starting syncer A again")
+	ctxA, cancelA = context.WithCancel(ctx)
+	go runSync(ctxA, syncerA)
+	t.Log("----------")
+	time.Sleep(6 * tick)
+	t.Log("----------")
+
+	// Check if the contents of A are still correct after restart
+	assertKey(t, envA, "new", "hello", withHeader)
+	// It should also be synced to B
+	assertKey(t, envB, "new", "hello", withHeader)
+	entries = listInstanceSnapshots(st, "a")
+	assert.Len(t, entries, 3, "A")
 
 	cancelA()
 	cancelB()
@@ -141,7 +165,7 @@ func logSnapshotList(t *testing.T, st simpleblob.Interface) {
 			lines = append(lines,
 				fmt.Sprintf("%s : %s = %q @ %s",
 					name, se.Key, se.Value,
-					snapshot.TimestampFromNano(se.TimestampNano)),
+					snapshot.NameTimestampFromNano(header.Timestamp(se.TimestampNano))),
 			)
 		}
 	}
@@ -161,21 +185,25 @@ func runSync(ctx context.Context, syncer *Syncer) {
 	}
 }
 
-func assertKey(t *testing.T, env *lmdb.Env, key, val string, timestamped bool) {
-	kv, err := dumpData(env, timestamped)
+func assertKey(t *testing.T, env *lmdb.Env, key, val string, withHeader bool) {
+	kv, err := dumpData(env, withHeader)
 	assert.NoError(t, err)
 	assert.Equal(t, val, kv[key])
 }
 
-func setKey(t *testing.T, env *lmdb.Env, key, val string, timestamped bool) {
+func setKey(t *testing.T, env *lmdb.Env, key, val string, withHeader bool) {
 	err := env.Update(func(txn *lmdb.Txn) error {
 		dbi, err := txn.OpenDBI(testDBIName, lmdb.Create)
 		if err != nil {
 			return err
 		}
 		valb := []byte(val)
-		if timestamped {
-			var b [8]byte
+		if withHeader {
+			var b [header.MinHeaderSize]byte
+			header.PutBasic(b[:],
+				header.TimestampFromTime(time.Now()),
+				header.TxnID(txn.ID()),
+				header.NoFlags)
 			binary.BigEndian.PutUint64(b[:], uint64(time.Now().UnixNano()))
 			valb = append(b[:], valb...)
 		}
@@ -185,7 +213,7 @@ func setKey(t *testing.T, env *lmdb.Env, key, val string, timestamped bool) {
 	assert.NoError(t, err)
 }
 
-func dumpData(env *lmdb.Env, timestamped bool) (map[string]string, error) {
+func dumpData(env *lmdb.Env, withHeader bool) (map[string]string, error) {
 	data := make(map[string]string)
 	err := env.View(func(txn *lmdb.Txn) error {
 		dbi, err := txn.OpenDBI(testDBIName, lmdb.Create)
@@ -197,8 +225,12 @@ func dumpData(env *lmdb.Env, timestamped bool) (map[string]string, error) {
 			return err
 		}
 		for _, kv := range kvs {
-			if timestamped {
-				data[kv.Key] = kv.Val[8:] // strip timestamp
+			if withHeader {
+				val, err := header.Skip([]byte(kv.Val))
+				if err != nil {
+					return err
+				}
+				data[kv.Key] = string(val)
 			} else {
 				data[kv.Key] = kv.Val
 			}
@@ -208,7 +240,7 @@ func dumpData(env *lmdb.Env, timestamped bool) (map[string]string, error) {
 	return data, err
 }
 
-func createConfig(instance string, tmpdir string, timestamped bool) config.Config {
+func createConfig(instance string, tmpdir string, withHeader bool) config.Config {
 	c := config.Config{
 		Instance:             instance,
 		LMDBs:                make(map[string]config.LMDB),
@@ -227,7 +259,7 @@ func createConfig(instance string, tmpdir string, timestamped bool) config.Confi
 		Path:                tmpdir,
 		Options:             lmdbenv.Options{},
 		DBIOptions:          nil,
-		SchemaTracksChanges: timestamped,
+		SchemaTracksChanges: withHeader,
 		DupSortHack:         false,
 		ScrapeSmaps:         false,
 		LogStats:            false,

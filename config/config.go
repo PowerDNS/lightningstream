@@ -120,6 +120,9 @@ type Config struct {
 	// after failure, before giving up.
 	StorageRetryCount int `yaml:"storage_retry_count"`
 
+	// If set, StorageRetryCount will be ignored, and we retry forever
+	StorageRetryForever bool `yaml:"storage_retry_forever"`
+
 	// LMDBScrapeSmaps enabled the scraping of /proc/smaps for LMDB stats
 	LMDBScrapeSmaps bool `yaml:"lmdb_scrape_smaps"`
 
@@ -142,9 +145,8 @@ type LMDB struct {
 
 	// Both important and dangerous: set to true if the LMDB schema already tracks
 	// changes in the exact way that this tool expects. This includes:
-	// - Every value is prefixed with an 8-byte big-endian timestamp containing
-	//   the number of *nanoseconds* since the UNIX epoch that it was last modified.
-	// - Deleted entries are recorded with the same timestamp and an empty value.
+	// - Every value is prefixed with an 24+ byte LS header.
+	// - Deleted entries are recorded with the same timestamp and a Deleted flag.
 	// When enabled, a shadow database is no longer needed to merge snapshots and
 	// conflict resolution is both more accurate and more efficient, but do note
 	// that THIS MUST BE SUPPORTED IN THE LMDB SCHEMA THE APPLICATION USES!
@@ -154,6 +156,11 @@ type LMDB struct {
 	// This will be applied to all dbs marked as DupSort.
 	// Not compatible with schema_tracks_changes=true
 	DupSortHack bool `yaml:"dupsort_hack"`
+
+	// HeaderExtraPaddingBlock adds an extra 8 all-zero bytes to the LS header
+	// to make it 32 bytes. This is useful to test an application's handling of
+	// the numExtra header field. This does not apply to shadow tables.
+	HeaderExtraPaddingBlock bool `yaml:"header_extra_padding_block"`
 
 	// Stats logging options
 	ScrapeSmaps      bool          `yaml:"scrape_smaps"` // Reading proc smaps can be expensive in some situations
@@ -169,6 +176,7 @@ type Storage struct {
 	Type    string                 `yaml:"type"`    // "fs", "s3", "memory"
 	Options map[string]interface{} `yaml:"options"` // backend specific
 
+	// FIXME: Configure per LMDB instead, since we run a cleaner per LMDB?
 	Cleanup Cleanup `yaml:"cleanup"`
 
 	RootPath string `yaml:"root_path,omitempty"` // Deprecated: use options.root_path for fs

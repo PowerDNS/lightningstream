@@ -2,16 +2,24 @@ package syncer
 
 import (
 	"context"
-	"sort"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/sirupsen/logrus"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/syncer/receiver"
 	"powerdns.com/platform/lightningstream/utils"
+)
+
+const (
+	// MaxConsecutiveSnapshotLoads are the maximum number of snapshot to
+	// load before we break for snapshotting local changes, if local changes
+	// exist.
+	MaxConsecutiveSnapshotLoads = 10
 )
 
 // Sync opens the env and starts the two-way sync loop.
@@ -39,13 +47,15 @@ func (s *Syncer) Sync(ctx context.Context) error {
 
 // syncLoop enters a two-way sync-loop and only returns when an error that cannot be
 // handled occurs.
-// TODO: merge with sendLoop
 func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiver) error {
 	info, err := env.Info()
 	if err != nil {
 		return err
 	}
-	lastTxnID := info.LastTxnID
+
+	// The lastSyncedTxnID starts as 0 to force at least one snapshot on startup
+	var lastSyncedTxnID header.TxnID
+	hasDataAtStart := info.LastTxnID > 0
 	warnedEmpty := false
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -64,28 +74,50 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			break
 		}
 		s.l.WithError(err).Info("Waiting for initial receiver listing")
-		time.Sleep(time.Second) // TODO: Configurable?
+		time.Sleep(time.Second)
 	}
 
 	// Start tracker: Initial storage snapshots listed
 	s.startTracker.SetPassedInitialListing()
 
 	hasSnapshots := r.HasSnapshots()
-	hasData := lastTxnID > 0
-	waitingForInstances := make(map[string]bool)
+	ownInstanceID := s.instanceID()
+
+	// The waitingForInstances are to:
+	// - decide when to exit if OnlyOnce is true
+	// - decide when to mark this instance as 'ready'
+	//
+	// There is a risk that we will never finish loading all of these instance.
+	// This situation could happen when:
+	// - The download of the latest snapshot for an instance keeps failing due
+	//   to network errors.
+	//
+	// The following scenarios are handled appropriately:
+	// - Corrupt snapshots will be ignored (see Receiver.MarkCorrupt)
+	// - When the last snapshot of an instance has been cleaned/ignored, we will
+	//   remove the instance from this set.
+	//
+	waitingForInstances := NewInstanceSet()
 	for _, instance := range r.SeenInstances() {
-		waitingForInstances[instance] = true
+		if instance == ownInstanceID {
+			// This instance name has existing snapshots that we must load before
+			// attempting to write new snapshots, to not lose data.
+			s.l.Info("This instance has existing snapshots that must be loaded " +
+				"before we create new snapshots")
+		}
+		waitingForInstances.Add(instance)
 	}
 
-	if hasData && !s.lc.SchemaTracksChanges {
+	if hasDataAtStart && !s.lc.SchemaTracksChanges {
 		// Sync to shadow using a time in the past to not overwrite newer data.
 		// At least is allows us to save newer entries that were added
 		// while the syncer was not running. it will not save updated entries.
+		// FIXME: Perhaps just use timestamp 0 (1970) here? Why disallow that in iterator?
 		s.l.Info("Syncing main to shadow, in case data was changed before start")
 		err := env.Update(func(txn *lmdb.Txn) error {
 			// TODO: use const
 			past := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-			pastNano := uint64(past.UnixNano())
+			pastNano := header.TimestampFromTime(past)
 			return s.mainToShadow(ctx, txn, pastNano)
 		})
 		if err != nil {
@@ -93,21 +125,29 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		}
 	}
 
-	// Store a snapshot of current data if there are no snapshots yet
-	if hasData && !hasSnapshots {
+	// Store a snapshot of current data if there are no snapshots yet.
+	// We do not do this here when a snapshot already exists, because it could
+	// be a snapshot from this instance that we do not want to overwrite
+	// with an empty one in the LMDB was reset.
+	if hasDataAtStart && !hasSnapshots {
 		s.l.Info("Performing initial snapshot, because none exists yet")
 		actualTxnID, err := s.SendOnce(ctx, env)
 		if err != nil {
 			return err
 		}
-		lastTxnID = actualTxnID
+		lastSyncedTxnID = actualTxnID
+		// Start tracker: Initial snapshot stored
+		s.startTracker.SetPassedInitialStore()
 	} else {
 		s.l.Debug("Not performing a snapshot of current data before sync " +
 			"(empty database or some snapshot already exist)")
 	}
 
-	// Start tracker: Initial snapshot stored
-	s.startTracker.SetPassedInitialStore()
+	if !hasDataAtStart {
+		// Start tracker: Initial snapshot stored
+		// To make sure it is set
+		s.startTracker.SetPassedInitialStore()
+	}
 
 	// Run receiver in background to get newer snapshot after loading the
 	// initial batch of snapshots.
@@ -119,109 +159,126 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	// There is no guarantee that the snapshots listed before have already been
 	// downloaded and are available for loading, but this is fine.
 	// The update loop will not cause any issues, even if a snapshot is generated.
+
+	// Keep checking for new remote snapshots and uploading on local changes
 	for {
-		// Keep checking for new remote snapshots until we have local changes
+		// Load all new snapshots that are ready (downloaded and unpacked).
+		// To not starve the syncer from sending local changes, we break for
+		// a local snapshot after MaxConsecutiveSnapshotLoads loads.
+		// Additionally, in shadow mode, every load will implicitly trigger a
+		// snapshot when local changes are detected.
+		nLoads := 0
+	loadReadySnapshotsLoop:
 		for {
-			// Load all new snapshots that are available now
-			// This will not starve the syncer from sending local changes,
-			// because every load will implicitly trigger a snapshot when local
-			// changes are detected.
-			for {
-				instance, update := r.Next()
-				if instance == "" {
-					break // no more remote snapshots
-				}
-				// New remote snapshot to load
-				delete(waitingForInstances, instance)
-				actualTxnID, localChanged, err := s.LoadOnce(ctx, env, instance, update, lastTxnID)
-				if err != nil {
-					return err
-				}
-				if !localChanged {
-					// Prevent triggering a local snapshot if there were no local
-					// changes by bumping the transaction ID we consider synced.
-					lastTxnID = actualTxnID
-				}
+			instance, update := r.Next()
+			if instance == "" {
+				break loadReadySnapshotsLoop // no more ready remote snapshots
 			}
+			// New remote snapshot to load
+			nLoads++
+			if instance == ownInstanceID {
+				s.l.Info("Loading snapshot for own instance")
+			}
+			waitingForInstances.Remove(instance)
+			actualTxnID, localChanged, err := s.LoadOnce(
+				ctx, env, instance, update, lastSyncedTxnID)
+			if err != nil {
+				return err
+			}
+			if !localChanged {
+				// Prevent triggering a local snapshot if there were no local
+				// changes by bumping the transaction ID we consider synced
+				// to the one just created by the snapshot load.
+				// If there were local changes, we leave it as is to trigger
+				// a snapshot below.
+				lastSyncedTxnID = actualTxnID
+			}
+			if localChanged && nLoads > MaxConsecutiveSnapshotLoads {
+				break loadReadySnapshotsLoop // allow a local snapshot before proceeding
+			}
+		}
 
-			// Check if any of the instances we are waiting for have disappeared,
-			// which can happen when a cleaner removes stale snapshots.
-			if len(waitingForInstances) > 0 {
-				// Check if the instance still has snapshots
-				current := make(map[string]bool)
-				for _, instance := range r.SeenInstances() {
-					current[instance] = true
-				}
-				// No need to wait for these any longer, remove them from the map
-				var toDelete []string
-				for instance := range waitingForInstances {
-					if !current[instance] {
-						toDelete = append(toDelete, instance)
+		// Check if any of the instances we are waiting for have disappeared,
+		// which can happen when a cleaner removes stale snapshots.
+		if !waitingForInstances.Done() {
+			cleaned := waitingForInstances.CleanDisappeared(r.SeenInstances())
+			for _, name := range cleaned {
+				s.l.WithField("cleaned_instance", name).Info(
+					"No longer waiting for instance, because its snapshots disappeared")
+			}
+			if !waitingForInstances.Done() {
+				cur := waitingForInstances.String()
+				s.l.WithField("instances", cur).Info(
+					"Still waiting for snapshots from instances")
+			}
+		}
+
+		// Check for change in local LMDB
+		info, err := env.Info()
+		if err != nil {
+			return err
+		}
+		s.l.WithFields(logrus.Fields{
+			"info.LastTxnID":  info.LastTxnID,
+			"lastSyncedTxnID": lastSyncedTxnID,
+		}).Trace("Checking if TxnID changed")
+		if header.TxnID(info.LastTxnID) > lastSyncedTxnID {
+			// We have data to snapshot, or we have not performed a snapshot
+			// yet after startup.
+			if waitingForInstances.Contains(ownInstanceID) {
+				// We must not store a snapshot before we have loaded our own
+				// snapshot, because if we started with an empty LMDB, we
+				// could write a snapshot that loses data that was only in our
+				// own older snapshot. This could happen in this process is
+				// terminated after writing this snapshot, and before loading
+				// its old one (triggered at beginning with RunOnce) and
+				// subsequently writing another snapshot.
+				// This guarantee does not hold in shadow mode, because
+				// every load there can trigger a snapshot store.
+				// TODO: Can we fix this for shadow mode?
+				s.l.Info("Waiting to load own old snapshot before writing a new one")
+			} else {
+				lastSyncedTxnID = header.TxnID(info.LastTxnID)
+				s.l.WithField("LastTxnID", lastSyncedTxnID).Debug("LMDB changed locally, syncing")
+
+				// Store snapshot
+				if hasDataAtStart || lastSyncedTxnID > 0 {
+					actualTxnID, err := s.SendOnce(ctx, env)
+					if err != nil {
+						return err
 					}
+					lastSyncedTxnID = actualTxnID
+					// Start tracker: Initial snapshot stored
+					s.startTracker.SetPassedInitialStore()
+				} else if !warnedEmpty {
+					s.l.Warn("LMDB is empty, waiting for data")
+					warnedEmpty = true
 				}
-				for _, instance := range toDelete {
-					delete(waitingForInstances, instance)
-				}
-				// Sort alphabetically for log message
-				var instances []string
-				for instance := range waitingForInstances {
-					instances = append(instances, instance)
-				}
-				sort.Strings(instances)
-				istr := strings.Join(instances, " ")
-				s.l.WithField("instances", istr).Info("Still waiting for snapshots from instances")
-			}
-
-			// If set, we are done now
-			if s.c.OnlyOnce && len(waitingForInstances) == 0 {
-				s.l.Info("Stopping, because requested to only do a single pass")
-				return nil
-			}
-
-			// Update start tracker if pass has completed
-			if len(waitingForInstances) == 0 {
-				s.startTracker.SetPassCompleted()
-			}
-
-			// Wait for change in local LMDB
-			info, err := env.Info()
-			if err != nil {
-				return err
-			}
-			s.l.WithFields(logrus.Fields{
-				"info.LastTxnID": info.LastTxnID,
-				"lastTxnID":      lastTxnID,
-			}).Trace("Checking if TxnID changed")
-			if info.LastTxnID > lastTxnID {
-				lastTxnID = info.LastTxnID
-				break // create new snapshot
-			}
-
-			// Sleep before next check for snapshots and local changes
-			s.l.Debug("Waiting for a new transaction")
-			if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
-				return err
 			}
 		}
 
-		s.l.WithField("LastTxnID", lastTxnID).Debug("LMDB changed locally, syncing")
-		// Store snapshot
-		// If lastTxnID == 0, the LMDB is empty, so we do not store anything
-		if lastTxnID > 0 {
-			actualTxnID, err := s.SendOnce(ctx, env)
-			if err != nil {
-				return err
-			}
-			lastTxnID = actualTxnID
-		} else if !warnedEmpty {
-			s.l.Warn("LMDB is empty, waiting for data")
-			warnedEmpty = true
+		// Update start tracker if pass has completed
+		if waitingForInstances.Done() {
+			s.startTracker.SetPassCompleted()
 		}
 
+		// If set, we are done now.
+		// This check is now intentionally after the local snapshot upload.
+		if s.c.OnlyOnce && waitingForInstances.Done() {
+			s.l.Info("Stopping, because requested to only do a single pass")
+			return nil
+		}
+
+		// Sleep before next check for snapshots and local changes
+		s.l.Debug("Waiting for a new transaction")
+		if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
+			return err
+		}
 	}
+
 }
 
-func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, update snapshot.Update, lastTxnID int64) (txnID int64, localChanged bool, err error) {
+func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, update snapshot.Update, lastTxnID header.TxnID) (txnID header.TxnID, localChanged bool, err error) {
 
 	t0 := time.Now() // for performance measurements
 	snap := update.Snapshot
@@ -239,8 +296,8 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 	err = env.Update(func(txn *lmdb.Txn) error {
 		ts := time.Now()
 		tTxnAcquire = ts
-		tsNano := uint64(ts.UnixNano())
-		txnID = int64(txn.ID())
+		tsNano := header.TimestampFromTime(ts)
+		txnID = header.TxnID(txn.ID())
 
 		// There was a local change if the update transaction ID was more than 1
 		// higher than the last transaction ID we took a snapshot of.
@@ -253,7 +310,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 			"txnID":             txnID,
 			"lastTxnID":         lastTxnID,
 			"snapshot_instance": instance,
-			"timestamp":         snapshot.TimestampFromNano(snap.Meta.TimestampNano),
+			"timestamp":         snapshot.NameTimestampFromNano(header.Timestamp(snap.Meta.TimestampNano)),
 			"localChanged":      localChanged,
 		})
 		l.Debug("Started load")
@@ -296,8 +353,17 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				return err
 			}
 
-			it := &TimestampedIterator{
-				Entries: dbiMsg.Entries,
+			it, err := NewNativeIterator(
+				snap.FormatVersion,
+				dbiMsg.Entries,
+				0, // no default timestamp
+				header.TxnID(txn.ID()),
+			)
+			if err != nil {
+				return fmt.Errorf("create native iterator: %w", err)
+			}
+			if s.lc.HeaderExtraPaddingBlock {
+				it.HeaderPaddingBlock = true
 			}
 			err = strategy.Update(txn, targetDBI, it)
 			if err != nil {
@@ -325,7 +391,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 	})
 	if err != nil {
 		// We always return LMDB reading errors, as these are really unexpected
-		return -1, false, err
+		return 0, false, err
 	}
 	tLoaded := time.Now()
 
@@ -333,16 +399,16 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 	// and reuse the ID the next time, so we need to adjust the txnID we return.
 	info, err := env.Info()
 	if err != nil {
-		return -1, false, err
+		return 0, false, err
 	}
-	if info.LastTxnID < txnID {
+	if header.TxnID(info.LastTxnID) < txnID {
 		// Transaction was empty, no changes
 		s.l.WithField("prevTxnID", txnID).WithField("txnID", info.LastTxnID).
 			Debug("Adjusting TxnID (no changes)")
-		txnID = info.LastTxnID
+		txnID = header.TxnID(info.LastTxnID)
 	}
 
-	ts := snapshot.TimestampFromNano(snap.Meta.TimestampNano)
+	ts := snapshot.NameTimestampFromNano(header.Timestamp(snap.Meta.TimestampNano))
 	l := s.l.WithFields(logrus.Fields{
 		"time_total":        utils.TimeDiff(tLoaded, t0),
 		"txnID":             txnID,

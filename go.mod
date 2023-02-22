@@ -14,6 +14,8 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.8.1
+	github.com/wojas/go-healthz v0.2.0
+	go.uber.org/atomic v1.10.0
 	golang.org/x/exp v0.0.0-20230111222715-75897c7a292a
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	gopkg.in/yaml.v2 v2.4.0
@@ -52,9 +54,7 @@ require (
 	github.com/rs/xid v1.4.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/twitchtv/twirp v8.1.0+incompatible // indirect
-	github.com/wojas/go-healthz v0.2.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect

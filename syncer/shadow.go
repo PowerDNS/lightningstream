@@ -9,14 +9,16 @@ import (
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
+	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
 
 // mainToShadow syncs the current databases to shadow databases with timestamps.
 // The sync is unidirectional, the state of the main database determines which
 // keys will be present in the shadow database.
-func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64) error {
+func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.Timestamp) error {
 	t0 := time.Now()
 
 	// List of DBIs to dump
@@ -72,9 +74,14 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano uint64)
 			return err
 		}
 
-		it := &TimestampedIterator{
-			Entries:              dbiMsg.Entries,
-			DefaultTimestampNano: tsNano,
+		it, err := NewNativeIterator(
+			snapshot.CurrentFormatVersion,
+			dbiMsg.Entries,
+			tsNano,
+			header.TxnID(txn.ID()),
+		)
+		if err != nil {
+			return fmt.Errorf("create native iterator: %w", err)
 		}
 		err = strategy.IterUpdate(txn, targetDBI, it)
 		if err != nil {
