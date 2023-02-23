@@ -218,7 +218,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			}
 		}
 
-		// Check fi we need to do a periodic snapshot
+		// Check if we need to do a periodic snapshot
 		snapshotOverdue := false
 		if dt := time.Since(lastSnapshotTime); forceSnapshotEnabled && dt > forceSnapshotInterval {
 			snapshotOverdue = true
