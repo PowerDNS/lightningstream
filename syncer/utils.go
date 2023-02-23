@@ -126,14 +126,23 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	}
 	l.WithField("entries", stat.Entries).Debug("Reading DBI")
 
+	// If enabled, all returned key and value []byte point directly into
+	// the LMDB, so these are unsafe to return to the caller. If used
+	// outside the transaction, the data may no longer be valid, and SendOnce
+	// does use it outside the transaction.
+	// So we create one big []byte to contain all data and return slices from
+	// here. This is more efficient than allocating individual slices for
+	// all keys and values, it is basically arena allocation.
+	txnRawRead := txn.RawRead
+	var arenaBuf []byte
+	if txnRawRead {
+		// Preallocate a large enough buffer for all data in this DBI
+		arenaBuf = make([]byte, 0, stats.PageUsageBytes(stat))
+	}
+
 	dbiMsg = new(snapshot.DBI)
 	dbiMsg.Name = dbiName
 	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
-	// TODO: directly read it into the right structure
-	items, err := lmdbenv.ReadDBI(txn, dbi)
-	if err != nil {
-		return nil, err
-	}
 
 	dbiFlags, err := txn.Flags(dbi)
 	if err != nil {
@@ -145,16 +154,49 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	}
 	dbiMsg.Flags = uint64(dbiFlags)
 
+	// Read all entries
+	c, err := txn.OpenCursor(dbi)
+	if err != nil {
+		return nil, errors.Wrap(err, "open cursor")
+	}
+	defer c.Close()
+
 	var prev []byte
-	for _, item := range items {
+	var flag uint = lmdb.First
+	for {
+		key, val, err := c.Get(nil, nil, flag)
+		if err != nil {
+			if lmdb.IsNotFound(err) {
+				break
+			} else {
+				return nil, errors.Wrap(err, "cursor next")
+			}
+		}
+
+		if txnRawRead {
+			// Copy key and value into our arena and then use our copies
+			{
+				start := len(arenaBuf)
+				arenaBuf = append(arenaBuf, key...)
+				end := start + len(key)
+				key = arenaBuf[start:end:end]
+			}
+			{
+				start := len(arenaBuf)
+				arenaBuf = append(arenaBuf, val...)
+				end := start + len(val)
+				val = arenaBuf[start:end:end]
+			}
+		}
+
 		// Not checking wrong order to support native integer and reverse ordering
-		if prev != nil && !isDupSort && bytes.Equal(prev, item.Key) {
+		if prev != nil && !isDupSort && bytes.Equal(prev, key) {
 			return nil, fmt.Errorf(
 				"duplicate key detected in DBI %q without dupsort_hack, refusing to continue",
 				dbiName)
 		}
-		prev = item.Key
-		val := item.Val
+		prev = key
+
 		var ts header.Timestamp
 		var flags header.Flags
 		if !rawValues {
@@ -162,7 +204,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 			if err != nil {
 				return nil, ErrEntry{
 					DBIName: dbiName,
-					Key:     item.Key,
+					Key:     key,
 					Err:     err,
 				}
 			}
@@ -171,8 +213,9 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 			val = appVal
 		}
 
+		flag = lmdb.Next
 		dbiMsg.Entries = append(dbiMsg.Entries, snapshot.KV{
-			Key:           item.Key,
+			Key:           key,
 			Value:         val,
 			TimestampNano: uint64(ts),
 			Flags:         uint32(flags.Masked()),

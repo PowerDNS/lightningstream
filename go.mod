@@ -8,6 +8,7 @@ require (
 	github.com/bufbuild/buf v0.56.0
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/gogo/protobuf v1.3.2
+	github.com/klauspost/compress v1.15.15
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.13.0
 	github.com/samber/lo v1.37.0
@@ -37,7 +38,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jhump/protoreflect v1.9.1-0.20210817181203-db1a327a393e // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.15.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.1.2 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect

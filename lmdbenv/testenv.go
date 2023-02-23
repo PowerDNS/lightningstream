@@ -22,7 +22,7 @@ func TestEnv(f TestEnvFunc) error {
 	}
 	defer os.RemoveAll(tmpdir)
 
-	env, err := New(tmpdir, 0)
+	env, err := New(tmpdir, lmdb.Create)
 	if err != nil {
 		return errors.Wrap(err, "new lmdb env")
 	}
