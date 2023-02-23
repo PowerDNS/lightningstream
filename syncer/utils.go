@@ -176,14 +176,16 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 		if txnRawRead {
 			// Copy key and value into our arena and then use our copies
 			{
-				o := len(arenaBuf)
+				start := len(arenaBuf)
 				arenaBuf = append(arenaBuf, key...)
-				key = arenaBuf[o : o+len(key)]
+				end := start + len(key)
+				key = arenaBuf[start:end:end]
 			}
 			{
-				o := len(arenaBuf)
+				start := len(arenaBuf)
 				arenaBuf = append(arenaBuf, val...)
-				val = arenaBuf[o : o+len(val)]
+				end := start + len(val)
+				val = arenaBuf[start:end:end]
 			}
 		}
 
