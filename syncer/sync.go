@@ -152,6 +152,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	// To force periodic snapshots
 	lastSnapshotTime := time.Now()
 	forceSnapshotInterval := s.c.StorageForceSnapshotInterval
+	forceSnapshotEnabled := forceSnapshotInterval > 0
 
 	// Run receiver in background to get newer snapshot after loading the
 	// initial batch of snapshots.
@@ -219,7 +220,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 
 		// Check fi we need to do a periodic snapshot
 		snapshotOverdue := false
-		if dt := time.Since(lastSnapshotTime); dt > forceSnapshotInterval {
+		if dt := time.Since(lastSnapshotTime); forceSnapshotEnabled && dt > forceSnapshotInterval {
 			snapshotOverdue = true
 			logrus.WithField(
 				"last_snapshot_time_passed", dt.Round(time.Second).String(),

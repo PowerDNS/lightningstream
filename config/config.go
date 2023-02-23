@@ -272,8 +272,8 @@ func (c Config) Check() error {
 	if c.StorageRetryInterval < 100*time.Millisecond {
 		return fmt.Errorf("storage_retry_interval: too short interval")
 	}
-	if c.StorageForceSnapshotInterval < time.Minute {
-		return fmt.Errorf("storage_force_snapshot_interval: too short interval (minimum 1m)")
+	if dt := c.StorageForceSnapshotInterval; dt != 0 && dt < time.Minute {
+		return fmt.Errorf("storage_force_snapshot_interval: too short interval (minimum 1m if enabled)")
 	}
 	if c.StorageRetryCount < 1 {
 		return fmt.Errorf("storage_retry_count: positive number required")
