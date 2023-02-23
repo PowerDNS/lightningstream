@@ -15,13 +15,31 @@ import (
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 )
 
-func BenchmarkSyncer_SendOnce_100k(b *testing.B) {
+func BenchmarkSyncer_SendOnce_native_100k(b *testing.B) {
+	doBenchmarkSyncerSendOnce(b, true, false)
+}
+
+func BenchmarkSyncer_SendOnce_shadow_100k(b *testing.B) {
+	doBenchmarkSyncerSendOnce(b, false, false)
+}
+
+func BenchmarkSyncer_SendOnce_shadow_dupsort_100k(b *testing.B) {
+	doBenchmarkSyncerSendOnce(b, false, true)
+}
+
+func doBenchmarkSyncerSendOnce(b *testing.B, native, dupsort bool) {
 	t := b
 	const nRecords = 100_000
 	now := time.Now()
 
+	var extraDBIFlags uint
+	if dupsort {
+		extraDBIFlags = lmdb.DupSort
+	}
+
 	syncer, err := New("test", memory.New(), config.Config{}, config.LMDB{
-		SchemaTracksChanges: true,
+		SchemaTracksChanges: native,
+		DupSortHack:         dupsort,
 	})
 	require.NoError(t, err)
 
@@ -43,7 +61,7 @@ func BenchmarkSyncer_SendOnce_100k(b *testing.B) {
 		// Fill some data to dump
 		err = env.Update(func(txn *lmdb.Txn) error {
 			// First insert the initial data into the main database
-			dbi, err := txn.OpenDBI("foo", lmdb.Create)
+			dbi, err := txn.OpenDBI("foo", lmdb.Create|extraDBIFlags)
 			require.NoError(t, err)
 			for i := 0; i < nRecords; i++ {
 				key := []byte(fmt.Sprintf("key-%020d", i))
