@@ -2,11 +2,11 @@ package snapshot
 
 import (
 	"bytes"
-	"compress/gzip"
 	"io"
 	"time"
 
 	"github.com/c2h5oh/datasize"
+	"github.com/klauspost/compress/gzip"
 )
 
 // LoadData loads snapshot file contents that are gzipped protobufs
