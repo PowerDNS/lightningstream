@@ -129,11 +129,6 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	dbiMsg = new(snapshot.DBI)
 	dbiMsg.Name = dbiName
 	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
-	// TODO: directly read it into the right structure
-	items, err := lmdbenv.ReadDBI(txn, dbi)
-	if err != nil {
-		return nil, err
-	}
 
 	dbiFlags, err := txn.Flags(dbi)
 	if err != nil {
@@ -145,16 +140,32 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	}
 	dbiMsg.Flags = uint64(dbiFlags)
 
+	// Read all entries
+	c, err := txn.OpenCursor(dbi)
+	if err != nil {
+		return nil, errors.Wrap(err, "open cursor")
+	}
+	defer c.Close()
+
 	var prev []byte
-	for _, item := range items {
+	var flag uint = lmdb.First
+	for {
+		key, val, err := c.Get(nil, nil, flag)
+		if err != nil {
+			if lmdb.IsNotFound(err) {
+				break
+			} else {
+				return nil, errors.Wrap(err, "cursor next")
+			}
+		}
 		// Not checking wrong order to support native integer and reverse ordering
-		if prev != nil && !isDupSort && bytes.Equal(prev, item.Key) {
+		if prev != nil && !isDupSort && bytes.Equal(prev, key) {
 			return nil, fmt.Errorf(
 				"duplicate key detected in DBI %q without dupsort_hack, refusing to continue",
 				dbiName)
 		}
-		prev = item.Key
-		val := item.Val
+		prev = key
+
 		var ts header.Timestamp
 		var flags header.Flags
 		if !rawValues {
@@ -162,7 +173,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 			if err != nil {
 				return nil, ErrEntry{
 					DBIName: dbiName,
-					Key:     item.Key,
+					Key:     key,
 					Err:     err,
 				}
 			}
@@ -171,8 +182,9 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 			val = appVal
 		}
 
+		flag = lmdb.Next
 		dbiMsg.Entries = append(dbiMsg.Entries, snapshot.KV{
-			Key:           item.Key,
+			Key:           key,
 			Value:         val,
 			TimestampNano: uint64(ts),
 			Flags:         uint32(flags.Masked()),
