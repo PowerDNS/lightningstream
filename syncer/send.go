@@ -33,14 +33,24 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 
 	schemaTracksChanges := s.lc.SchemaTracksChanges
 
+	txnRawRead := false
 	var inTxn func(lmdb.TxnOp) error
 	if schemaTracksChanges {
 		inTxn = env.View
+		txnRawRead = true // []byte will point directly into LMDB, potentially unsafe
 	} else {
 		inTxn = env.Update
 	}
 
 	err = inTxn(func(txn *lmdb.Txn) error {
+		// We can speed SendOnce up by about 30% by setting txn.RawRead to true
+		// if this is env.View, but this is only safe if the returned []byte
+		// keys and values are not used outside the transaction, because
+		// they point into the LMDB pages.
+		// This is safe here, because s.readDBI() allocates an arena []byte and
+		// copies all keys and values in there when txn.RawRead is set.
+		txn.RawRead = txnRawRead
+
 		// Determine snapshot timestamp after we opened the transaction
 		ts = time.Now()
 		tTxnAcquire = ts

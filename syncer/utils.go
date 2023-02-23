@@ -126,6 +126,20 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	}
 	l.WithField("entries", stat.Entries).Debug("Reading DBI")
 
+	// If enabled, all returned key and value []byte point directly into
+	// the LMDB, so these are unsafe to return to the caller. If used
+	// outside the transaction, the data may no longer be valid, and SendOnce
+	// does use it outside the transaction.
+	// So we create one big []byte to contain all data and return slices from
+	// here. This is more efficient than allocating individual slices for
+	// all keys and values, it is basically arena allocation.
+	txnRawRead := txn.RawRead
+	var arenaBuf []byte
+	if txnRawRead {
+		// Preallocate a large enough buffer for all data in this DBI
+		arenaBuf = make([]byte, 0, stats.PageUsageBytes(stat))
+	}
+
 	dbiMsg = new(snapshot.DBI)
 	dbiMsg.Name = dbiName
 	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
@@ -158,6 +172,21 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 				return nil, errors.Wrap(err, "cursor next")
 			}
 		}
+
+		if txnRawRead {
+			// Copy key and value into our arena and then use our copies
+			{
+				o := len(arenaBuf)
+				arenaBuf = append(arenaBuf, key...)
+				key = arenaBuf[o : o+len(key)]
+			}
+			{
+				o := len(arenaBuf)
+				arenaBuf = append(arenaBuf, val...)
+				val = arenaBuf[o : o+len(val)]
+			}
+		}
+
 		// Not checking wrong order to support native integer and reverse ordering
 		if prev != nil && !isDupSort && bytes.Equal(prev, key) {
 			return nil, fmt.Errorf(
