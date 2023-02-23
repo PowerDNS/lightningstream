@@ -149,6 +149,11 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		s.startTracker.SetPassedInitialStore()
 	}
 
+	// To force periodic snapshots
+	lastSnapshotTime := time.Now()
+	forceSnapshotInterval := s.c.StorageForceSnapshotInterval
+	forceSnapshotEnabled := forceSnapshotInterval > 0
+
 	// Run receiver in background to get newer snapshot after loading the
 	// initial batch of snapshots.
 	go func() {
@@ -213,6 +218,15 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			}
 		}
 
+		// Check if we need to do a periodic snapshot
+		snapshotOverdue := false
+		if dt := time.Since(lastSnapshotTime); forceSnapshotEnabled && dt > forceSnapshotInterval {
+			snapshotOverdue = true
+			logrus.WithField(
+				"last_snapshot_time_passed", dt.Round(time.Second).String(),
+			).Info("Snapshot overdue, forcing one")
+		}
+
 		// Check for change in local LMDB
 		info, err := env.Info()
 		if err != nil {
@@ -222,7 +236,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			"info.LastTxnID":  info.LastTxnID,
 			"lastSyncedTxnID": lastSyncedTxnID,
 		}).Trace("Checking if TxnID changed")
-		if header.TxnID(info.LastTxnID) > lastSyncedTxnID {
+		if header.TxnID(info.LastTxnID) > lastSyncedTxnID || snapshotOverdue {
 			// We have data to snapshot, or we have not performed a snapshot
 			// yet after startup.
 			if waitingForInstances.Contains(ownInstanceID) {
@@ -248,6 +262,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 						return err
 					}
 					lastSyncedTxnID = actualTxnID
+					lastSnapshotTime = time.Now()
 					// Start tracker: Initial snapshot stored
 					s.startTracker.SetPassedInitialStore()
 				} else if !warnedEmpty {

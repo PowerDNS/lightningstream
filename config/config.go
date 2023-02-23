@@ -37,6 +37,10 @@ const (
 	// DefaultStorageRetryCount is the number of times to retry a storage operation
 	// after failure, before giving up.
 	DefaultStorageRetryCount = 100
+
+	// DefaultStorageForceSnapshotInterval is the default interval at which we
+	// write a snapshot even if no local changes were detected.
+	DefaultStorageForceSnapshotInterval = 4 * time.Hour
 )
 
 var (
@@ -122,6 +126,11 @@ type Config struct {
 
 	// If set, StorageRetryCount will be ignored, and we retry forever
 	StorageRetryForever bool `yaml:"storage_retry_forever"`
+
+	// StorageForceSnapshotInterval sets the interval to force a snapshot write
+	// even if no LMDB changes were detected, to make sure we occasionally write
+	// a fresh snapshot.
+	StorageForceSnapshotInterval time.Duration `yaml:"storage_force_snapshot_interval"`
 
 	// LMDBScrapeSmaps enabled the scraping of /proc/smaps for LMDB stats
 	LMDBScrapeSmaps bool `yaml:"lmdb_scrape_smaps"`
@@ -263,6 +272,9 @@ func (c Config) Check() error {
 	if c.StorageRetryInterval < 100*time.Millisecond {
 		return fmt.Errorf("storage_retry_interval: too short interval")
 	}
+	if dt := c.StorageForceSnapshotInterval; dt != 0 && dt < time.Minute {
+		return fmt.Errorf("storage_force_snapshot_interval: too short interval (minimum 1m if enabled)")
+	}
 	if c.StorageRetryCount < 1 {
 		return fmt.Errorf("storage_retry_count: positive number required")
 	}
@@ -331,12 +343,13 @@ func Default() Config {
 			Start:        DefaultHealthStart,
 		},
 
-		LMDBScrapeSmaps:      true,
-		LMDBPollInterval:     DefaultLMDBPollInterval,
-		LMDBLogStatsInterval: DefaultLMDBLogStatsInterval,
-		StoragePollInterval:  DefaultStoragePollInterval,
-		StorageRetryInterval: DefaultStorageRetryInterval,
-		StorageRetryCount:    DefaultStorageRetryCount,
+		LMDBScrapeSmaps:              true,
+		LMDBPollInterval:             DefaultLMDBPollInterval,
+		LMDBLogStatsInterval:         DefaultLMDBLogStatsInterval,
+		StoragePollInterval:          DefaultStoragePollInterval,
+		StorageRetryInterval:         DefaultStorageRetryInterval,
+		StorageRetryCount:            DefaultStorageRetryCount,
+		StorageForceSnapshotInterval: DefaultStorageForceSnapshotInterval,
 
 		Storage: Storage{
 			Cleanup: Cleanup{
