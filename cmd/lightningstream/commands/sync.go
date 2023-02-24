@@ -79,7 +79,7 @@ var syncCmd = &cobra.Command{
 	Short: "Continuous bidirectional syncing",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runSync(); err != nil {
-			logrus.WithError(err).Error("Error")
+			logrus.WithError(err).Fatal("Error")
 		}
 	},
 }
