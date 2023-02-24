@@ -74,6 +74,7 @@ const statusTemplateString = `<!DOCTYPE html>
 			<th>Used</th>
 			<th>LastTxnID</th>
 			<th>Readers</th>
+			<th>Error</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -84,6 +85,7 @@ const statusTemplateString = `<!DOCTYPE html>
 			<td class="size">{{.Used.HumanReadable}}</td>
 			<td class="size">{{.Info.LastTxnID}}</td>
 			<td>{{.Info.NumReaders}} / {{.Info.MaxReaders}}</td>
+			<td>{{.Err}}</td>
 		</tr>
 	{{end}}
 	</tbody>
@@ -101,6 +103,7 @@ const statusTemplateString = `<!DOCTYPE html>
 				<th>BranchPages</th>
 				<th>LeafPages</th>
 				<th>OverflowPages</th>
+				<th>Flags</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -113,6 +116,7 @@ const statusTemplateString = `<!DOCTYPE html>
 				<td class="size">{{.Stat.BranchPages}}</td>
 				<td class="size">{{.Stat.LeafPages}}</td>
 				<td class="size">{{.Stat.OverflowPages}}</td>
+				<td class="size">{{.FlagsDisplay}}</td>
 			</tr>
 		{{end}}
 		</tbody>

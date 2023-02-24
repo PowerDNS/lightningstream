@@ -32,9 +32,11 @@ type DBInfo struct {
 }
 
 type DBIStat struct {
-	Name string
-	Stat *lmdb.Stat
-	Used datasize.ByteSize
+	Name         string
+	Stat         *lmdb.Stat
+	Used         datasize.ByteSize
+	Flags        uint
+	FlagsDisplay string
 }
 
 var gi info
@@ -72,14 +74,20 @@ func (i *info) DBInfo() (res []DBInfo) {
 				if err != nil {
 					return err
 				}
+				fl, err := txn.Flags(dbi)
+				if err != nil {
+					return err
+				}
 				st, err := txn.Stat(dbi)
 				if err != nil {
 					return err
 				}
 				ds := DBIStat{
-					Name: dbiName,
-					Stat: st,
-					Used: datasize.ByteSize(stats.PageUsageBytes(st)),
+					Name:         dbiName,
+					Stat:         st,
+					Used:         datasize.ByteSize(stats.PageUsageBytes(st)),
+					Flags:        fl,
+					FlagsDisplay: displayFlags(fl),
 				}
 				info.DBIStats = append(info.DBIStats, ds)
 				info.Used += ds.Used
