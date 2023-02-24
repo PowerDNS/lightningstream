@@ -11,6 +11,7 @@ import (
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
 	"powerdns.com/platform/lightningstream/snapshot"
+	"powerdns.com/platform/lightningstream/status"
 	"powerdns.com/platform/lightningstream/syncer/receiver"
 	"powerdns.com/platform/lightningstream/utils"
 )
@@ -30,6 +31,9 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 	defer s.closeEnv(env)
+
+	status.AddLMDBEnv(s.name, env)
+	defer status.RemoveLMDBEnv(s.name)
 
 	s.startStatsLogger(ctx, env)
 	s.registerCollector(env)
