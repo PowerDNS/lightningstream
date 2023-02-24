@@ -35,6 +35,7 @@ func runSync() error {
 		return err
 	}
 	logrus.WithField("storage_type", conf.Storage.Type).Info("Storage backend initialised")
+	status.SetStorage(st)
 
 	eg, ctx := errgroup.WithContext(ctx)
 	for name, lc := range conf.LMDBs {
