@@ -11,15 +11,18 @@ import (
 	"golang.org/x/sync/errgroup"
 	"powerdns.com/platform/lightningstream/status"
 	"powerdns.com/platform/lightningstream/syncer"
+	"powerdns.com/platform/lightningstream/utils"
 )
 
 var (
-	onlyOnce bool
+	onlyOnce   bool
+	markerFile string
 )
 
 func init() {
 	rootCmd.AddCommand(syncCmd)
 	syncCmd.Flags().BoolVar(&onlyOnce, "only-once", false, "Only do a single run and exit")
+	syncCmd.Flags().StringVar(&markerFile, "wait-for-marker-file", "", "Marker file to wait for in storage before starting syncers")
 }
 
 func runSync() error {
@@ -36,6 +39,27 @@ func runSync() error {
 	}
 	logrus.WithField("storage_type", conf.Storage.Type).Info("Storage backend initialised")
 	status.SetStorage(st)
+
+	// If enabled, wait for marker file to be present in storage before starting syncers
+	if markerFile != "" {
+		logrus.Infof("waiting for marker file '%s' to be present in storage", markerFile)
+		for {
+			if _, err := st.Load(ctx, markerFile); err == nil {
+				logrus.Infof("marker file '%s' found, proceeding", markerFile)
+				break
+			} else {
+				if !os.IsNotExist(err) {
+					logrus.WithError(err).Errorf("unable to check storage for marker file '%s'", markerFile)
+				}
+			}
+
+			logrus.Debugf("waiting for marker file '%s'", markerFile)
+
+			if err := utils.SleepContext(ctx, conf.StoragePollInterval); err != nil {
+				return err
+			}
+		}
+	}
 
 	eg, ctx := errgroup.WithContext(ctx)
 	for name, lc := range conf.LMDBs {
