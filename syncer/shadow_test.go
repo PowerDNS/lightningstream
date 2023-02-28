@@ -39,7 +39,7 @@ func TestSyncer_shadow(t *testing.T) {
 	ts2 := testTS(2)
 	ts3 := testTS(3)
 
-	s, err := New("test", nil, config.Config{}, config.LMDB{})
+	s, err := New("test", nil, config.Config{}, config.LMDB{}, Options{})
 	assert.NoError(t, err)
 
 	err = lmdbenv.TestEnv(func(env *lmdb.Env) error {

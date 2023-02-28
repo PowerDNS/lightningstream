@@ -25,7 +25,7 @@ func init() {
 	syncCmd.Flags().StringVar(&markerFile, "wait-for-marker-file", "", "Marker file to wait for in storage before starting syncers")
 }
 
-func runSync() error {
+func runSync(receiveOnly bool) error {
 	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
 
@@ -63,7 +63,10 @@ func runSync() error {
 
 	eg, ctx := errgroup.WithContext(ctx)
 	for name, lc := range conf.LMDBs {
-		s, err := syncer.New(name, st, conf, lc)
+		opt := syncer.Options{
+			ReceiveOnly: receiveOnly,
+		}
+		s, err := syncer.New(name, st, conf, lc, opt)
 		if err != nil {
 			return err
 		}
@@ -102,7 +105,7 @@ var syncCmd = &cobra.Command{
 	Use:   "sync",
 	Short: "Continuous bidirectional syncing",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := runSync(); err != nil {
+		if err := runSync(false); err != nil {
 			logrus.WithError(err).Fatal("Error")
 		}
 	},
