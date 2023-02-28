@@ -56,6 +56,23 @@ services:
         init: true
         entrypoint: /run.sh
 
+    auth3:
+        image: powerdns/pdns-auth-master
+        environment:
+            instance: 3
+            port: 53
+            webserver_port: 8081
+        ports:
+            - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}53:53/tcp"
+            - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}53:53/udp"
+            - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}83:8081"
+        volumes:
+            - "lmdb:/lmdb" 
+            - "./docker/pdns/run.sh:/run.sh:ro"
+        user: root
+        init: true
+        entrypoint: /run.sh
+
     sync1:
         build:
             dockerfile: Dockerfile
@@ -87,5 +104,21 @@ services:
         working_dir: /
         user: "953"  # pdns
         command: --minimum-pid 50 sync
+
+    sync3:
+        build:
+            dockerfile: Dockerfile
+            context: .
+        environment:
+            instance: 3  # used in config file
+        ports:
+            - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}93:8500"
+        volumes:
+            - "lmdb:/lmdb" 
+            - "./docker/pdns/lightningstream.yaml:/lightningstream.yaml:ro"
+            #- "snapshots:/snapshots" 
+        working_dir: /
+        user: "953"  # pdns
+        command: --minimum-pid 50 receive
 
 
