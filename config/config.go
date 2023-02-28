@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
 
 	"powerdns.com/platform/lightningstream/config/logger"
 	"powerdns.com/platform/lightningstream/lmdbenv"
@@ -178,7 +179,14 @@ type LMDB struct {
 }
 
 type DBIOptions struct {
-	// No longer has any options, but may get them in the future
+	// OverrideCreateFlags can override DBI create flags when loading a
+	// snapshot and the DBI does not create yet.
+	// By default, we use the flags stored in the snapshot.
+	// Snapshot with formatVersion < 3 did not store the right flags when
+	// shadow tables were in use and may require this override.
+	//
+	// ONLY USE THIS WHEN YOU ARE SURE YOU NEED IT!
+	OverrideCreateFlags *dbiflags.Flags `yaml:"override_create_flags"`
 }
 
 type Storage struct {

@@ -53,7 +53,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 		}
 
 		// If the DBI has MDB_INTEGERKEY set, our shadow db will use the same
-		var targetFlags = dbiFlags & AllowedShadowDBIFlagsMask
+		var targetFlags = dbiFlags & uint(AllowedShadowDBIFlagsMask)
 
 		if s.lc.DupSortHack && isDupSort {
 			if err = dupSortHackEncode(dbiMsg.Entries); err != nil {
