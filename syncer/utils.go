@@ -53,8 +53,7 @@ func (e ErrEntry) Unwrap() error {
 }
 
 var (
-	ErrNoTimestamp = errors.New("no timestamp to use for entry")
-	ErrNoTxnID     = errors.New("no TxnID set on iterator")
+	ErrNoTxnID = errors.New("no TxnID set on iterator")
 )
 
 var hostname string

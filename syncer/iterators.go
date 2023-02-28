@@ -163,21 +163,6 @@ func (it *NativeIterator) addHeader(
 	}
 	if ts == 0 {
 		ts = it.DefaultTimestampNano
-		if ts == 0 {
-			// When we write an entry, it MUST have a valid timestamp.
-			// Only applications are allowed to use 0 when they migrate old
-			// data to the native schema, but there is no reason for us
-			// to ever do that.
-			if fromClean {
-				return nil, ErrNoTimestamp // no extra info here
-			} else {
-				key := it.Entries[it.current].Key
-				return nil, ErrEntry{
-					Key: key,
-					Err: ErrNoTimestamp,
-				}
-			}
-		}
 	}
 	if len(entryVal) == 0 && it.FormatVersion < 2 {
 		// Earlier snapshots did not have a deleted flag and indicated deleted
