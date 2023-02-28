@@ -116,13 +116,15 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	if hasDataAtStart && !s.lc.SchemaTracksChanges {
 		// Sync to shadow using a time in the past to not overwrite newer data.
 		// At least is allows us to save newer entries that were added
-		// while the syncer was not running. it will not save updated entries.
-		// FIXME: Perhaps just use timestamp 0 (1970) here? Why disallow that in iterator?
+		// while the syncer was not running. It will not save updated entries.
 		s.l.Info("Syncing main to shadow, in case data was changed before start")
 		err := env.Update(func(txn *lmdb.Txn) error {
-			// TODO: use const
-			past := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-			pastNano := header.TimestampFromTime(past)
+			// We would like to just use timestamp 0 here, but that
+			// would break older clients that explicitly guard against
+			// zero timestamps.
+			// Previously we would use the year 2000 here, but this more clearly
+			// identifies migrated records.
+			pastNano := header.Timestamp(1) // 1 ns after UNIX epoch (1970)
 			return s.mainToShadow(ctx, txn, pastNano)
 		})
 		if err != nil {

@@ -48,6 +48,7 @@ func IsCanceled(ctx context.Context) bool {
 // If it contains unsafe characters, these are replaced by '.' and a hex
 // representation is added to the output.
 // It the first 8 bytes look like a nanosecond UNIX timestamp, that will be shown too.
+// TODO: Support full LS header
 func DisplayASCII(b []byte) string {
 	ret := make([]byte, len(b))
 	unsafe := false
@@ -61,9 +62,11 @@ func DisplayASCII(b []byte) string {
 	}
 	var tsString string
 	if len(b) >= 8 {
-		ts := time.Unix(0, int64(binary.BigEndian.Uint64(b[:8]))).UTC()
-		if ts.After(time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)) &&
-			ts.Before(time.Now().Add(30*24*time.Hour)) {
+		tsNano := int64(binary.BigEndian.Uint64(b[:8]))
+		ts := time.Unix(0, tsNano).UTC()
+		isRecentTS := ts.After(time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)) &&
+			ts.Before(time.Now().Add(30*24*time.Hour))
+		if isRecentTS {
 			tsString = ts.Format(time.RFC3339Nano)
 		}
 	}
