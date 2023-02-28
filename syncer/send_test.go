@@ -40,7 +40,7 @@ func doBenchmarkSyncerSendOnce(b *testing.B, native, dupsort bool) {
 	syncer, err := New("test", memory.New(), config.Config{}, config.LMDB{
 		SchemaTracksChanges: native,
 		DupSortHack:         dupsort,
-	})
+	}, Options{})
 	require.NoError(t, err)
 
 	l, hook := test.NewNullLogger()

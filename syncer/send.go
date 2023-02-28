@@ -75,6 +75,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		}
 		tShadow = time.Now()
 
+		// Skip the data dump if we are not going to send it anyway
+		if s.opt.ReceiveOnly {
+			return nil
+		}
+
 		// List of DBIs to dump
 		dbiNames, err := lmdbenv.ReadDBINames(txn)
 		if err != nil {
@@ -124,6 +129,13 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		txnID = header.TxnID(info.LastTxnID)
 	}
 	msg.Meta.LmdbTxnID = int64(txnID)
+
+	// Return before actually writing a snapshot, but after the txnID was adjusted
+	// when we are in receive-only mode.
+	if s.opt.ReceiveOnly {
+		s.l.Info("Snapshot store skipped, because running in receive-only mode")
+		return txnID, nil
+	}
 
 	out, dds, err := snapshot.DumpData(msg)
 	if err != nil {

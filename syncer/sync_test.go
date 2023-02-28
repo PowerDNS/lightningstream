@@ -147,7 +147,7 @@ func createInstance(t *testing.T, name string, st simpleblob.Interface, timestam
 	assert.NoError(t, err)
 
 	c := createConfig(name, tmp, timestamped)
-	syncer, err := New("default", st, c, c.LMDBs[testLMDBName])
+	syncer, err := New("default", st, c, c.LMDBs[testLMDBName], Options{})
 	assert.NoError(t, err)
 
 	return syncer, env

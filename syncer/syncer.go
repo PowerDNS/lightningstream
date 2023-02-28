@@ -13,14 +13,26 @@ import (
 	"powerdns.com/platform/lightningstream/status/starttracker"
 )
 
-func New(name string, st simpleblob.Interface, c config.Config, lc config.LMDB) (*Syncer, error) {
+func New(name string, st simpleblob.Interface, c config.Config, lc config.LMDB, opt Options) (*Syncer, error) {
 	l := logrus.WithField("db", name)
-	cl := cleaner.New(name, st, c.Storage.Cleanup, l)
+
+	// Start cleaner, but make sure it is disabled if we run in receive-only mode
+	var cleanupConf config.Cleanup
+	if opt.ReceiveOnly {
+		// Disabled when in receive-only mode.
+		// This is the default, just setting this for clarity.
+		cleanupConf.Enabled = false
+	} else {
+		cleanupConf = c.Storage.Cleanup
+	}
+	cl := cleaner.New(name, st, cleanupConf, l)
+
 	s := &Syncer{
 		name:               name,
 		st:                 st,
 		c:                  c,
 		lc:                 lc,
+		opt:                opt,
 		shadow:             true,
 		generation:         0,
 		lastByInstance:     make(map[string]time.Time),
@@ -47,6 +59,7 @@ type Syncer struct {
 	st         simpleblob.Interface
 	c          config.Config
 	lc         config.LMDB
+	opt        Options
 	l          logrus.FieldLogger
 	shadow     bool // use shadow database for timestamps?
 	generation uint64
