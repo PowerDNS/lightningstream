@@ -32,7 +32,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 			continue // skip shadow and other special databases
 		}
 		// raw dump, because main does not have timestamps
-		dbiMsg, err := s.readDBI(txn, dbiName, true)
+		dbiMsg, err := s.readDBI(txn, dbiName, dbiName, true)
 		if err != nil {
 			return err
 		}
@@ -53,10 +53,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 		}
 
 		// If the DBI has MDB_INTEGERKEY set, our shadow db will use the same
-		var targetFlags uint = lmdb.Create
-		if dbiFlags&strategy.LMDBIntegerKeyFlag > 0 {
-			targetFlags |= strategy.LMDBIntegerKeyFlag
-		}
+		var targetFlags = dbiFlags & AllowedShadowDBIFlagsMask
 
 		if s.lc.DupSortHack && isDupSort {
 			if err = dupSortHackEncode(dbiMsg.Entries); err != nil {
@@ -69,13 +66,14 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 		}
 
 		targetDBIName := SyncDBIShadowPrefix + dbiName
-		targetDBI, err := txn.OpenDBI(targetDBIName, targetFlags)
+		targetDBI, err := txn.OpenDBI(targetDBIName, lmdb.Create|targetFlags)
 		if err != nil {
 			return err
 		}
 
 		it, err := NewNativeIterator(
 			snapshot.CurrentFormatVersion,
+			snapshot.CompatFormatVersion,
 			dbiMsg.Entries,
 			tsNano,
 			header.TxnID(txn.ID()),
@@ -137,7 +135,7 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 		// Dump associated shadow database. We will ignore the timestamps.
 		// At this point the shadow database must exist, as this function call
 		// will always be preceded by a mainToShadow call.
-		dbiMsg, err := s.readDBI(txn, SyncDBIShadowPrefix+dbiName, false)
+		dbiMsg, err := s.readDBI(txn, SyncDBIShadowPrefix+dbiName, dbiName, false)
 		if err != nil {
 			return err
 		}

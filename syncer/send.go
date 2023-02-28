@@ -18,6 +18,7 @@ import (
 func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnID, err error) {
 	var msg = new(snapshot.Snapshot)
 	msg.FormatVersion = snapshot.CurrentFormatVersion
+	msg.CompatVersion = snapshot.WriteCompatFormatVersion
 	msg.Meta.DatabaseName = s.name
 	msg.Meta.Hostname = hostname
 	msg.Meta.InstanceID = s.instanceID()
@@ -90,11 +91,12 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 			if !schemaTracksChanges {
 				readDBIName = SyncDBIShadowPrefix + dbiName
 			}
-			dbiMsg, err := s.readDBI(txn, readDBIName, false)
+			dbiMsg, err := s.readDBI(txn, readDBIName, dbiName, false)
 			if err != nil {
 				return fmt.Errorf("dbi %s: %w", dbiNames, err)
 			}
 			dbiMsg.Name = dbiName // replace shadow name if used
+
 			msg.Databases = append(msg.Databases, dbiMsg)
 
 			if utils.IsCanceled(ctx) {

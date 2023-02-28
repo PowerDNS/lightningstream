@@ -15,6 +15,7 @@ import (
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/stats"
+	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
@@ -25,6 +26,13 @@ const (
 	SyncDBIPrefix = "_sync"
 	// SyncDBIShadowPrefix is the DBI name prefix of shadow databases.
 	SyncDBIShadowPrefix = "_sync_shadow_"
+)
+
+const (
+	// AllowedShadowDBIFlagsMask is the set of LMDB DBI flags that we transfer
+	// to shadow DBIs.
+	// MDB_INTEGERKEY needs to be transferred for proper ordering of shadow DBIs.
+	AllowedShadowDBIFlagsMask uint = strategy.LMDBIntegerKeyFlag
 )
 
 // ErrEntry is returned when an entry is invalid, for example due to a missing
@@ -111,7 +119,9 @@ func (s *Syncer) closeEnv(env *lmdb.Env) {
 // By default, the headers of values will be split out to the corresponding snapshot fields.
 // If rawValues is true, the value will be stored as is and the headers will
 // not be extracted. This is useful when reading a database without headers.
-func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg *snapshot.DBI, err error) {
+// The origDBIName is used to ensure that the flags stored are those of the original
+// DBI, not of the shadow DBI.
+func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues bool) (dbiMsg *snapshot.DBI, err error) {
 	l := s.l.WithField("dbi", dbiName)
 
 	l.Debug("Opening DBI")
@@ -144,13 +154,33 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	dbiMsg.Name = dbiName
 	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
 
-	dbiFlags, err := txn.Flags(dbi)
-	if err != nil {
-		return nil, err
+	// Flags of the original DBI (not the shadow DBI)
+	var dbiFlags uint
+	if dbiName != origDBIName {
+		// We are dumping a shadow DBI, but need to store the flags of the
+		// original DBI.
+		l.Debug("Opening original DBI for flags")
+		origDBI, err := txn.OpenDBI(origDBIName, 0)
+		if err != nil {
+			return nil, err
+		}
+		dbiFlags, err = txn.Flags(origDBI)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// This is the original DBI
+		dbiFlags, err = txn.Flags(dbi)
+		if err != nil {
+			return nil, err
+		}
 	}
 	isDupSort := dbiFlags&lmdb.DupSort > 0
-	if isDupSort && !s.lc.DupSortHack {
-		return nil, fmt.Errorf("readDBI: dupsort db %q found and dupsort_hack disabled", dbiName)
+	if isDupSort {
+		if !s.lc.DupSortHack {
+			return nil, fmt.Errorf("readDBI: dupsort db %q found and dupsort_hack disabled", dbiName)
+		}
+		dbiMsg.Transform = snapshot.TransformDupSortHackV1
 	}
 	dbiMsg.Flags = uint64(dbiFlags)
 

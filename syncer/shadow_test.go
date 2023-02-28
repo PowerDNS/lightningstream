@@ -73,7 +73,7 @@ func TestSyncer_shadow(t *testing.T) {
 			// Reverse sync should not change the original data
 			err = s.shadowToMain(context.Background(), txn)
 			assert.NoError(t, err)
-			dbiMsg, err := s.readDBI(txn, "foo", true)
+			dbiMsg, err := s.readDBI(txn, "foo", "foo", true)
 			assert.NoError(t, err)
 			assert.Equal(t, v1, dbiMsg.Entries)
 

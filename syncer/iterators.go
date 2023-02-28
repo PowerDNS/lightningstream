@@ -14,6 +14,7 @@ import (
 
 func NewNativeIterator(
 	formatVersion uint32,
+	compatVersion uint32,
 	entries []snapshot.KV,
 	defaultTS header.Timestamp,
 	txnID header.TxnID,
@@ -21,13 +22,16 @@ func NewNativeIterator(
 	if formatVersion == 0 {
 		return nil, errors.New("no snapshot formatVersion provided, or 0")
 	}
+	// Check if the snapshot tells us this snapshot is compatible
+	if compatVersion > snapshot.CurrentFormatVersion {
+		return nil, fmt.Errorf("snapshot compatVersion too new for this version (%d > %d, formatVersion %d)",
+			compatVersion, snapshot.CurrentFormatVersion, formatVersion)
+	}
+	// Check if we still support an older snapshot type. We do try to forever
+	// support old version as long as there is no very strong reason not to.
 	if formatVersion < snapshot.CompatFormatVersion {
 		return nil, fmt.Errorf("snapshot formatVersion no longer supported (%d < %d)",
 			formatVersion, snapshot.CompatFormatVersion)
-	}
-	if formatVersion > snapshot.CurrentFormatVersion {
-		return nil, fmt.Errorf("snapshot formatVersion too new for this version (%d > %d)",
-			formatVersion, snapshot.CurrentFormatVersion)
 	}
 	if txnID == 0 {
 		return nil, ErrNoTxnID
