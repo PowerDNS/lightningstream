@@ -154,6 +154,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 	dbiMsg.Name = dbiName
 	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
 
+	// Flags of the original DBI (not the shadow DBI)
 	var dbiFlags uint
 	if dbiName != origDBIName {
 		// We are dumping a shadow DBI, but need to store the flags of the
@@ -175,8 +176,11 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		}
 	}
 	isDupSort := dbiFlags&lmdb.DupSort > 0
-	if isDupSort && !s.lc.DupSortHack {
-		return nil, fmt.Errorf("readDBI: dupsort db %q found and dupsort_hack disabled", dbiName)
+	if isDupSort {
+		if !s.lc.DupSortHack {
+			return nil, fmt.Errorf("readDBI: dupsort db %q found and dupsort_hack disabled", dbiName)
+		}
+		dbiMsg.Transform = snapshot.TransformDupSortHackV1
 	}
 	dbiMsg.Flags = uint64(dbiFlags)
 

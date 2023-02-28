@@ -356,6 +356,11 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				continue // skip our own special dbs
 			}
 
+			err := dbiMsg.ValidateTransform(snap.FormatVersion, schemaTracksChanges)
+			if err != nil {
+				return err
+			}
+
 			ld.Debug("Starting merge of snapshot into DBI")
 			targetDBIName := dbiName
 			if !schemaTracksChanges {
@@ -380,10 +385,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 					}
 
 					var flags = uint(dbiMsg.Flags)
-					ld.WithFields(logrus.Fields{
-						"dbiName": dbiName,
-						"flags":   flags,
-					}).Warn("Creating new DBI from snapshot")
+					ld.WithField("flags", flags).Warn("Creating new DBI from snapshot")
 					_, err := txn.OpenDBI(dbiName, lmdb.Create|flags)
 					if err != nil {
 						return err
@@ -406,10 +408,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 					// to shadow DBIs.
 					flags &= AllowedShadowDBIFlagsMask
 				}
-				ld.WithFields(logrus.Fields{
-					"dbiName": dbiName,
-					"flags":   flags,
-				}).Warn("Creating new DBI from snapshot")
+				ld.WithField("flags", flags).Warn("Creating new DBI from snapshot")
 				_, err := txn.OpenDBI(targetDBIName, lmdb.Create|flags)
 				if err != nil {
 					return err

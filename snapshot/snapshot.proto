@@ -18,7 +18,7 @@ message DBI {
   string name = 1;
   repeated KV entries = 2 [(gogoproto.nullable) = false];  // Must be in LMDB sort order!
   uint64 flags = 3; // DBI flags stored in the LMDB (from v3 always the original DBI, not shadow)
-  string transform = 4; // Transformation applied, e.g. "dupsort_hack" (added in v3)
+  string transform = 4; // Transformation applied, e.g. "dupsort_hack_v1" (added in v3)
 }
 
 message Snapshot {
