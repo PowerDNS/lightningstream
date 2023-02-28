@@ -6,11 +6,37 @@ lmdbs:
     options:
       no_subdir: true
       create: true
+    dbi_options:
+      # WARNING: Only added because old snapshots are missing the flags,
+      #          only add when you are sure you need this.
+      pdns:
+        override_create_flags: 0
+      domains:
+        override_create_flags: MDB_INTEGERKEY
+      domains_0:
+        override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
+      keydata:
+        override_create_flags: MDB_INTEGERKEY
+      keydata_0:
+        override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
+      metadata:
+        override_create_flags: MDB_INTEGERKEY
+      metadata_0:
+        override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
+      tsig:
+        override_create_flags: MDB_INTEGERKEY
+      tsig_0:
+        override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
   shard:
     path: /lmdb/instance-${instance}/db-0
     options:
       no_subdir: true
       create: true
+    dbi_options:
+      # WARNING: Only added because old snapshots are missing the flags,
+      #          only add when you are sure you need this.
+      records:
+        override_create_flags: 0
 
 storage:
   #type: fs

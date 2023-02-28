@@ -421,7 +421,8 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 					// to shadow DBIs.
 					flags &= AllowedShadowDBIFlagsMask
 				}
-				ld.WithField("flags", flags).Warn("Creating new DBI from snapshot")
+				ld.WithField("dbi", targetDBIName).
+					WithField("flags", flags).Warn("Creating new DBI from snapshot")
 				_, err := txn.OpenDBI(targetDBIName, lmdb.Create|uint(flags))
 				if err != nil {
 					return err
