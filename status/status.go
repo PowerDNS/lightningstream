@@ -9,6 +9,7 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/pkg/errors"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
 	"powerdns.com/platform/lightningstream/lmdbenv/stats"
 )
 
@@ -87,7 +88,7 @@ func (i *info) DBInfo() (res []DBInfo) {
 					Stat:         st,
 					Used:         datasize.ByteSize(stats.PageUsageBytes(st)),
 					Flags:        fl,
-					FlagsDisplay: displayFlags(fl),
+					FlagsDisplay: dbiflags.Flags(fl).String(),
 				}
 				info.DBIStats = append(info.DBIStats, ds)
 				info.Used += ds.Used

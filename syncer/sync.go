@@ -9,6 +9,7 @@ import (
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
 	"powerdns.com/platform/lightningstream/snapshot"
@@ -351,6 +352,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 		tLoadStart = time.Now()
 		for _, dbiMsg := range snap.Databases {
 			dbiName := dbiMsg.Name
+			dbiOpt := s.lc.DBIOptions[dbiName]
 			ld := l.WithField("dbi", dbiName)
 
 			if strings.HasPrefix(dbiName, SyncDBIPrefix) {
@@ -375,20 +377,26 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 					return err
 				}
 				if !exists {
-					if snap.FormatVersion < 3 {
+					if snap.FormatVersion < 3 && dbiOpt.OverrideCreateFlags == nil {
 						// Earlier versions stored the DBI flags from the shadow
 						// DBI instead of the flags from the original DBI.
 						return fmt.Errorf(
 							"DBI %s does not exist yet, and we cannot safely "+
 								"create it from a formatVersion=%d snapshot, "+
 								"only a formatVersion 3+ snapshot contains the "+
-								"information we need for this",
+								"information we need for this; you can explicitly "+
+								"override the flags through `override_create_flags` "+
+								"in `dbi_options`, but only attempt this if you "+
+								"are sure you need it",
 							dbiName, snap.FormatVersion)
 					}
 
-					var flags = uint(dbiMsg.Flags)
+					var flags = dbiflags.Flags(dbiMsg.Flags)
+					if dbiOpt.OverrideCreateFlags != nil {
+						flags = *dbiOpt.OverrideCreateFlags
+					}
 					ld.WithField("flags", flags).Warn("Creating new DBI from snapshot")
-					_, err := txn.OpenDBI(dbiName, lmdb.Create|flags)
+					_, err := txn.OpenDBI(dbiName, lmdb.Create|uint(flags))
 					if err != nil {
 						return err
 					}
@@ -404,14 +412,18 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				// The formatVersion does not matter here, because the DBI flags
 				// stored in earlier versions will be the correct ones for the
 				// DBI that we are creating here (shadow or native).
-				var flags = uint(dbiMsg.Flags)
+				var flags = dbiflags.Flags(dbiMsg.Flags)
+				if dbiOpt.OverrideCreateFlags != nil {
+					flags = *dbiOpt.OverrideCreateFlags
+				}
 				if !schemaTracksChanges {
 					// Only flags like MDB_INTEGERKEY must be transferred
 					// to shadow DBIs.
 					flags &= AllowedShadowDBIFlagsMask
 				}
-				ld.WithField("flags", flags).Warn("Creating new DBI from snapshot")
-				_, err := txn.OpenDBI(targetDBIName, lmdb.Create|flags)
+				ld.WithField("dbi", targetDBIName).
+					WithField("flags", flags).Warn("Creating new DBI from snapshot")
+				_, err := txn.OpenDBI(targetDBIName, lmdb.Create|uint(flags))
 				if err != nil {
 					return err
 				}

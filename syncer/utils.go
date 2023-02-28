@@ -13,9 +13,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv"
+	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/stats"
-	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
@@ -32,7 +32,7 @@ const (
 	// AllowedShadowDBIFlagsMask is the set of LMDB DBI flags that we transfer
 	// to shadow DBIs.
 	// MDB_INTEGERKEY needs to be transferred for proper ordering of shadow DBIs.
-	AllowedShadowDBIFlagsMask uint = strategy.LMDBIntegerKeyFlag
+	AllowedShadowDBIFlagsMask = dbiflags.IntegerKey
 )
 
 // ErrEntry is returned when an entry is invalid, for example due to a missing
