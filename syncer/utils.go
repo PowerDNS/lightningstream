@@ -111,7 +111,9 @@ func (s *Syncer) closeEnv(env *lmdb.Env) {
 // By default, the headers of values will be split out to the corresponding snapshot fields.
 // If rawValues is true, the value will be stored as is and the headers will
 // not be extracted. This is useful when reading a database without headers.
-func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg *snapshot.DBI, err error) {
+// The origDBIName is used to ensure that the flags stored are those of the original
+// DBI, not of the shadow DBI.
+func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues bool) (dbiMsg *snapshot.DBI, err error) {
 	l := s.l.WithField("dbi", dbiName)
 
 	l.Debug("Opening DBI")
@@ -144,9 +146,25 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName string, rawValues bool) (dbiMsg 
 	dbiMsg.Name = dbiName
 	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
 
-	dbiFlags, err := txn.Flags(dbi)
-	if err != nil {
-		return nil, err
+	var dbiFlags uint
+	if dbiName != origDBIName {
+		// We are dumping a shadow DBI, but need to store the flags of the
+		// original DBI.
+		l.Debug("Opening original DBI for flags")
+		origDBI, err := txn.OpenDBI(origDBIName, 0)
+		if err != nil {
+			return nil, err
+		}
+		dbiFlags, err = txn.Flags(origDBI)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// This is the original DBI
+		dbiFlags, err = txn.Flags(dbi)
+		if err != nil {
+			return nil, err
+		}
 	}
 	isDupSort := dbiFlags&lmdb.DupSort > 0
 	if isDupSort && !s.lc.DupSortHack {
