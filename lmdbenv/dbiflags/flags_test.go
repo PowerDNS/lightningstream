@@ -49,6 +49,9 @@ func TestFlags_UnmarshalText(t *testing.T) {
 		{"0x28", 0x28, false},
 		{"2", 0x02, false},
 		// Relaxed parsing
+		{"INTEGERKEY", 0x08, false},
+		{"IntegerKey", 0x08, false},
+		{"iNtEgErkEY", 0x08, false},
 		{" ", 0, false},
 		{"MDB_INTEGERKEY,MDB_INTEGERDUP", 0x28, false},
 		{"MDB_INTEGERKEY+MDB_INTEGERDUP", 0x28, false},

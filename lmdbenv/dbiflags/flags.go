@@ -68,6 +68,11 @@ func (f *Flags) UnmarshalText(text []byte) error {
 			*f |= flag
 			continue
 		}
+		// Also accept the flags without "MDB_" prefix
+		if flag, ok := nameToFlag["MDB_"+p]; ok {
+			*f |= flag
+			continue
+		}
 		// Allow numbers as flags. Parse as 16 bits to avoid MDB_CREATE
 		// and other non-persistent flags.
 		if strings.HasPrefix(p, "0X") {
