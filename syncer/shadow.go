@@ -76,6 +76,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 
 		it, err := NewNativeIterator(
 			snapshot.CurrentFormatVersion,
+			snapshot.CompatFormatVersion,
 			dbiMsg.Entries,
 			tsNano,
 			header.TxnID(txn.ID()),

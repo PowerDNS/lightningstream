@@ -374,6 +374,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 
 			it, err := NewNativeIterator(
 				snap.FormatVersion,
+				snap.CompatVersion,
 				dbiMsg.Entries,
 				0, // no default timestamp
 				header.TxnID(txn.ID()),

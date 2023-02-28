@@ -9,7 +9,7 @@ message KV {
   bytes key = 1;
   bytes value = 2;
   fixed64 timestampNano = 3;
-  uint32 flags = 4; // only flags in header.FlagSyncMask are allowed here
+  uint32 flags = 4; // only flags in header.FlagSyncMask are allowed here (added in v2)
   // TODO: add this in the future
   //bytes extraHeader = 5;
 }
@@ -17,11 +17,13 @@ message KV {
 message DBI {
   string name = 1;
   repeated KV entries = 2 [(gogoproto.nullable) = false];  // Must be in LMDB sort order!
-  uint64 flags = 3; // DBI flags stored in the LMDB
+  uint64 flags = 3; // DBI flags stored in the LMDB (from v3 always the original DBI, not shadow)
+  string transform = 4; // Transformation applied, e.g. "dupsort_hack" (added in v3)
 }
 
 message Snapshot {
-  uint32 formatVersion = 1;
+  uint32 formatVersion = 1; // version of this snapshot format
+  uint32 compatVersion = 4; // compatible with clients that support at least this version
 
   message Meta {
     string generationID = 1;

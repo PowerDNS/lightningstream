@@ -18,6 +18,7 @@ import (
 func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnID, err error) {
 	var msg = new(snapshot.Snapshot)
 	msg.FormatVersion = snapshot.CurrentFormatVersion
+	msg.CompatVersion = snapshot.WriteCompatFormatVersion
 	msg.Meta.DatabaseName = s.name
 	msg.Meta.Hostname = hostname
 	msg.Meta.InstanceID = s.instanceID()
