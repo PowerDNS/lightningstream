@@ -53,10 +53,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 		}
 
 		// If the DBI has MDB_INTEGERKEY set, our shadow db will use the same
-		var targetFlags uint = lmdb.Create
-		if dbiFlags&strategy.LMDBIntegerKeyFlag > 0 {
-			targetFlags |= strategy.LMDBIntegerKeyFlag
-		}
+		var targetFlags = dbiFlags & AllowedShadowDBIFlagsMask
 
 		if s.lc.DupSortHack && isDupSort {
 			if err = dupSortHackEncode(dbiMsg.Entries); err != nil {
@@ -69,7 +66,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 		}
 
 		targetDBIName := SyncDBIShadowPrefix + dbiName
-		targetDBI, err := txn.OpenDBI(targetDBIName, targetFlags)
+		targetDBI, err := txn.OpenDBI(targetDBIName, lmdb.Create|targetFlags)
 		if err != nil {
 			return err
 		}

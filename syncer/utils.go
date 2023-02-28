@@ -15,6 +15,7 @@ import (
 	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/stats"
+	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
 	"powerdns.com/platform/lightningstream/snapshot"
 	"powerdns.com/platform/lightningstream/utils"
 )
@@ -25,6 +26,13 @@ const (
 	SyncDBIPrefix = "_sync"
 	// SyncDBIShadowPrefix is the DBI name prefix of shadow databases.
 	SyncDBIShadowPrefix = "_sync_shadow_"
+)
+
+const (
+	// AllowedShadowDBIFlagsMask is the set of LMDB DBI flags that we transfer
+	// to shadow DBIs.
+	// MDB_INTEGERKEY needs to be transferred for proper ordering of shadow DBIs.
+	AllowedShadowDBIFlagsMask uint = strategy.LMDBIntegerKeyFlag
 )
 
 // ErrEntry is returned when an entry is invalid, for example due to a missing

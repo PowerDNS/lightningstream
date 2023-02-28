@@ -8,6 +8,7 @@ import (
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/sirupsen/logrus"
+	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
 	"powerdns.com/platform/lightningstream/snapshot"
@@ -360,14 +361,63 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 			if !schemaTracksChanges {
 				targetDBIName = SyncDBIShadowPrefix + dbiName
 
-				// We need to create the actual data DBI too in this case
-				_, err := txn.OpenDBI(dbiName, lmdb.Create)
+				// We need to create the actual data DBI too if it does not
+				// exist yet.
+				exists, err := lmdbenv.DBIExists(txn, dbiName)
+				if err != nil {
+					return err
+				}
+				if !exists {
+					if snap.FormatVersion < 3 {
+						// Earlier versions stored the DBI flags from the shadow
+						// DBI instead of the flags from the original DBI.
+						return fmt.Errorf(
+							"DBI %s does not exist yet, and we cannot safely "+
+								"create it from a formatVersion=%d snapshot, "+
+								"only a formatVersion 3+ snapshot contains the "+
+								"information we need for this",
+							dbiName, snap.FormatVersion)
+					}
+
+					var flags = uint(dbiMsg.Flags)
+					ld.WithFields(logrus.Fields{
+						"dbiName": dbiName,
+						"flags":   flags,
+					}).Warn("Creating new DBI from snapshot")
+					_, err := txn.OpenDBI(dbiName, lmdb.Create|flags)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+			// Create the target DBI if needed
+			exists, err := lmdbenv.DBIExists(txn, targetDBIName)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				// The formatVersion does not matter here, because the DBI flags
+				// stored in earlier versions will be the correct ones for the
+				// DBI that we are creating here (shadow or native).
+				var flags = uint(dbiMsg.Flags)
+				if !schemaTracksChanges {
+					// Only flags like MDB_INTEGERKEY must be transferred
+					// to shadow DBIs.
+					flags &= AllowedShadowDBIFlagsMask
+				}
+				ld.WithFields(logrus.Fields{
+					"dbiName": dbiName,
+					"flags":   flags,
+				}).Warn("Creating new DBI from snapshot")
+				_, err := txn.OpenDBI(targetDBIName, lmdb.Create|flags)
 				if err != nil {
 					return err
 				}
 			}
 
-			targetDBI, err := txn.OpenDBI(targetDBIName, lmdb.Create)
+			// Open the DBI now. It has been created if it did not exist yet.
+			targetDBI, err := txn.OpenDBI(targetDBIName, 0)
 			if err != nil {
 				return err
 			}
