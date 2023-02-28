@@ -34,6 +34,34 @@ func TestFlags_String(t *testing.T) {
 	}
 }
 
+func TestFlags_FriendlyString(t *testing.T) {
+	tests := []struct {
+		name string
+		f    Flags
+		want string
+	}{
+		{"none", 0, ""},
+		{"MDB_DUPSORT", lmdb.DupSort, "DupSort"},
+		{"MDB_DUPFIXED", lmdb.DupFixed, "DupFixed"},
+		{"MDB_REVERSEKEY", lmdb.ReverseKey, "ReverseKey"},
+		{"MDB_REVERSEDUP", lmdb.ReverseDup, "ReverseDup"},
+		{"MDB_INTEGERKEY", 0x08, "IntegerKey"},
+		{"MDB_INTEGERDUP", 0x20, "IntegerDup"},
+		{"multi", 0x28, "IntegerKey IntegerDup"},
+		{"multi-unknown", 0xFFFF, "ReverseKey DupSort IntegerKey DupFixed " +
+			"IntegerDup ReverseDup UNKNOWN:0xff81"},
+		{"single-unknown", 0x1000, "UNKNOWN:0x1000"},
+		{"MDB_CREATE-ignored-overflows", Flags(lmdb.Create & 0xFFFF), ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.f.FriendlyString(); got != tt.want {
+				t.Errorf("FriendlyString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFlags_UnmarshalText(t *testing.T) {
 	tests := []struct {
 		input   string

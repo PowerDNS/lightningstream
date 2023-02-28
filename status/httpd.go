@@ -116,7 +116,7 @@ const statusTemplateString = `<!DOCTYPE html>
 				<td class="size">{{.Stat.BranchPages}}</td>
 				<td class="size">{{.Stat.LeafPages}}</td>
 				<td class="size">{{.Stat.OverflowPages}}</td>
-				<td class="size">{{.FlagsDisplay}}</td>
+				<td>{{.FlagsDisplay}}</td>
 			</tr>
 		{{end}}
 		</tbody>

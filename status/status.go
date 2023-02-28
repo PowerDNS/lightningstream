@@ -88,7 +88,7 @@ func (i *info) DBInfo() (res []DBInfo) {
 					Stat:         st,
 					Used:         datasize.ByteSize(stats.PageUsageBytes(st)),
 					Flags:        fl,
-					FlagsDisplay: dbiflags.Flags(fl).String(),
+					FlagsDisplay: dbiflags.Flags(fl).FriendlyString(),
 				}
 				info.DBIStats = append(info.DBIStats, ds)
 				info.Used += ds.Used

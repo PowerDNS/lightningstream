@@ -22,6 +22,14 @@ const (
 )
 
 func (f Flags) String() string {
+	return f.buildString("|", false)
+}
+
+func (f Flags) FriendlyString() string {
+	return f.buildString(" ", true)
+}
+
+func (f Flags) buildString(sep string, friendly bool) string {
 	var sb strings.Builder
 	for b := 0x02; b <= 0x40; b <<= 1 {
 		bf := Flags(b)
@@ -30,14 +38,18 @@ func (f Flags) String() string {
 		}
 		f ^= bf // clear flag from local copy
 		if sb.Len() > 0 {
-			sb.WriteByte('|')
+			sb.WriteString(sep)
 		}
-		sb.WriteString(flagToName[bf])
+		if friendly {
+			sb.WriteString(flagToFriendlyName[bf])
+		} else {
+			sb.WriteString(flagToName[bf])
+		}
 	}
 	if f != 0 {
 		// Unknown leftover flags
 		if sb.Len() > 0 {
-			sb.WriteByte('|')
+			sb.WriteString(sep)
 		}
 		sb.WriteString("UNKNOWN:0x")
 		sb.WriteString(strconv.FormatUint(uint64(f), 16))
@@ -113,15 +125,29 @@ var nameToFlag = map[string]Flags{
 	"MDB_REVERSEDUP": ReverseDup,
 }
 
+var nameToFriendlyName = map[string]string{
+	"MDB_REVERSEKEY": "ReverseKey",
+	"MDB_DUPSORT":    "DupSort",
+	"MDB_INTEGERKEY": "IntegerKey",
+	"MDB_DUPFIXED":   "DupFixed",
+	"MDB_INTEGERDUP": "IntegerDup",
+	"MDB_REVERSEDUP": "ReverseDup",
+}
+
 // flagToName is the inverse of nameToFLag
 var flagToName map[Flags]string
+
+// flagToName is like flagToName, but more friendly
+var flagToFriendlyName map[Flags]string
 
 var allValid Flags
 
 func init() {
 	flagToName = make(map[Flags]string)
+	flagToFriendlyName = make(map[Flags]string)
 	for name, flag := range nameToFlag {
 		flagToName[flag] = name
+		flagToFriendlyName[flag] = nameToFriendlyName[name]
 		allValid |= flag
 	}
 }
