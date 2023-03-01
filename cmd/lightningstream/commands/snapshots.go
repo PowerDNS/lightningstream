@@ -11,6 +11,7 @@ import (
 	"github.com/PowerDNS/simpleblob"
 	"github.com/gogo/protobuf/proto"
 	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
@@ -41,6 +42,7 @@ func init() {
 	snapshotsCmd.AddCommand(snapshotsPutCmd)
 	snapshotsPutCmd.Flags().StringP("name", "n", "",
 		"Name to store the snapshot as, if different from the local name")
+	snapshotsPutCmd.Flags().Bool("force", false, "Force the use of an invalid snapshot name")
 }
 
 var snapshotsCmd = &cobra.Command{
@@ -245,8 +247,18 @@ var snapshotsPutCmd = &cobra.Command{
 		if name == "" {
 			name = filepath.Base(args[0])
 		}
+		force, err := cmd.Flags().GetBool("force")
+		if err != nil {
+			return err
+		}
+
 		if _, err = snapshot.ParseName(name); err != nil {
-			return fmt.Errorf("invalid snapshot name (use -n to specify a different one): %v", err)
+			if !force {
+				return fmt.Errorf(
+					"invalid snapshot name (use -n to specify a different one, or "+
+						"--force to skip this check): %v", err)
+			}
+			logrus.WithError(err).Warn("Invalid snapshot name forced")
 		}
 
 		st, err := simpleblob.GetBackend(ctx, conf.Storage.Type, conf.Storage.Options)
@@ -264,14 +276,20 @@ var snapshotsPutCmd = &cobra.Command{
 
 func sortByTime(list simpleblob.BlobList) {
 	slices.SortFunc(list, func(a, b simpleblob.Blob) bool {
-		na, err := snapshot.ParseName(a.Name)
-		if err != nil {
+		na, errA := snapshot.ParseName(a.Name)
+		nb, errB := snapshot.ParseName(b.Name)
+		// Invalid names are sorted by name
+		if errA != nil && errB != nil {
+			return a.Name < b.Name
+		}
+		// Invalid names come before valid names
+		if errA != nil {
 			return true
 		}
-		nb, err := snapshot.ParseName(b.Name)
-		if err != nil {
+		if errB != nil {
 			return false
 		}
+		// Valid names are sorted by timestamp
 		return na.Timestamp.Before(nb.Timestamp)
 	})
 }
