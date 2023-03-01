@@ -27,8 +27,15 @@ func TestFlags_String(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.f.String(); got != tt.want {
+			got := tt.f.String()
+			if got != tt.want {
 				t.Errorf("String() = %v, want %v", got, tt.want)
+			}
+			// Check that we do not modify the underlying flag value, in
+			// case we accidentally change it to a pointer receiver.
+			got2 := tt.f.String()
+			if got != got2 {
+				t.Errorf("String() output changed, first %v, then %v", got, got2)
 			}
 		})
 	}
@@ -55,8 +62,15 @@ func TestFlags_FriendlyString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.f.FriendlyString(); got != tt.want {
+			got := tt.f.FriendlyString()
+			if got != tt.want {
 				t.Errorf("FriendlyString() = %v, want %v", got, tt.want)
+			}
+			// Check that we do not modify the underlying flag value, in
+			// case we accidentally change it to a pointer receiver.
+			got2 := tt.f.FriendlyString()
+			if got != got2 {
+				t.Errorf("FriendlyString() output changed, first %v, then %v", got, got2)
 			}
 		})
 	}
