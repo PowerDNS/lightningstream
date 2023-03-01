@@ -34,6 +34,8 @@ func init() {
 	snapshotsDumpCmd.Flags().StringP("format", "f", "debug",
 		"Output format, one of: 'debug' (default), 'text'")
 	snapshotsDumpCmd.Flags().StringP("dbi", "d", "", "Only output DBI with this exact name")
+	snapshotsDumpCmd.Flags().BoolP("local", "l", false,
+		"Dump a local file instead of a remote snapshot")
 
 	snapshotsCmd.AddCommand(snapshotsGetCmd)
 	snapshotsGetCmd.Flags().StringP("output", "o", "",
@@ -137,15 +139,27 @@ var snapshotsDumpCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		// Load snapshot
-		st, err := simpleblob.GetBackend(ctx, conf.Storage.Type, conf.Storage.Options)
+		local, err := cmd.Flags().GetBool("local")
 		if err != nil {
 			return err
 		}
-		data, err := st.Load(ctx, args[0])
-		if err != nil {
-			return err
+
+		// Load snapshot
+		var data []byte
+		if local {
+			data, err = os.ReadFile(args[0])
+			if err != nil {
+				return err
+			}
+		} else {
+			st, err := simpleblob.GetBackend(ctx, conf.Storage.Type, conf.Storage.Options)
+			if err != nil {
+				return err
+			}
+			data, err = st.Load(ctx, args[0])
+			if err != nil {
+				return err
+			}
 		}
 		snap, err := snapshot.LoadData(data)
 		if err != nil {
