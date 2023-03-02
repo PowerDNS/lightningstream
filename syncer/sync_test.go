@@ -261,9 +261,6 @@ func createConfig(instance string, tmpdir string, withHeader bool) config.Config
 		DBIOptions:          nil,
 		SchemaTracksChanges: withHeader,
 		DupSortHack:         false,
-		ScrapeSmaps:         false,
-		LogStats:            false,
-		LogStatsInterval:    0,
 	}
 	return c
 }
