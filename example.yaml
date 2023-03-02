@@ -230,5 +230,10 @@ log:
   #  interval: 1s
   #  warn_duration: 1m0s
   #  error_duration: 5m0s
+  #  # If true, a failing startup sequence will be included in the healthz
+  #  # overall status. This can be used to prevent marking the node ready
+  #  # before LightningStream has completed an initial sync.
   #  report_healthz: false
+  #  # Controls if the healthz 'startup_[db name]' metadata field will be used
+  #  # to report the status of the startup sequence for each db.
   #  report_metadata: true
