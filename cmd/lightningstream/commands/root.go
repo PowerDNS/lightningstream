@@ -24,6 +24,7 @@ var (
 	instanceName string
 	debug        bool
 	minimumPID   int
+	logConfig    bool
 	timeout      time.Duration
 	conf         config.Config
 )
@@ -93,6 +94,9 @@ var rootCmd = &cobra.Command{
 		logger.Configure(conf.Log)
 		ensureMinimumPID()
 		logrus.WithField("version", version).Debug("Running")
+		if logConfig {
+			logrus.Infof("Effective configuration:\n%s\n", conf.String())
+		}
 		applyTimeout()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -103,6 +107,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "lightningstream.yaml", "Config file")
+	rootCmd.PersistentFlags().BoolVar(&logConfig, "log-config", false, "Log the evaluated configuration on startup")
 	rootCmd.PersistentFlags().StringVarP(&instanceName, "instance", "i", "", "Instance name, defaults to hostname. MUST be unique for each instance")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().IntVar(&minimumPID, "minimum-pid", 0, fmt.Sprintf(
