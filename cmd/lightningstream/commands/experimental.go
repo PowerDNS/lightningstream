@@ -40,17 +40,24 @@ var experimentalCmd = &cobra.Command{
 }
 
 const migrateTimestampsLong = `
-Migrate timestamps from one DBI to another DBI
+Migrate timestamps from one DBI to a target DBI by key.
 
-Migrate timestamps from one DBI to a target DBI by key. The only requirement
-is that the key is the same, and that the first 8 bytes of the value represent
-the timestamp. If the target timestamp is higher than the source, it will not
-be updated.
+Requirements: 
+
+- The keys must match between source and destination without any transformation.
+- The DBIs must not use special DBI flags.
+- The destination DBI must use the new 24+ byte native headers.
+- The source DBI must use the new header, or the old (v0.2.0) 8 byte
+  timestamp-only headers.
 
 This command can be used for both native DBIs, and for shadow DBIs.
+If the target timestamp is higher than the source, it will not be updated.
+
+The actual values are not compared, it blindly copies the timestamps. This is
+only useful during a migration where no new data is written.
 
 This command will abort the transaction and exit with an error if any value
-shorter than 8 bytes is encountered.
+shorter than expected is encountered.
 
 Example to migrate shard records when moving from PowerDNS Auth 4.7 to 4.8:
 
@@ -97,6 +104,12 @@ var migrateTimestampsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		// Stats
+		var (
+			nUpdated      int64
+			nAddedDeletes int64
+		)
 
 		// Actual migration
 		err = env.Update(func(txn *lmdb.Txn) error {
@@ -153,6 +166,7 @@ var migrateTimestampsCmd = &cobra.Command{
 				}
 
 				// Update the timestamp and txnID
+				nUpdated++
 				copy(dstVal, srcVal[:8])
 				binary.BigEndian.PutUint64(dstVal[8:16], uint64(txnID))
 				if err := txn.Put(dstDBI, key, dstVal, 0); err != nil {
@@ -209,6 +223,7 @@ var migrateTimestampsCmd = &cobra.Command{
 				}
 
 				// Create a deletion marker
+				nAddedDeletes++
 				delVal := make([]byte, header.MinHeaderSize)
 				header.PutBasic(delVal, srcTS, txnID, header.FlagDeleted)
 				if err := txn.Put(dstDBI, key, delVal, 0); err != nil {
@@ -224,6 +239,11 @@ var migrateTimestampsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		logrus.WithFields(logrus.Fields{
+			"n_updated":       nUpdated,
+			"n_added_deletes": nAddedDeletes,
+		}).Info("Done")
 
 		return nil
 	},
