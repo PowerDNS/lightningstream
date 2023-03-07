@@ -61,7 +61,7 @@ shorter than expected is encountered.
 
 Example to migrate shard records when moving from PowerDNS Auth 4.7 to 4.8:
 
-    ... migrate-timestamps --add-deleted-entries --database shard --src-dbi _sync_shadow_records --dst-dbi records_v5
+    ... migrate-timestamps --add-delete-entries --database shard --src-dbi _sync_shadow_records --dst-dbi records_v5
 
 `
 
@@ -115,7 +115,7 @@ var migrateTimestampsCmd = &cobra.Command{
 		err = env.Update(func(txn *lmdb.Txn) error {
 			txnID := header.TxnID(txn.ID())
 
-			srcDBI, err := txn.OpenDBI(srcDBIName, lmdb.Readonly)
+			srcDBI, err := txn.OpenDBI(srcDBIName, 0)
 			if err != nil {
 				if lmdb.IsNotFound(err) && ignoreNotPresent {
 					logrus.Warn("Source DBI not found, no migration performed")
