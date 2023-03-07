@@ -1,0 +1,239 @@
+# This is a LightningStream (LS) example configuration for use with the
+# the PowerDNS Authoritative DNS server (PDNS Auth) LMDB backend.
+# This example configuration is based on version 4.8 of PDNS Auth, which
+# uses a native LS compatible schema. This version has not been released yet as
+# of Feb 2023.
+# This example aims to document all available options. If an option is
+# commented out, its default value is shown, unless indicated otherwise.
+
+# Every instance of LS requires a unique instance name. This instance name
+# is included in the snapshot filenames and used by instances to discover
+# snapshots by other instances.
+# LS supports the expansion of OS environment variables in YAML configs, with
+# values like ${INSTANCE}, which can simplify the management of multiple
+# instances.
+instance: unique-instance-name
+
+# Check the LMDBs for newly written transactions at this interval, and write
+# a new snapshot if anything has changed. The check is very cheap.
+#lmdb_poll_interval: 1s
+
+# Periodically log LMDB statistics.
+# Useful when investigating issues based on logs. Defaults to 30m.
+lmdb_log_stats_interval: 5m
+# Include LMDB memory usage statistics from /proc/$PID/smaps for metrics.
+# This can be expensive on some older kernel versions when a lot of memory
+# is mapped.
+#lmdb_scrape_smaps: true
+
+# Check the storage for new snapshots at this interval
+#storage_poll_interval: 1s
+
+# When a download or upload fails, these items determine how often and at what
+# interval we will retry, before existing LS with an error.
+#storage_retry_interval: 5s
+#storage_retry_count: 100
+#storage_retry_forever: false
+
+# Force a snapshot once in a while, even if there were no local changes, so
+# that this instance will not be seen as stale, or removed by external cleaning
+# actions.
+# Note that external cleaning mechanisms are not recommended, it is safer to use
+# the 'storage.cleanup' section.
+#storage_force_snapshot_interval: 4h
+
+# Run a single merge cycle and then exit.
+# Equivalent to the --only-once flag.
+#only_once: false
+
+# The 'lmdbs' section defines which LMDB database need to be synced. LS will
+# start one internal syncer instance per database.
+# The keys in this section ('main' and 'shard' here) are arbitrary names
+# assigned to these databases. These names are used in logging and in the
+# snapshot filenames, so they must match between instances and not be changed
+# later.
+lmdbs:
+  # In PDNS Auth, this database contains all the data, except for the records.
+  main:
+    # Path to the LMDB database. This is typically the directory containing
+    # a 'data.mdb' and 'lock.mdb' file, but PDNS Auth uses the 'no_subdir'
+    # option, in which case this is a path to the data file itself.
+    path: /path/to/pdns.lmdb
+
+    # LMDB environment options
+    options:
+      # If set, the LMDB path refers to a file, not a directory.
+      # This is required for PDNS Auth.
+      no_subdir: true
+
+      # Create the LMDB if it does not exist yet.
+      create: true
+
+      # Optional directory mask when creating a new LMDB. 0 means default.
+      #dir_mask: 0775
+      # Optional file mask when creating a new LMDB. 0 means default.
+      #file_mask: 0664
+
+      # The LMDB mapsize when creating the LMDB. This is the amount of memory
+      # that can be used for LMDB data pages and limits the file size of an
+      # LMDB. Keep in mind that an LMDB file can eventually grow to its mapsize.
+      # A value of 0 means 1GB when creating a new LMDB.
+      #map_size: 1GB
+
+      # The maximum number of named DBIs within the LMDB. 0 means default.
+      #max_dbs: 64
+
+    # This indicates that the application natively supports LS headers on all
+    # its database values. PDNS Auth supports this starting from version 4.8.
+    # Earlier versions required this to be set to 'false'.
+    # Application requirements include, but are not limited to:
+    # - Every value is prefixed with an 24+ byte LS header.
+    # - Deleted entries are recorded with the same timestamp and a Deleted flag.
+    # When enabled, a shadow database is no longer needed to merge snapshots, and
+    # conflict resolution is both more accurate and more efficient.
+    schema_tracks_changes: true
+
+    # Older versions of PDNS Auth (4.7) require this to be enabled to handle
+    # the used MDB_DUPSORT DBIs. Never versions have a native LS schema.
+    # Not compatible with schema_tracks_changes=true.
+    #dupsort_hack: false
+
+    # (DO NOT USE) For development only: force an extra padding block in the
+    # header to test if the application handles this correctly.
+    #header_extra_padding_block: false
+
+    # This allows setting options per-DBI.
+    # Currently, the only option supported is 'override_create_flags', which is
+    # should only be used when you need both options.create=true
+    # and have snapshots created by a pre-0.3.0 version of LS. Newer snapshots
+    # have all the information they need to create new DBIs.
+    dbi_options: {}
+      # Example use to create new LMDBs from old snapshots of older PDNS Auth
+      # 4.7 LMDBs. This is not be needed for any new deployment with PDNS Auth
+      # 4.8.
+      #pdns:
+      #  override_create_flags: 0
+      #domains:
+      #  override_create_flags: MDB_INTEGERKEY
+      #domains_0:
+      #  override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
+      #keydata:
+      #  override_create_flags: MDB_INTEGERKEY
+      #keydata_0:
+      #  override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
+      #metadata:
+      #  override_create_flags: MDB_INTEGERKEY
+      #metadata_0:
+      #  override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
+      #tsig:
+      #  override_create_flags: MDB_INTEGERKEY
+      #tsig_0:
+      #  override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
+
+  # In PDNS Auth, this database contains all the records.
+  # The various options available are the same as in the 'lmdb.main' section above.
+  shard:
+    path: /path/to/pdns.lmdb-0
+    options:
+      no_subdir: true
+      create: true
+
+    # Example use to create new LMDBs from old snapshots of older PDNS Auth
+    # 4.7 LMDBs. This is not be needed for any new deployment with PDNS Auth
+    # 4.8.
+    #dbi_options:
+    #  records:
+    #    override_create_flags: 0
+
+# Storage configures where LS stores its snapshots
+storage:
+  # For the available backend types and options, please
+  # check https://github.com/PowerDNS/simpleblob
+
+  # Example with S3 storage in Minio running on localhost.
+  # For the available S3 backend options, check the Options struct in
+  # https://github.com/PowerDNS/simpleblob/blob/main/backends/s3/s3.go#L43
+  type: s3
+  options:
+    access_key: minioadmin
+    secret_key: minioadmin
+    region: us-east-1
+    bucket: lightningstream
+    endpoint_url: http://localhost:9000
+
+  # Example with local file storage for local testing and development
+  #type: fs
+  #options:
+  #  root_path: /path/to/snapshots
+
+  # Periodic snapshot cleanup. This cleans old snapshots from all instances,
+  # including stale ones. Multiple instances can safely try to clean the same
+  # snapshots at the same time.
+  # LS only really needs the latest snapshot of an instance, but we want to keep
+  # older snapshots for a short interval in case a slower instance is still
+  # trying to download it.
+  # This is disabled by default, but highly recommended.
+  cleanup:
+    # Enable the cleaner
+    enabled: true
+    # Interval to check if snapshots need to be cleaned. Some perturbation
+    # is added to this interval so that multiple instances started at exactly
+    # the same time do not always try to clean the same snapshots at the same
+    # time.
+    interval: 5m
+    # Snapshots must have been available for at least this interval before they
+    # are considered for cleaning, so that slower instances have a chance to
+    # download them.
+    must_keep_interval: 10m
+    # Remove stale instances without newer snapshots after this interval, but
+    # only after we are sure this instance has downloaded and merged that
+    # snapshot, and subsequently written a new snapshots that incorporates these
+    # changes.
+    remove_old_instances_interval: 168h   # 1 week
+
+# HTTP server with status page, Prometheus metrics and /healthz endpoint.
+# Disabled by default.
+http:
+  address: ":8500"    # listen on port 8500 on all interfaces
+
+# Logging configuration
+# LS uses https://github.com/sirupsen/logrus internally
+log:
+   level: info        # "debug", "info", "warning", "error", "fatal"
+   format: human      # "human", "logfmt", "json"
+   timestamp: short   # "short", "disable", "full"
+
+# Health checkers for /healthz endpoint
+# This is always enabled. This section allows tweaking the intervals.
+#health:
+  # Check if we can list the storage buckets
+  #storage_list:
+  #  interval: 5s             # Check every 5 seconds
+  #  warn_duration: 1m0s      # Trigger a warning after 1 minute of failures
+  #  error_duration: 5m0s     # Trigger an error after 5 minutes of failures
+  #
+  # Check if we successfully load snapshots
+  #storage_load:
+  #  interval: 5s
+  #  warn_duration: 1m0s
+  #  error_duration: 5m0s
+  #
+  # Check if we successfully store snapshots
+  #storage_store:
+  #  interval: 5s
+  #  warn_duration: 1m0s
+  #  error_duration: 5m0s
+  #
+  # Check if we started up and are ready to handle real traffic according to
+  # some checks, like having loaded all available snapshots.
+  #start:
+  #  interval: 1s
+  #  warn_duration: 1m0s
+  #  error_duration: 5m0s
+  #  # If true, a failing startup sequence will be included in the healthz
+  #  # overall status. This can be used to prevent marking the node ready
+  #  # before LightningStream has completed an initial sync.
+  #  report_healthz: false
+  #  # Controls if the healthz 'startup_[db name]' metadata field will be used
+  #  # to report the status of the startup sequence for each db.
+  #  report_metadata: true

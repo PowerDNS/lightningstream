@@ -171,11 +171,6 @@ type LMDB struct {
 	// to make it 32 bytes. This is useful to test an application's handling of
 	// the numExtra header field. This does not apply to shadow tables.
 	HeaderExtraPaddingBlock bool `yaml:"header_extra_padding_block"`
-
-	// Stats logging options
-	ScrapeSmaps      bool          `yaml:"scrape_smaps"` // Reading proc smaps can be expensive in some situations
-	LogStats         bool          `yaml:"log_stats"`
-	LogStatsInterval time.Duration `yaml:"log_stats_interval"`
 }
 
 type DBIOptions struct {
@@ -258,9 +253,6 @@ func (c Config) Check() error {
 		if l.Options.DirMask > 0777 { // decimal 511
 			return fmt.Errorf("lmdb.options.dir_mask: too large value, possible use of decimal (%d) instead of octal (%#o)",
 				l.Options.DirMask, l.Options.DirMask)
-		}
-		if l.LogStats && l.LogStatsInterval < 100*time.Millisecond {
-			return fmt.Errorf("lmdb.log_stats_interval: too short interval")
 		}
 		if l.SchemaTracksChanges && l.DupSortHack {
 			return fmt.Errorf("lmdb.schema_tracks_changes: cannot be used together with the dupsort_hack option")
