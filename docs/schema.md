@@ -11,11 +11,11 @@ LightningStream can sync LMDBs in two different modes:
 ## General schema considerations
 
 No matter if you are using the [native mode](schema-native.md) or [non-native mode](schema-shadow.md), there are some
-important considerations regarding how the application manages its data, that affect if it is safe to write use
+important considerations regarding how the application manages its data, that affect if it is safe to use
 LightningStream with multiple active writers.
 
 Conceptually, consider an LMDB with LightningStream like a global key-value storage that is updated by multiple
-instances at the same time. Does the way these values are stored allow that to be done safely?
+instances at the same time. Does the way these values are stored by the application allow that to be done safely?
 
 ### Application caching of state
 
@@ -42,13 +42,13 @@ has changed since the last cache update.
 
 ### Natural keys vs. Sequential IDs
 
-If an application uses **sequential IDs** as keys, multiple writers will quickly result in a conflict, because it is
+If an application uses **sequential IDs** as keys, using multiple writers will quickly result in a conflict, because it is
 very likely that two instances will try to create a new entry using the same ID.
 
 **Natural keys**, on the other hand, do not have this problem. For example, if the entry describe a domain name, use
 the domain name itself as the key, instead of a number, if possible. Even if two instances try to create the same
 entry, it will not result in an inconsistent database, as the natural key automatically prevents the addition of
-duplicate domain entries. A **hash** of the fields that make up the uniqueness constraint provides the same guarantees.
+duplicate domain entries. A **hash** of the fields that make up the uniqueness constraint provides similar guarantees.
 
 If natural keys cannot be used, use **random or globally unique IDs like UUIDs** to reduce the chance of an ID clash.
 The larger the ID, the smaller the chance of a clash. In this case you do need to be aware that duplicate entries can
@@ -56,11 +56,9 @@ occur, for example if two users try to add an `example.com` zone on different in
 up with two `example.com` entries with different IDs.
 
 
-### Multi-entry references and indices
+### Multi-value entries and indices
 
-Suppose you have a DBI that keeps track of tags or categories for keys.
-
-One way to organise this would be:
+Suppose you have a DBI that keeps track of tags or categories for keys. One way to organise this would be:
 
 - "key 1" => "RED,BLUE" 
 - "key 2" => "RED,GREEN,YELLOW" 
@@ -73,7 +71,7 @@ tag:
 
 One of these updates will win the race, and the other one will get lost.
 
-For these tags this may not matter, but consider a scenario where these are not tags, but indices:
+For these tags this may be acceptable, but consider a scenario where these are not tags, but indices:
 
 - "accounts-owned-by-jane" => "14,522,1314"
 
@@ -95,10 +93,9 @@ When you need a list of values, perform an `MDB_SET_RANGE` query for fetch all k
 "accounts-owned-by-jane:".
 
 If a safe separator cannot be found, the key can be prefixed with one or two bytes indicating the length
-of the key. Also keep in mind that LMDB keys are limited to 511 bytes by default, and changing this
-requires a custom build of the LMDB code.
+of the key. Also keep in mind that LMDB keys are typically limited to 511 bytes.
 
-There records can safely be individually added and deleted by the application.
+These records can safely be added and deleted by different instances of the application.
 
 !!! warning
 

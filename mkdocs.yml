@@ -19,5 +19,6 @@ nav:
   - 'Schema':
     - 'General considerations': schema.md
     - 'Native header schema': schema-native.md
-    - 'Non-native (shadow)': schema-shadow.md
+    - 'Non-native (shadow)': schema-shadow.md  # TODO: discuss it here or move?
+    - 'Schema migration': schema-migration.md
  #- 'Release Notes': 'release-notes.md'

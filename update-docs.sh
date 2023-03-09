@@ -18,3 +18,15 @@ function autogen_warning() {
     go run ./cmd/lightningstream --config docker/pdns/lightningstream.yaml docs
     autogen_warning
 ) > docs/commands.md
+
+(
+    autogen_warning
+    # Replace a string with contents of a file
+    # https://stackoverflow.com/a/25557287/297793
+    awk 'NR==FNR { a[n++]=$0; next } 
+    /__CONFIG__/ { for (i=0;i<n;++i) print a[i]; next }
+    1' example.yaml docs/configuration.template.md 
+    autogen_warning
+) > docs/configuration.md
+
+
