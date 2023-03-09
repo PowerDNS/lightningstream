@@ -12,12 +12,12 @@ theme:
 
 nav:
   - 'LightningStream Introduction': index.md
-  # TODO: Perhaps move to a PDNS Auth section
-  - 'Getting Started': getting-started.md
   - 'Configuration': configuration.md
   - 'Commands': commands.md
+  - 'PowerDNS Integration':
+    - 'Getting Started': getting-started.md
   - 'Schema':
-    - 'Introduction': schema.md
-    - 'Native': schema-native.md
+    - 'General considerations': schema.md
+    - 'Native header schema': schema-native.md
     - 'Non-native (shadow)': schema-shadow.md
  #- 'Release Notes': 'release-notes.md'
