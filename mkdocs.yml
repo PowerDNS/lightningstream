@@ -1,0 +1,23 @@
+site_name: PowerDNS LightningStream
+site_url: https://github.com/PowerDNS/lightningstream
+repo_url: https://github.com/PowerDNS/lightningstream
+copyright: PowerDNS.com B.V.
+markdown_extensions:
+ - toc:
+     permalink: True
+ - admonition    # Use sparingly, not compatible with Github
+ # Consider for compatibility with Github rendering: - nl2br
+theme:
+  name: readthedocs
+
+nav:
+  - 'LightningStream Introduction': index.md
+  # TODO: Perhaps move to a PDNS Auth section
+  - 'Getting Started': getting-started.md
+  - 'Configuration': configuration.md
+  - 'Commands': commands.md
+  - 'Schema':
+    - 'Introduction': schema.md
+    - 'Native': schema-native.md
+    - 'Non-native (shadow)': schema-shadow.md
+ #- 'Release Notes': 'release-notes.md'
