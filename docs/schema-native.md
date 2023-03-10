@@ -97,6 +97,21 @@ blocks when present. Currently the format of any extension blocks has not been d
 We intend to define a format where extension blocks are optional and identified by an ID and length, but currently this idea has
 not been worked out yet.
 
+## DBI flag limitations
+
+In native mode, LightningStream only supports DBIs without any special DBI flags. More specifically, the following DBI flags
+are NOT supported in native mode:
+
+- `MDB_DUPSORT`
+- `MDB_DUPFIXED`
+- `MDB_INTEGER`
+- `MDB_INTEGERDUP`
+- `MDB_REVERSEKEY`
+- `MDB_REVERSEDUP`
+
+The reverse keys are currently also not supported in non-native mode, or at least not tested.
+
+
 ## Old timestamp-only headers
 
 Before version 0.3.0, LightningStream used a simpler header with only an 8 byte timestamp. No native application ever used this
