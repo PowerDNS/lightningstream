@@ -20,6 +20,10 @@ instance: ${LS_INSTANCE}
 
 ## Instance name
 
+!!! warning
+
+    Every instance **MUST** have a unique instance name.
+
 Every instance MUST have a unique instance name. This instance name is included in the snapshot filenames
 and used to ignore its own snapshots.
 
@@ -91,9 +95,10 @@ Currently available options:
 | use_update_marker | bool | Reduce LIST commands, see link below |
 | update_marker_force_list_interval | duration | See link below for details |
 
-The `use_update_marker` option can be useful to reduce your AWS S3 bill in small personal
-deployments, as GET operations are 10 times cheaper than LIST operations, but it cannot reliably
-be used when you are using a bucket mirror mechanism to keep multiple buckets in sync.
+The `use_update_marker` option can reduce your AWS S3 bill in small personal
+deployments without compromises on update latency, as GET operations are 10 times cheaper
+than LIST operations, but it cannot reliably be used when you are using a bucket mirror
+mechanism to keep multiple buckets in sync.
 
 You can find all the available S3 options with full descriptions in
 [Simpleblob's S3 backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/s3/s3.go#:~:text=Options%20struct).

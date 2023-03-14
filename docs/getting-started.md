@@ -10,4 +10,6 @@ This section explains how to get started with PowerDNS Authoratitive version 4.8
     TODO: explain how to use with 4.7. Can it work with 4.6?
 
 
+TODO:
 
+- Docker demo (no schemaversion handling!)

@@ -63,7 +63,7 @@ You also must sure that LightningStream is not running on the instance during th
 it could end up syncing data to the wrong bucket.
 
 LightningStream allows you to use environment variables in its YAML configuration, like
-`$(APP_SCHEMA_VERSION)`. If you can reliably set this before starting LightningStream, you can use
+`${APP_SCHEMA_VERSION}`. If you can reliably set this before starting LightningStream, you can use
 this to automatically write different schema versions to different S3 bucket prefixes.
 
 
