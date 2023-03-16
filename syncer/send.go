@@ -100,7 +100,6 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 			if err != nil {
 				return fmt.Errorf("dbi %s: %w", dbiNames, err)
 			}
-			dbiMsg.Name = dbiName // replace shadow name if used
 
 			msg.Databases = append(msg.Databases, dbiMsg)
 
@@ -179,17 +178,24 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	}
 	tStored := time.Now()
 
+	var compressionRatio string
+	if dds.CompressedSize > 0 {
+		r := float32(dds.ProtobufSize) / float32(dds.CompressedSize)
+		compressionRatio = fmt.Sprintf("1:%.2f", r)
+	}
+
 	s.l.WithFields(logrus.Fields{
-		"time_acquire":     utils.TimeDiff(tTxnAcquire, t0),
-		"time_copy_shadow": tShadow.Sub(tTxnAcquire).Round(time.Millisecond),
-		"time_dump":        tDumped.Sub(tShadow).Round(time.Millisecond),
-		"time_marshal":     dds.TMarshaled.Round(time.Millisecond),
-		"time_compress":    dds.TCompressed.Round(time.Millisecond),
-		"time_store":       tStored.Sub(tDumpedData).Round(time.Millisecond),
-		"time_total":       tStored.Sub(t0).Round(time.Millisecond),
-		"snapshot_size":    datasize.ByteSize(len(out)).HumanReadable(),
-		"snapshot_name":    name,
-		"txnID":            txnID,
+		"time_acquire":      utils.TimeDiff(tTxnAcquire, t0),
+		"time_copy_shadow":  tShadow.Sub(tTxnAcquire).Round(time.Millisecond),
+		"time_dump":         tDumped.Sub(tShadow).Round(time.Millisecond),
+		"time_compress":     dds.TCompressed.Round(time.Millisecond),
+		"time_store":        tStored.Sub(tDumpedData).Round(time.Millisecond),
+		"time_total":        tStored.Sub(t0).Round(time.Millisecond),
+		"uncompressed_size": dds.ProtobufSize.HumanReadable(),
+		"compression_ratio": compressionRatio,
+		"snapshot_size":     datasize.ByteSize(len(out)).HumanReadable(),
+		"snapshot_name":     name,
+		"txnID":             txnID,
 	}).Info("Stored snapshot")
 
 	// Tell the cleaner which snapshots made by other instances have been

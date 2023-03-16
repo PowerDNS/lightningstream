@@ -392,4 +392,51 @@ func (d *DBI) Append(kv KV) {
 		binary.LittleEndian.PutUint64(d.data[offset:offset+8], kv.TimestampNano)
 		offset += 8
 	}
+	_ = offset // silence linter
+}
+
+type KVMapFunc = func(KV) (KV, error)
+
+// Map creates a new DBI with copied and transformed data.
+func (d *DBI) Map(transform string, f KVMapFunc) (*DBI, error) {
+	newDBI := NewDBISize(len(d.data))
+	newDBI.SetName(d.name)
+	newDBI.SetFlags(d.flags)
+	newDBI.SetTransform(transform)
+	var err error
+	var kv KV
+	d.ResetCursor()
+	for {
+		kv, err = d.Next()
+		if err != nil {
+			if err != io.EOF {
+				return nil, err
+			}
+			break
+		}
+		newKV, err := f(kv)
+		if err != nil {
+			return nil, err
+		}
+		newDBI.Append(newKV)
+	}
+	return newDBI, nil
+}
+
+// AsInefficientKVList returns all KV entries as an inefficient []KV.
+// Only use this for tests.
+func (d *DBI) AsInefficientKVList() ([]KV, error) {
+	var kvList []KV
+	d.ResetCursor()
+	for {
+		kv, err := d.Next()
+		if err != nil {
+			if err != io.EOF {
+				return nil, err
+			}
+			break
+		}
+		kvList = append(kvList, kv)
+	}
+	return kvList, nil
 }

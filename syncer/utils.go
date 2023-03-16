@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"time"
@@ -114,12 +115,12 @@ func (s *Syncer) closeEnv(env *lmdb.Env) {
 	}
 }
 
-// readDBI reads a DBI into a snapshot DBI.
+// readDBI reads a DBI into a snapshot.DBI.
 // By default, the headers of values will be split out to the corresponding snapshot fields.
 // If rawValues is true, the value will be stored as is and the headers will
 // not be extracted. This is useful when reading a database without headers.
 // The origDBIName is used to ensure that the flags stored are those of the original
-// DBI, not of the shadow DBI.
+// DBI, not of the shadow DBI, and to set the name field of DBI.
 func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues bool) (dbiMsg *snapshot.DBI, err error) {
 	l := s.l.WithField("dbi", dbiName)
 
@@ -129,29 +130,37 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		return nil, err
 	}
 
+	// Get some DBI stats for optimisation
 	stat, err := txn.Stat(dbi)
 	if err != nil {
 		return nil, err
 	}
 	l.WithField("entries", stat.Entries).Debug("Reading DBI")
 
-	// If enabled, all returned key and value []byte point directly into
-	// the LMDB, so these are unsafe to return to the caller. If used
-	// outside the transaction, the data may no longer be valid, and SendOnce
-	// does use it outside the transaction.
-	// So we create one big []byte to contain all data and return slices from
-	// here. This is more efficient than allocating individual slices for
-	// all keys and values, it is basically arena allocation.
-	txnRawRead := txn.RawRead
-	var arenaBuf []byte
-	if txnRawRead {
-		// Preallocate a large enough buffer for all data in this DBI
-		arenaBuf = make([]byte, 0, stats.PageUsageBytes(stat))
-	}
+	// Always enable txn.RawRead so that the slices point directly into the
+	// LMDB pages, since we will copy the values into the snapshot.DBI anyway.
+	restoreRawRead := txn.RawRead
+	txn.RawRead = true
+	defer func() {
+		txn.RawRead = restoreRawRead
+	}()
 
-	dbiMsg = new(snapshot.DBI)
-	dbiMsg.Name = dbiName
-	dbiMsg.Entries = make([]snapshot.KV, 0, stat.Entries)
+	// Pre-allocate based on the amount of data the DBI currently
+	// takes up as LMDB pages to avoid reallocs later.
+	// For native DBIs, we always have a 24 byte header of which we only include
+	// a timestamp (9 bytes) and headers (2 bytes) in the protobuf. The keys
+	// and values will take 2 bytes each if < 16 bytes long, adding up to
+	// 15 bytes out of 24 used, and 9 free for larger values. So this will be
+	// almost certainly enough for native data, even under the assumption that
+	// LMDB does not have any overhead in the pages (it does) and all pages
+	// are tightly packed (they rarely are).
+	sizeHint := float64(stats.PageUsageBytes(stat))
+	if rawValues {
+		// For rawValues, we do not have this header padding, so add a bit more.
+		sizeHint = (1.2 * sizeHint) + 4*float64(stat.Entries)
+	}
+	dbiMsg = snapshot.NewDBISize(int(sizeHint))
+	dbiMsg.SetName(origDBIName)
 
 	// Flags of the original DBI (not the shadow DBI)
 	var dbiFlags uint
@@ -179,9 +188,9 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		if !s.lc.DupSortHack {
 			return nil, fmt.Errorf("readDBI: dupsort db %q found and dupsort_hack disabled", dbiName)
 		}
-		dbiMsg.Transform = snapshot.TransformDupSortHackV1
+		dbiMsg.SetTransform(snapshot.TransformDupSortHackV1)
 	}
-	dbiMsg.Flags = uint64(dbiFlags)
+	dbiMsg.SetFlags(uint64(dbiFlags))
 
 	// Read all entries
 	c, err := txn.OpenCursor(dbi)
@@ -199,22 +208,6 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 				break
 			} else {
 				return nil, errors.Wrap(err, "cursor next")
-			}
-		}
-
-		if txnRawRead {
-			// Copy key and value into our arena and then use our copies
-			{
-				start := len(arenaBuf)
-				arenaBuf = append(arenaBuf, key...)
-				end := start + len(key)
-				key = arenaBuf[start:end:end]
-			}
-			{
-				start := len(arenaBuf)
-				arenaBuf = append(arenaBuf, val...)
-				end := start + len(val)
-				val = arenaBuf[start:end:end]
 			}
 		}
 
@@ -243,13 +236,25 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		}
 
 		flag = lmdb.Next
-		dbiMsg.Entries = append(dbiMsg.Entries, snapshot.KV{
+		dbiMsg.Append(snapshot.KV{
 			Key:           key,
 			Value:         val,
 			TimestampNano: uint64(ts),
 			Flags:         uint32(flags.Masked()),
 		})
 	}
+
+	// Check how close our hint was
+	var efficiency float64
+	actualSize := dbiMsg.Size()
+	if actualSize > 0 {
+		efficiency = math.Round(100*sizeHint/float64(actualSize)) / 100
+	}
+	s.l.WithFields(logrus.Fields{
+		"size_hint_used":   int(sizeHint),
+		"actual_data_size": actualSize,
+		"hint_efficiency":  efficiency,
+	}).Debug("Check our pre-alloc size estimate (<1 is OK)")
 
 	return dbiMsg, nil
 }

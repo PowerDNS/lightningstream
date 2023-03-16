@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
@@ -15,7 +14,7 @@ import (
 func NewNativeIterator(
 	formatVersion uint32,
 	compatVersion uint32,
-	entries []snapshot.KV,
+	dbiMsg *snapshot.DBI,
 	defaultTS header.Timestamp,
 	txnID header.TxnID,
 ) (*NativeIterator, error) {
@@ -37,7 +36,7 @@ func NewNativeIterator(
 		return nil, ErrNoTxnID
 	}
 	return &NativeIterator{
-		Entries:              entries,
+		DBIMsg:               dbiMsg,
 		DefaultTimestampNano: defaultTS,
 		TxnID:                txnID,
 		FormatVersion:        formatVersion,
@@ -53,7 +52,7 @@ func NewNativeIterator(
 // The LMDB values the iterator operates on MUST always have a header. If no
 // header is present, an error is returned.
 type NativeIterator struct {
-	Entries              []snapshot.KV    // LMDB contents as raw values without header
+	DBIMsg               *snapshot.DBI    // DBI contents as raw values without header
 	DefaultTimestampNano header.Timestamp // Timestamp to add to entries that do not have one
 	TxnID                header.TxnID     // Current write TxnID (required)
 	FormatVersion        uint32           // Snapshot FormatVersion
@@ -62,6 +61,7 @@ type NativeIterator struct {
 	current int
 	started bool
 	buf     []byte
+	curKV   snapshot.KV
 }
 
 func (it *NativeIterator) Next() (key []byte, err error) {
@@ -69,19 +69,21 @@ func (it *NativeIterator) Next() (key []byte, err error) {
 		it.current++
 	} else {
 		it.started = true
+		it.DBIMsg.ResetCursor()
 	}
-	if len(it.Entries) <= it.current {
-		return nil, io.EOF
+	kv, err := it.DBIMsg.Next()
+	if err != nil {
+		return nil, err // can be io.EOF
 	}
-	key = it.Entries[it.current].Key
-	return key, nil
+	it.curKV = kv
+	return kv.Key, nil
 }
 
 // Merge compares the old LMDB value currently stored and the current iterator
 // value from the dump, and decides which value the LMDB should take.
 // The LMDB entries are always prefixed with a header.
 func (it *NativeIterator) Merge(oldval []byte) (val []byte, err error) {
-	entry := it.Entries[it.current]
+	entry := it.curKV
 	entryVal := entry.Value
 	//logrus.Debug("key = %s | old = %s | new = %s",
 	//	string(entry.Key), string(oldval), string(entryVal))
@@ -136,7 +138,7 @@ func (it *NativeIterator) Clean(oldval []byte) (val []byte, err error) {
 }
 
 func (it *NativeIterator) logDebugValue(val []byte) {
-	entry := it.Entries[it.current]
+	entry := it.curKV
 	logrus.WithFields(logrus.Fields{
 		"key": hex.Dump(entry.Key),
 		"val": hex.Dump(val),
@@ -186,10 +188,11 @@ func (it *NativeIterator) addHeader(
 // PlainIterator iterates over a snapshot of a shadow database for
 // insertion into the main database without the timestamp header.
 type PlainIterator struct {
-	Entries []snapshot.KV // LMDB contents (timestamp is ignored)
+	DBIMsg *snapshot.DBI // LMDB contents (timestamp is ignored)
 
 	current int
 	started bool
+	curKV   snapshot.KV
 }
 
 func (it *PlainIterator) Next() (key []byte, err error) {
@@ -197,16 +200,18 @@ func (it *PlainIterator) Next() (key []byte, err error) {
 		it.current++
 	} else {
 		it.started = true
+		it.DBIMsg.ResetCursor()
 	}
-	if len(it.Entries) <= it.current {
-		return nil, io.EOF
+	kv, err := it.DBIMsg.Next()
+	if err != nil {
+		return nil, err // can be io.EOF
 	}
-	key = it.Entries[it.current].Key
-	return key, nil
+	it.curKV = kv
+	return kv.Key, nil
 }
 
 func (it *PlainIterator) Merge(oldval []byte) (val []byte, err error) {
-	mainVal := it.Entries[it.current].Value
+	mainVal := it.curKV.Value
 	if len(mainVal) == 0 {
 		// Signal that we want deletion in case the strategy distinguishes
 		// between nil and an empty value

@@ -96,6 +96,7 @@ func (s *Snapshot) WriteTo(w io.Writer) (nWritten int64, err error) {
 		return nWritten, err
 	}
 	offset = 0
+	_ = offset // silence linter
 
 	// Add Meta
 	metaPB := s.Meta.Marshal()
@@ -111,6 +112,7 @@ func (s *Snapshot) WriteTo(w io.Writer) (nWritten int64, err error) {
 			return nWritten, err
 		}
 		offset = 0
+		_ = offset // silence linter
 
 		// Write actual Meta message
 		n, err = w.Write(metaPB)
@@ -139,6 +141,7 @@ func (s *Snapshot) WriteTo(w io.Writer) (nWritten int64, err error) {
 			return nWritten, err
 		}
 		offset = 0
+		_ = offset // silence linter
 
 		// Write actual DBI message
 		n, err = w.Write(dbiPB)

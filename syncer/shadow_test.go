@@ -75,7 +75,9 @@ func TestSyncer_shadow(t *testing.T) {
 			assert.NoError(t, err)
 			dbiMsg, err := s.readDBI(txn, "foo", "foo", true)
 			assert.NoError(t, err)
-			assert.Equal(t, v1, dbiMsg.Entries)
+			entries, err := dbiMsg.AsInefficientKVList()
+			assert.NoError(t, err)
+			assert.Equal(t, v1, entries)
 
 			return nil
 		})
