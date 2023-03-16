@@ -34,37 +34,40 @@ func LoadData(data []byte) (*Snapshot, error) {
 	return msg, nil
 }
 
+// DumpData returns a compressed Snapshot.
 func DumpData(msg *Snapshot) ([]byte, DumpDataStats, error) {
 	var stat DumpDataStats
 	t0 := time.Now()
 
-	// Snapshot complete, serialize it
-	pb, err := msg.Marshal()
-	if err != nil {
-		return nil, stat, err
-	}
-	tMarshaled := time.Now()
-	stat.TMarshaled = tMarshaled.Sub(t0)
-
-	// Compress it
-	out := bytes.NewBuffer(make([]byte, 0, datasize.MB))
+	// Streaming compression
+	out := bytes.NewBuffer(make([]byte, 0, datasize.MB)) // TODO: better start size
 	gw, err := gzip.NewWriterLevel(out, gzip.BestSpeed)
 	if err != nil {
 		return nil, stat, err
 	}
-	if _, err = gw.Write(pb); err != nil {
+
+	// Marshal and write to gzip writer
+	// The marshalling itself takes almost no time, since all the DBI data is
+	// already marshaled.
+	pbSize, err := msg.WriteTo(gw)
+	if err != nil {
 		return nil, stat, err
 	}
+	stat.ProtobufSize = datasize.ByteSize(pbSize)
+
 	if err = gw.Close(); err != nil {
 		return nil, stat, err
 	}
 	tCompressed := time.Now()
-	stat.TCompressed = tCompressed.Sub(tMarshaled)
+	stat.TCompressed = tCompressed.Sub(t0)
 
-	return out.Bytes(), stat, nil
+	compressedData := out.Bytes()
+	stat.CompressedSize = datasize.ByteSize(len(compressedData))
+	return compressedData, stat, nil
 }
 
 type DumpDataStats struct {
-	TMarshaled  time.Duration
-	TCompressed time.Duration
+	TCompressed    time.Duration     // time it took to marshal (near 0) and compress
+	ProtobufSize   datasize.ByteSize // uncompressed protobuf size
+	CompressedSize datasize.ByteSize // uncompressed protobuf size
 }

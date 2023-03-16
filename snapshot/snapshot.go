@@ -68,6 +68,85 @@ func (s *Snapshot) Unmarshal(data []byte) error {
 	return nil
 }
 
-func (s *Snapshot) WriteTo(w io.Writer) (n int64, err error) {
-	panic("NOT IMPLEMENTED")
+// WriteTo writes all protobuf data to an io.Writer. It does not construct the
+// whole protobuf message in the process, it simply streams the data.
+func (s *Snapshot) WriteTo(w io.Writer) (nWritten int64, err error) {
+	b := make([]byte, 1000) // temp buffer to construct tags
+	offset := 0
+
+	// Add top-level fields
+	varintFields := []struct {
+		tag int
+		val uint64
+	}{
+		{FieldSnapshotFormatVersion, uint64(s.FormatVersion)},
+		{FieldSnapshotCompatVersion, uint64(s.CompatVersion)},
+	}
+	for _, f := range varintFields {
+		if f.val > 0 {
+			offset += csproto.EncodeTag(b[offset:], f.tag, csproto.WireTypeVarint)
+			offset += csproto.EncodeVarint(b[offset:], f.val)
+		}
+	}
+
+	// Flush temp buffer
+	n, err := w.Write(b[:offset])
+	nWritten += int64(n)
+	if err != nil {
+		return nWritten, err
+	}
+	offset = 0
+
+	// Add Meta
+	metaPB := s.Meta.Marshal()
+	if len(metaPB) > 0 {
+		// Header with tag and length
+		offset = 0
+		offset += csproto.EncodeTag(b[offset:], FieldSnapshotMeta, csproto.WireTypeLengthDelimited)
+		offset += csproto.EncodeVarint(b[offset:], uint64(len(metaPB)))
+		// Flush temp buffer
+		n, err := w.Write(b[:offset])
+		nWritten += int64(n)
+		if err != nil {
+			return nWritten, err
+		}
+		offset = 0
+
+		// Write actual Meta message
+		n, err = w.Write(metaPB)
+		nWritten += int64(n)
+		if err != nil {
+			return nWritten, err
+		}
+	}
+
+	// Add DBIs
+	for _, dbi := range s.Databases {
+		// No actual work is done by this Marshal, it just returns its internal slice
+		dbiPB := dbi.Marshal()
+		if len(dbiPB) == 0 {
+			continue
+		}
+
+		// Header with tag and length
+		offset = 0
+		offset += csproto.EncodeTag(b[offset:], FieldSnapshotDBI, csproto.WireTypeLengthDelimited)
+		offset += csproto.EncodeVarint(b[offset:], uint64(len(dbiPB)))
+		// Flush temp buffer
+		n, err := w.Write(b[:offset])
+		nWritten += int64(n)
+		if err != nil {
+			return nWritten, err
+		}
+		offset = 0
+
+		// Write actual DBI message
+		n, err = w.Write(dbiPB)
+		nWritten += int64(n)
+		if err != nil {
+			return nWritten, err
+		}
+	}
+
+	return nWritten, nil
 }

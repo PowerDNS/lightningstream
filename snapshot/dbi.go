@@ -143,11 +143,11 @@ func (d *DBI) ResetCursor() {
 	d.cur = 0
 }
 
-// ProtobufData returns the currently written protobuf data.
+// Marshal returns the currently written protobuf data.
 // This implicitly calls flushFields, which will prevent further changes to
 // the top-level fields.
 // Careful, this does not make a copy.
-func (d *DBI) ProtobufData() []byte {
+func (d *DBI) Marshal() []byte {
 	d.flushFields()
 	l := len(d.data)
 	return d.data[:l:l]
@@ -161,6 +161,10 @@ func (d *DBI) Size() (n int) {
 	return len(d.data)
 }
 
+// Next decodes the next KV from the data.
+// BenchmarkDBI_Next benchmarks this, locally it takes about 40ns per entry
+// (or 40ms for 1 million entries), which makes it a fine replacement for
+// looping over a slice, given that we avoid the allocations.
 func (d *DBI) Next() (kv KV, err error) {
 	// Only update d.cur at the end to never point into the middle of a message
 	// if something went wrong before.

@@ -1,6 +1,10 @@
 package snapshot
 
-import "github.com/CrowdStrike/csproto"
+import (
+	"encoding/binary"
+
+	"github.com/CrowdStrike/csproto"
+)
 
 // Protobuf field numbers
 const (
@@ -19,6 +23,47 @@ type Meta struct {
 	LmdbTxnID     int64
 	TimestampNano uint64
 	DatabaseName  string
+}
+
+func (m *Meta) Marshal() []byte {
+	stringFields := []struct {
+		tag int
+		val string
+	}{
+		{FieldMetaGenerationID, m.GenerationID},
+		{FieldMetaInstanceID, m.InstanceID},
+		{FieldMetaHostname, m.Hostname},
+		{FieldMetaDatabaseName, m.DatabaseName},
+	}
+
+	// Make a safe estimate of the buffer size needed, not accurate.
+	var bufSizeNeeded int
+	for _, sf := range stringFields {
+		bufSizeNeeded += len(sf.val) + 20
+	}
+	bufSizeNeeded += 1000 // generous enough for the numeric fields
+	b := make([]byte, bufSizeNeeded)
+	offset := 0
+
+	// Marshal data
+	for _, sf := range stringFields {
+		if len(sf.val) > 0 {
+			offset += csproto.EncodeTag(b[offset:], sf.tag, csproto.WireTypeLengthDelimited)
+			offset += csproto.EncodeVarint(b[offset:], uint64(len(sf.val)))
+			offset += copy(b[offset:], sf.val)
+		}
+	}
+	if m.LmdbTxnID > 0 {
+		offset += csproto.EncodeTag(b[offset:], FieldMetaLMDBTxnID, csproto.WireTypeVarint)
+		offset += csproto.EncodeVarint(b[offset:], uint64(m.LmdbTxnID))
+	}
+	if m.TimestampNano > 0 {
+		offset += csproto.EncodeTag(b[offset:], FieldMetaTimestampNano, csproto.WireTypeFixed64)
+		binary.LittleEndian.PutUint64(b[offset:offset+8], m.TimestampNano)
+		offset += 8
+	}
+
+	return b[:offset]
 }
 
 func (m *Meta) Unmarshal(data []byte) error {
