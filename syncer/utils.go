@@ -213,8 +213,8 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 	// Check how close our hint was
 	var efficiency float64
 	actualSize := dbiMsg.Size()
-	if actualSize > 0 {
-		efficiency = math.Round(100*sizeHint/float64(actualSize)) / 100
+	if sizeHint > 0 {
+		efficiency = math.Round(100*float64(actualSize)/sizeHint) / 100
 	}
 	s.l.WithFields(logrus.Fields{
 		"size_hint_used":   int(sizeHint),
