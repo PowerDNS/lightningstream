@@ -3,6 +3,7 @@ package commands
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -184,14 +185,17 @@ var snapshotsDumpCmd = &cobra.Command{
 		case "debug", "text":
 			databases := snap.Databases
 			snap.Databases = nil
-			// FIXME: Ensure this is not printing private fields?
-			outf("%+v", snap)
+			j, err := json.MarshalIndent(snap, "", "  ")
+			if err != nil {
+				return err
+			}
+			outf("%s\n", string(j))
 
 			// Print DBI contents
 			now := time.Now()
 			for _, dbi := range databases {
 				outf("\n### %s (transform=%q, flags=%q)\n\n",
-					dbi.Name, dbi.Transform, dbiflags.Flags(dbi.Flags()))
+					dbi.Name(), dbi.Transform(), dbiflags.Flags(dbi.Flags()))
 				dbi.ResetCursor()
 				for {
 					e, err := dbi.Next()

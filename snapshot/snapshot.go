@@ -19,7 +19,7 @@ type Snapshot struct {
 	FormatVersion uint32 // version of this snapshot format
 	CompatVersion uint32 // compatible with clients that support at least this version
 	Meta          Meta
-	Databases     []*DBI
+	Databases     []*DBI `json:",omitempty"`
 }
 
 func (s *Snapshot) Unmarshal(data []byte) error {
