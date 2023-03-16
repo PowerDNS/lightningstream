@@ -3,7 +3,7 @@
 # The output files need to be checked into the repo.
 # Only rerun this if proto was updated.
 
-export GOBIN="$PWD/../bin"
+export GOBIN="$PWD/../../bin"
 export PATH="$GOBIN:$PATH"
 
 set -ex
