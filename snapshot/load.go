@@ -12,15 +12,20 @@ import (
 // LoadData loads snapshot file contents that are gzipped protobufs
 func LoadData(data []byte) (*Snapshot, error) {
 	// Uncompress
-	dataBuffer := bytes.NewBuffer(data)
-	g, err := gzip.NewReader(dataBuffer)
+	dataReader := bytes.NewReader(data)
+	g, err := gzip.NewReader(dataReader)
 	if err != nil {
 		return nil, err
 	}
-	pbData, err := io.ReadAll(g)
+	// For buffer sizing, assume 1:10 best case compression. Better to overestimate
+	// than to underestimate the size needed, because reallocs are expensive.
+	pbBuf := bytes.NewBuffer(make([]byte, 0, 10*len(data)))
+	//pbData, err := io.ReadAll(g)
+	_, err = io.Copy(pbBuf, g)
 	if err != nil {
 		return nil, err
 	}
+	pbData := pbBuf.Bytes()
 	if err := g.Close(); err != nil {
 		return nil, err
 	}
@@ -40,7 +45,13 @@ func DumpData(msg *Snapshot) ([]byte, DumpDataStats, error) {
 	t0 := time.Now()
 
 	// Streaming compression
-	out := bytes.NewBuffer(make([]byte, 0, datasize.MB)) // TODO: better start size
+	// For buffer sizing, assume 1:2 worst case compression. Better to overestimate
+	// than to underestimate the size needed, because reallocs are expensive.
+	var estimatedSize int
+	for _, d := range msg.Databases {
+		estimatedSize += d.Size()
+	}
+	out := bytes.NewBuffer(make([]byte, 0, estimatedSize/2))
 	gw, err := gzip.NewWriterLevel(out, gzip.BestSpeed)
 	if err != nil {
 		return nil, stat, err
