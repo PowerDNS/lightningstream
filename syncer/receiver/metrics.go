@@ -63,6 +63,7 @@ var (
 			Help: "Number of bytes downloaded successfully",
 		},
 	)
+	// TODO: add total space used by all snapshots
 )
 
 func init() {

@@ -56,7 +56,8 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 		var targetFlags = dbiFlags & uint(AllowedShadowDBIFlagsMask)
 
 		if s.lc.DupSortHack && isDupSort {
-			if err = dupSortHackEncode(dbiMsg.Entries); err != nil {
+			dbiMsg, err = dupSortHackEncode(dbiMsg)
+			if err != nil {
 				return fmt.Errorf("dupsort_hack error for DBI %s: %w", dbiName, err)
 			}
 		}
@@ -74,7 +75,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 		it, err := NewNativeIterator(
 			snapshot.CurrentFormatVersion,
 			snapshot.CompatFormatVersion,
-			dbiMsg.Entries,
+			dbiMsg,
 			tsNano,
 			header.TxnID(txn.ID()),
 		)
@@ -141,7 +142,8 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 		}
 
 		if isDupSort {
-			if err = dupSortHackDecode(dbiMsg.Entries); err != nil {
+			dbiMsg, err = dupSortHackDecode(dbiMsg)
+			if err != nil {
 				return fmt.Errorf("dupsort_hack error for DBI %s: %w", dbiName, err)
 			}
 		}
@@ -159,7 +161,7 @@ func (s *Syncer) shadowToMain(ctx context.Context, txn *lmdb.Txn) error {
 
 		// This iterator will insert the plain items without timestamp header
 		it := &PlainIterator{
-			Entries: dbiMsg.Entries,
+			DBIMsg: dbiMsg,
 		}
 		err = stratFunc(txn, targetDBI, it)
 		if err != nil {

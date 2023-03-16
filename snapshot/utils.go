@@ -42,17 +42,6 @@ func getUInt32(d *csproto.Decoder, tag int, wireType csproto.WireType) (uint32, 
 	return val, nil
 }
 
-func getUInt64(d *csproto.Decoder, tag int, wireType csproto.WireType) (uint64, error) {
-	if err := expectWT(tag, wireType, csproto.WireTypeVarint); err != nil {
-		return 0, err
-	}
-	val, err := d.DecodeUInt64()
-	if err != nil {
-		return 0, err
-	}
-	return val, nil
-}
-
 func getFixed64(d *csproto.Decoder, tag int, wireType csproto.WireType) (uint64, error) {
 	if err := expectWT(tag, wireType, csproto.WireTypeFixed64); err != nil {
 		return 0, err

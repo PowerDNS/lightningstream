@@ -345,7 +345,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 		// Apply snapshot
 		tLoadStart = time.Now()
 		for _, dbiMsg := range snap.Databases {
-			dbiName := dbiMsg.Name
+			dbiName := dbiMsg.Name()
 			dbiOpt := s.lc.DBIOptions[dbiName]
 			ld := l.WithField("dbi", dbiName)
 
@@ -385,7 +385,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 							dbiName, snap.FormatVersion)
 					}
 
-					var flags = dbiflags.Flags(dbiMsg.Flags)
+					var flags = dbiflags.Flags(dbiMsg.Flags())
 					if dbiOpt.OverrideCreateFlags != nil {
 						flags = *dbiOpt.OverrideCreateFlags
 					}
@@ -406,7 +406,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				// The formatVersion does not matter here, because the DBI flags
 				// stored in earlier versions will be the correct ones for the
 				// DBI that we are creating here (shadow or native).
-				var flags = dbiflags.Flags(dbiMsg.Flags)
+				var flags = dbiflags.Flags(dbiMsg.Flags())
 				if dbiOpt.OverrideCreateFlags != nil {
 					flags = *dbiOpt.OverrideCreateFlags
 				}
@@ -432,7 +432,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 			it, err := NewNativeIterator(
 				snap.FormatVersion,
 				snap.CompatVersion,
-				dbiMsg.Entries,
+				dbiMsg,
 				0, // no default timestamp
 				header.TxnID(txn.ID()),
 			)
@@ -488,6 +488,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 	ts := snapshot.NameTimestampFromNano(header.Timestamp(snap.Meta.TimestampNano))
 	l := s.l.WithFields(logrus.Fields{
 		"time_total":        utils.TimeDiff(tLoaded, t0),
+		"time_write_lock":   utils.TimeDiff(tLoaded, tTxnAcquire),
 		"txnID":             txnID,
 		"snapshot_instance": instance,
 		"shorthash":         snapshot.ShortHash(snap.Meta.InstanceID, ts),
