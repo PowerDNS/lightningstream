@@ -142,6 +142,9 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	}
 	tDumpedData := time.Now()
 
+	msg = nil // no longer needed
+	timeGC := utils.GC()
+
 	metricSnapshotsLoaded.WithLabelValues(s.name).Inc()
 	metricSnapshotsLastTimestamp.WithLabelValues(s.name).Set(float64(ts.UnixNano()) / 1e9)
 	metricSnapshotsLastSize.WithLabelValues(s.name).Set(float64(len(out)))
@@ -190,6 +193,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		"time_dump":         tDumped.Sub(tShadow).Round(time.Millisecond),
 		"time_compress":     dds.TCompressed.Round(time.Millisecond),
 		"time_store":        tStored.Sub(tDumpedData).Round(time.Millisecond),
+		"time_gc":           timeGC,
 		"time_total":        tStored.Sub(t0).Round(time.Millisecond),
 		"uncompressed_size": dds.ProtobufSize.HumanReadable(),
 		"compression_ratio": compressionRatio,

@@ -198,6 +198,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			if err != nil {
 				return err
 			}
+			utils.GC()
 			if !localChanged {
 				// Prevent triggering a local snapshot if there were no local
 				// changes by bumping the transaction ID we consider synced
