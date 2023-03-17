@@ -42,6 +42,14 @@ const (
 	// DefaultStorageForceSnapshotInterval is the default interval at which we
 	// write a snapshot even if no local changes were detected.
 	DefaultStorageForceSnapshotInterval = 4 * time.Hour
+
+	// DefaultMemoryDownloadedSnapshots is the number of downloaded compressed
+	// snapshots we can keep in memory.
+	DefaultMemoryDownloadedSnapshots = 2
+
+	// DefaultMemoryDecompressedSnapshots is the number of decompressed snapshots
+	// we can keep in memory.
+	DefaultMemoryDecompressedSnapshots = 3
 )
 
 var (
@@ -132,6 +140,22 @@ type Config struct {
 	// even if no LMDB changes were detected, to make sure we occasionally write
 	// a fresh snapshot.
 	StorageForceSnapshotInterval time.Duration `yaml:"storage_force_snapshot_interval"`
+
+	// MemoryDownloadedSnapshots defines how many downloaded compressed snapshots
+	// we are allowed to keep in memory for each database (minimum: 1, default: 3).
+	// Setting this higher allows us to keep downloading snapshots for different
+	// instances, even if one download is experiencing a hiccup.
+	// These will transition to 'memory_decompressed_snapshots' once a slot opens
+	// up in there.
+	// Increasing this can speed up processing at the cost of memory.
+	MemoryDownloadedSnapshots int `yaml:"memory_downloaded_snapshots"`
+
+	// MemoryDecompressedSnapshots defines how many decompressed snapshots
+	// we are allowed to keep in memory for each database (minimum: 1, default: 2).
+	// Keep in mind that decompressed snapshots are typically 3-10x larger than
+	// the downloaded compressed snapshots.
+	// Increasing this can speed up processing at the cost of memory.
+	MemoryDecompressedSnapshots int `yaml:"memory_decompressed_snapshots"`
 
 	// LMDBScrapeSmaps enabled the scraping of /proc/smaps for LMDB stats
 	LMDBScrapeSmaps bool `yaml:"lmdb_scrape_smaps"`
@@ -278,6 +302,12 @@ func (c Config) Check() error {
 	if c.StorageRetryCount < 1 {
 		return fmt.Errorf("storage_retry_count: positive number required")
 	}
+	if c.MemoryDownloadedSnapshots < 1 {
+		return fmt.Errorf("memory_downloaded_snapshots: positive number required")
+	}
+	if c.MemoryDecompressedSnapshots < 1 {
+		return fmt.Errorf("memory_decompressed_snapshots: positive number required")
+	}
 	return nil
 }
 
@@ -350,6 +380,8 @@ func Default() Config {
 		StorageRetryInterval:         DefaultStorageRetryInterval,
 		StorageRetryCount:            DefaultStorageRetryCount,
 		StorageForceSnapshotInterval: DefaultStorageForceSnapshotInterval,
+		MemoryDownloadedSnapshots:    DefaultMemoryDownloadedSnapshots,
+		MemoryDecompressedSnapshots:  DefaultMemoryDecompressedSnapshots,
 
 		Storage: Storage{
 			Cleanup: Cleanup{

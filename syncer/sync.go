@@ -195,6 +195,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			waitingForInstances.Remove(instance)
 			actualTxnID, localChanged, err := s.LoadOnce(
 				ctx, env, instance, update, lastSyncedTxnID)
+			update.Close() // returns the DecompressedSnapshotToken
 			if err != nil {
 				return err
 			}
