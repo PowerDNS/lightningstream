@@ -42,6 +42,22 @@ lmdb_log_stats_interval: 5m
 # the 'storage.cleanup' section.
 #storage_force_snapshot_interval: 4h
 
+# MemoryDownloadedSnapshots defines how many downloaded compressed snapshots
+# we are allowed to keep in memory for each database (minimum: 1, default: 3).
+# Setting this higher allows us to keep downloading snapshots for different
+# instances, even if one download is experiencing a hiccup.
+# These will transition to 'memory_decompressed_snapshots' once a slot opens
+# up in there.
+# Increasing this can speed up processing at the cost of memory.
+#memory_downloaded_snapshots: 3
+
+# MemoryDecompressedSnapshots defines how many decompressed snapshots
+# we are allowed to keep in memory for each database (minimum: 1, default: 2).
+# Keep in mind that decompressed snapshots are typically 3-10x larger than
+# the downloaded compressed snapshots.
+# Increasing this can speed up processing at the cost of memory.
+#memory_decompressed_snapshots: 2
+
 # Run a single merge cycle and then exit.
 # Equivalent to the --only-once flag.
 #only_once: false
