@@ -5,7 +5,7 @@ but it can only be used if the application natively supports Lightning Stream he
 precision timestamps for conflict resolution and the best performance.
 
 The PowerDNS Authoritative server supports native Lightning Stream headers starting from version 4.8. As of March 2023,
-the latest release with this support is 4.8.0-alpha1.
+the recommended release to use to test this feature is 4.8.0-alpha1.
 
 Native mode benefits include:
 
