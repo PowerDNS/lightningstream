@@ -84,6 +84,86 @@ lightningstream dump [flags]
   -n, --name string   Only dump given database name
 ```
 
+## lightningstream experimental
+
+Experimental commands, may disappear or change in any future version
+
+```
+lightningstream experimental [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for experimental
+```
+
+## lightningstream experimental help
+
+Help about any command
+
+### Synopsis
+
+Help provides help for any command in the application.
+Simply type experimental help [path to command] for full details.
+
+```
+lightningstream experimental help [command] [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for help
+```
+
+## lightningstream experimental migrate-timestamps
+
+Migrate timestamps from one DBI to another DBI
+
+### Synopsis
+
+
+Migrate timestamps from one DBI to a target DBI by key.
+
+Requirements: 
+
+- The keys must match between source and destination without any transformation.
+- The DBIs must not use special DBI flags.
+- The destination DBI must use the new 24+ byte native headers.
+- The source DBI must use the new header, or the old (v0.2.0) 8 byte
+  timestamp-only headers.
+
+This command can be used for both native DBIs, and for shadow DBIs.
+If the target timestamp is higher than the source, it will not be updated.
+
+The actual values are not compared, it blindly copies the timestamps. This is
+only useful during a migration where no new data is written.
+
+This command will abort the transaction and exit with an error if any value
+shorter than expected is encountered.
+
+Example to migrate shard records when moving from PowerDNS Auth 4.7 to 4.8:
+
+    ... migrate-timestamps --add-delete-entries --database shard --src-dbi _sync_shadow_records --dst-dbi records_v5
+
+
+
+```
+lightningstream experimental migrate-timestamps [flags]
+```
+
+### Options
+
+```
+      --add-delete-entries           Create 24-byte deletion headers for entries marked as deleted in the source database.
+  -d, --database string              Named database to operate on
+      --dst-dbi string               Destination DBI
+  -h, --help                         help for migrate-timestamps
+      --ignore-src-dbi-not-present   Do not exit with an error if the source DBI does not exist, ignore it.
+      --src-dbi string               Source DBI
+```
+
 ## lightningstream help
 
 Help about any command
