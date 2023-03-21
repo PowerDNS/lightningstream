@@ -145,7 +145,7 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 		// Signal failure to health tracker
 		r.storageListHealth.AddFailure(err)
 
-		return err
+		return fmt.Errorf("list snapshots: %w", err)
 	}
 
 	// Signal success to health tracker
