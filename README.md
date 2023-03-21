@@ -1,6 +1,6 @@
-# LightningStream
+# Lightning Stream
 
-LightningStream is a tool to stream Lightning Memory-Mapped Database (LMDB) changes to an S3 bucket in
+Lightning Stream is a tool to stream Lightning Memory-Mapped Database (LMDB) changes to an S3 bucket in
 near realtime. Receiving instances can update a local LMDB from these snapshots in near realtime to
 reflect remote changes, with a typical replication delay of a few seconds.
 
@@ -25,9 +25,9 @@ Easy cross compiling is not supported, because the LMDB bindings require CGo.
 ## Example in Docker Compose
 
 This repo includes an example of syncing the PowerDNS Authoritative Nameserver LMDB. It runs two DNS
-servers with each their own syncer, syncing to a bucket in a Minio server.
+servers, each with their own syncer, syncing to a bucket in a Minio server.
 
-The LightningStream config used can be found in `docker/pdns/lightningstream.yaml`. Note that the
+The Lightning Stream config used can be found in `docker/pdns/lightningstream.yaml`. Note that the
 config file contents can reference environment variables.
 
 To get it up and running:
