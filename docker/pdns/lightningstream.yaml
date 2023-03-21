@@ -23,6 +23,7 @@ storage:
     region: us-east-1
     bucket: lightningstream
     endpoint_url: http://minio:9000
+    create_bucket: true
   cleanup:
     enabled: true
     interval: 15m
