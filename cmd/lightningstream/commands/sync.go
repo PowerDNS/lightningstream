@@ -63,23 +63,33 @@ func runSync(receiveOnly bool) error {
 
 	eg, ctx := errgroup.WithContext(ctx)
 	for name, lc := range conf.LMDBs {
-		opt := syncer.Options{
-			ReceiveOnly: receiveOnly,
-		}
-		s, err := syncer.New(name, st, conf, lc, opt)
+		l := logrus.WithField("db", name)
+		env, err := syncer.OpenEnv(l, lc)
 		if err != nil {
 			return err
 		}
 
-		name := name
+		opt := syncer.Options{
+			ReceiveOnly: receiveOnly,
+		}
+		s, err := syncer.New(name, env, st, conf, lc, opt)
+		if err != nil {
+			return err
+		}
+
 		eg.Go(func() error {
+			defer func() {
+				if err := env.Close(); err != nil {
+					l.WithError(err).Error("Env close failed")
+				}
+			}()
 			err := s.Sync(ctx)
 			if err != nil {
 				if err == context.Canceled {
-					logrus.WithField("db", name).Error("Sync cancelled")
+					l.Error("Sync cancelled")
 					return err
 				}
-				logrus.WithError(err).WithField("db", name).Error("Sync failed")
+				l.WithError(err).Error("Sync failed")
 			}
 			return err
 		})
