@@ -756,7 +756,8 @@ func (m *KV) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
+			//m.Key = append(m.Key[:0], dAtA[iNdEx:postIndex]...)
+			m.Key = dAtA[iNdEx:postIndex:postIndex]
 			if m.Key == nil {
 				m.Key = []byte{}
 			}
@@ -790,7 +791,8 @@ func (m *KV) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Value = append(m.Value[:0], dAtA[iNdEx:postIndex]...)
+			//m.Value = append(m.Value[:0], dAtA[iNdEx:postIndex]...)
+			m.Value = dAtA[iNdEx:postIndex:postIndex]
 			if m.Value == nil {
 				m.Value = []byte{}
 			}
