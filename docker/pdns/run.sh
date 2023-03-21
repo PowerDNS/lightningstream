@@ -37,6 +37,7 @@ launch=lmdb
 lmdb-filename=/lmdb/instance-$instance/db
 lmdb-shards=1
 lmdb-random-ids=yes
+lmdb-flag-deleted=yes
 " > /etc/powerdns/pdns.conf
 
 pdns_server || (

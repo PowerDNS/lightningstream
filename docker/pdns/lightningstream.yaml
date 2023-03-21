@@ -2,41 +2,16 @@ instance: instance-${instance}
 lmdbs:
   main:
     path: /lmdb/instance-${instance}/db
-    dupsort_hack: true
+    schema_tracks_changes: true
     options:
       no_subdir: true
       create: true
-    dbi_options:
-      # WARNING: Only added because old snapshots are missing the flags,
-      #          only add when you are sure you need this.
-      pdns:
-        override_create_flags: 0
-      domains:
-        override_create_flags: MDB_INTEGERKEY
-      domains_0:
-        override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
-      keydata:
-        override_create_flags: MDB_INTEGERKEY
-      keydata_0:
-        override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
-      metadata:
-        override_create_flags: MDB_INTEGERKEY
-      metadata_0:
-        override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
-      tsig:
-        override_create_flags: MDB_INTEGERKEY
-      tsig_0:
-        override_create_flags: MDB_DUPSORT|MDB_DUPFIXED
   shard:
     path: /lmdb/instance-${instance}/db-0
+    schema_tracks_changes: true
     options:
       no_subdir: true
       create: true
-    dbi_options:
-      # WARNING: Only added because old snapshots are missing the flags,
-      #          only add when you are sure you need this.
-      records:
-        override_create_flags: 0
 
 storage:
   #type: fs
@@ -57,25 +32,3 @@ storage:
 http:
   address: ":8500"
 
-# log:
-#   level: info
-
-# health:
-#   storage_list:
-#     warn_duration: 5s
-#     error_duration: 15s
-#     interval: 1s
-#   storage_load:
-#     warn_duration: 5s
-#     error_duration: 15s
-#     interval: 1s
-#   storage_store:
-#     warn_duration: 5s
-#     error_duration: 15s
-#     interval: 1s
-#   start:
-#     warn_duration: 5s
-#     error_duration: 15s
-#     report_healthz: true
-#     report_metadata: true
-#     interval: 1s
