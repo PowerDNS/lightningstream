@@ -84,10 +84,10 @@ var (
 		// EvaluationInterval is the interval between healthz evaluation of the startup sequence
 		EvaluationInterval: 1 * time.Second,
 		// ReportHealthz controls whether or not a failing startup sequence will be included in healthz's overall status
-		// This can be used to prevent unwanted activity before LightningStream has completed an initial sync
+		// This can be used to prevent unwanted activity before Lightning Stream has completed an initial sync
 		ReportHealthz: false,
 		// ReportHealthz controls whether or not healthz's 'startup_[db name]' metadata field will be used to store the status of the startup sequence for each db
-		// This can be used to prevent unwanted activity before LightningStream has completed an initial sync
+		// This can be used to prevent unwanted activity before Lightning Stream has completed an initial sync
 		ReportMetadata: true,
 	}
 )

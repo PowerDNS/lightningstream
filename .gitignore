@@ -10,3 +10,5 @@
 .*.swp
 .*.swo
 .idea
+/.venv
+/site
