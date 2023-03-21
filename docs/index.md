@@ -34,7 +34,7 @@ their deletion timestamp. This allows LightningStream to provide **Eventual Cons
 
 If the application uses a [carefully designed data schema](schema.md), this approach can be used to support
 multiple simultaneously active writers. In other instances, it can often be used to sync data from one writer to
-multiple read-only receivers, or even with a single instance where a local persistent volume is not available.
+multiple read-only receivers. Or it can simply create a near real-time backup of a single instance.
 
 
 ## Open Source

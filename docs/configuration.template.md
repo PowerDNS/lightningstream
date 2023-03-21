@@ -49,8 +49,8 @@ instance: ${LS_INSTANCE}
 ```
 
 The instance name should be composed of safe characters, like ASCII letters, numbers, dashes and dots.
-It MUST NOT contain underscores, slashes, spaces or other special characters. Basically what is allowed
-in a raw domain name or hostname is safe.
+It MUST NOT contain underscores, slashes, spaces or other special characters. Basically, what is allowed
+in a hostname is safe.
 
 
 ## Storage

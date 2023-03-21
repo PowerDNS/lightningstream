@@ -43,9 +43,10 @@ LightningStream will pick it up and start syncing the new DBI to other instances
 ignore it until they are upgraded. The tricky part is how they will decide when they need to
 migrate the data.
 
-In this case, you cannot safely use a DBI that tells it was the current schema version is, because
-that one will be bumped as soon as the first instance performs a schema migration. The other
-instance will think the database is already upgraded and you may lose your most recent changes.
+In this case, you cannot safely use a common DBI that is shared between version to tell the application
+what the current schema version is, because that one will be increased as soon as the first instance
+performs a schema migration. The other instances will think the database is already upgraded, and you
+may lose your most recent changed.
 
 If you can prevent any new changes during your upgrade, or writes only go to the instance you
 upgrade first, this method can work.

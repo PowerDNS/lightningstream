@@ -75,10 +75,9 @@ records allow deletes to be propagated to other instances.
 
 !!! note
 
-    We will provide a mechanism to make LightningStream automatically clean old deleted entries in the future.
-    This requires cooperation from LightningStream, because it also needs to ignore old deleted entries in snapshots
-    and not recreate them.
-
+    We will provide a mechanism to make LightningStream automaticaly clean old deleted entries in the future.
+    LightningStream needs to be in charge of this, because it also needs to ignore old deleted entries in snapshots
+    to not recreate them.
 
 Applications MUST ignore unknown flags when reading, and they MUST NOT set or retain flags they do not understand. Any flag additions
 will be made with the understanding that applications are allowed to ignore them.
