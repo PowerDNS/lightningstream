@@ -45,7 +45,7 @@ migrate the data.
 
 In this case, you cannot safely use a DBI that tells it was the current schema version is, because
 that one will be bumped as soon as the first instance performs a schema migration. The other
-instance will think the database is already upgraded and you may lose your most recent changed.
+instance will think the database is already upgraded and you may lose your most recent changes.
 
 If you can prevent any new changes during your upgrade, or writes only go to the instance you
 upgrade first, this method can work.

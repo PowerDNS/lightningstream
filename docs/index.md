@@ -2,7 +2,7 @@
 
 LightningStream is a tool to sync changes between a local LMDB (Lightning Memory-Mapped Database) and 
 an S3 bucket in near real-time. If the application schema is compatible, this can be used in a multi-writer
-setup where any instance can update any data, with a global eventually consistent view of the data in seconds.
+setup where any instance can update any data, with a global eventually-consistent view of the data in seconds.
 
 Our main target application is the sync of LMDB databases in the 
 [PowerDNS Authoritative Nameserver](https://doc.powerdns.com/authoritative/) (PDNS Auth). We are excited
@@ -11,7 +11,7 @@ for keeping DNSSEC keys in sync.
 Check the [Getting Started](getting-started.md) section to understand how you can use LightningStream together
 with the PowerDNS Authoritative server.
 
-Its use is not limited to the PowerDNS Authoritative server, however. LightningStream does not make any assumptions
+Its use is not limited to the PowerDNS Authoritative server however. LightningStream does not make any assumptions
 about the contents of the LMDB, and can be used to sync LMDBs for other applications, as long as the data is stored
 using a [compatible schema](schema.md).
 
@@ -29,7 +29,7 @@ Its operation boils down to the following:
   and merges the data into the local LMDB. 
 
 The merge of a key is performed based on a per-record last-modified timestamp:
-the most recent version of the entry wins. Deletes entries are cleared and marked as deleted, together with
+the most recent version of the entry wins. Deleted entries are cleared and marked as deleted, together with
 their deletion timestamp. This allows LightningStream to provide **Eventual Consistency** across all nodes.
 
 If the application uses a [carefully designed data schema](schema.md), this approach can be used to support
@@ -43,7 +43,7 @@ This is the documentation for the Open Source edition of LightningStream.
 For more information on how we provide support for Open Source products, please read
 [our blog post on this topic](https://blog.powerdns.com/2016/01/18/open-source-support-out-in-the-open/).
 
-PowerDNS also offers an Enterprise edition that includes professional support, advanced features, deployment
+PowerDNS also offers an Enterprise edition of LightningStream that includes professional support, advanced features, deployment
 tooling for large deployments, Kubernetes integration, and more.
 
 

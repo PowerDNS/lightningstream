@@ -12,7 +12,7 @@ Native mode benefits include:
 - Nanosecond precision for sync conflict resolution.
 - No duplication of data in shadow tables.
 - Better performance, because data does not need to be copied to and from shadow tables.
-- Many operations can be performed using read locks, which do no block other readers and writers.
+- Many operations can be performed using read locks, which do not block other readers and writers.
 
 ## Native header
 
@@ -75,7 +75,7 @@ records allow deletes to be propagated to other instances.
 
 !!! note
 
-    We will provide a mechanism to make LightningStream automaticaly clean old deleted entries in the future.
+    We will provide a mechanism to make LightningStream automatically clean old deleted entries in the future.
     This requires cooperation from LightningStream, because it also needs to ignore old deleted entries in snapshots
     and not recreate them.
 

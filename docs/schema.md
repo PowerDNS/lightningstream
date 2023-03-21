@@ -45,14 +45,14 @@ has changed since the last cache update.
 If an application uses **sequential IDs** as keys, using multiple writers will quickly result in a conflict, because it is
 very likely that two instances will try to create a new entry using the same ID.
 
-**Natural keys**, on the other hand, do not have this problem. For example, if the entry describe a domain name, use
+**Natural keys**, on the other hand, do not have this problem. For example, if an entry describes a domain name, use
 the domain name itself as the key, instead of a number, if possible. Even if two instances try to create the same
 entry, it will not result in an inconsistent database, as the natural key automatically prevents the addition of
 duplicate domain entries. A **hash** of the fields that make up the uniqueness constraint provides similar guarantees.
 
 If natural keys cannot be used, use **random or globally unique IDs like UUIDs** to reduce the chance of an ID clash.
 The larger the ID, the smaller the chance of a clash. In this case you do need to be aware that duplicate entries can
-occur, for example if two users try to add an `example.com` zone on different instances at the same time: you will end
+occur, for example if two users try to add an `example.com` entry on different instances at the same time: you will end
 up with two `example.com` entries with different IDs.
 
 

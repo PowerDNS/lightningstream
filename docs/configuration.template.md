@@ -126,7 +126,7 @@ as it is included in the snapshot filenames. The name should only contain
 lowercase letters and must not contains spaces, underscores or special characters.
 If you are bad at naming things and have only one database, "main" is a good safe choice.
 
-A basic example for an LMDB with a native schema:
+A basic example for an LMDB with a [native schema](schema-native.md):
 
 ```yaml
 lmdbs:

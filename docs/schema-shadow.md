@@ -49,7 +49,7 @@ When the schema contains DBIs with `MDB_DUPSORT` set, LightningStream needs to p
 its merge algorithm requires unique keys. The `dupsort_hack` rewrites keys in the shadow tables for these DBIs to
 include part of the value, to make all keys unique.
 
-For these DBIs, every time a change is detected LightningStream current needs to completely rewrite the shadow DBI, and
+For these DBIs, every time a change is detected LightningStream currently needs to completely rewrite the shadow DBI, and
 the original DBI if it needs to sync back changes from remote instances.
 
 ### Long write locks
@@ -63,6 +63,6 @@ This likely constrains its use to relatively small LMDBs with thousands of recor
 
 ### Double LMDB disk and memory usage
 
-The need to create the shadow DBIs effectively doubles the requires disk space and memory usage of the LMDBs.
+The need to create the shadow DBIs effectively doubles the required disk space and memory usage of the LMDBs.
 
 
