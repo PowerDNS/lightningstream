@@ -1,5 +1,5 @@
-site_name: PowerDNS LightningStream
-site_url: https://github.com/PowerDNS/lightningstream
+site_name: PowerDNS Lightning Stream
+site_url: https://doc.powerdns.com/lightningstream/
 repo_url: https://github.com/PowerDNS/lightningstream
 copyright: PowerDNS.com B.V.
 markdown_extensions:
@@ -11,7 +11,7 @@ theme:
   name: readthedocs
 
 nav:
-  - 'LightningStream Introduction': index.md
+  - 'Lightning Stream Introduction': index.md
   - 'Configuration': configuration.md
   - 'Commands': commands.md
   - 'PowerDNS Integration':

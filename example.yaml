@@ -1,4 +1,4 @@
-# This is a LightningStream (LS) example configuration for use with the
+# This is a Lightning Stream (LS) example configuration for use with the
 # the PowerDNS Authoritative DNS server (PDNS Auth) LMDB backend.
 # This example configuration is based on version 4.8 of PDNS Auth, which
 # uses a native LS compatible schema. This version has not been released yet as
@@ -232,7 +232,7 @@ log:
   #  error_duration: 5m0s
   #  # If true, a failing startup sequence will be included in the healthz
   #  # overall status. This can be used to prevent marking the node ready
-  #  # before LightningStream has completed an initial sync.
+  #  # before Lightning Stream has completed an initial sync.
   #  report_healthz: false
   #  # Controls if the healthz 'startup_[db name]' metadata field will be used
   #  # to report the status of the startup sequence for each db.

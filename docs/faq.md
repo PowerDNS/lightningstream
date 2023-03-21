@@ -1,6 +1,6 @@
 
 
-### Why is it called LightningStream?
+### Why is it called Lightning Stream?
 
 The project was inspired by [Litestream](https://litestream.io/), which does something similar for sqlite3 databases,
 but without the simultaneous multi-writer capabilities. (TODO: rewrite)

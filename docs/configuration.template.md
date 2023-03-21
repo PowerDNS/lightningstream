@@ -11,7 +11,7 @@ The configuration consists of the following general sections:
 - Sync parameter tweaking
 - Monitoring and logging
 
-LightningStream allows environment variables in the YAML configuration files, e.g.:
+Lightning Stream allows environment variables in the YAML configuration files, e.g.:
 
 ```yaml
 instance: ${LS_INSTANCE}
@@ -55,7 +55,7 @@ in a hostname is safe.
 
 ## Storage
 
-LightningStream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support
+Lightning Stream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support
 different storage backends. At the moment of writing, it supports S3 and local filesystem
 backends.
 
@@ -118,7 +118,7 @@ storage:
 
 ## LMDBs
 
-The `lmdbs` section configures which LMDB databases to sync. One LightningStream instance can sync more than
+The `lmdbs` section configures which LMDB databases to sync. One Lightning Stream instance can sync more than
 one LMDB database. Snapshots are independent per LMDB.
 
 Every database requires a name that must not change over time,
@@ -146,7 +146,7 @@ Some commonly use LMDB options:
 - `create`: create the LMDB if it does not exist yet.
 - `map_size`: the LMDB map size, which is the maximum size the LMDB can grow to.
 
-The `schema_tracks_changes` indicates if the LMDB supported the [native LightningStream schema](schema-native.md).
+The `schema_tracks_changes` indicates if the LMDB supported the [native Lightning Stream schema](schema-native.md).
 
 If the LMDB does not support a native schema, you can use a configuration like this:
 

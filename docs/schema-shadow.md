@@ -1,13 +1,13 @@
 
 # Non-native (shadow) mode
 
-When the LMDB is not in a native format, LightningStream needs to create _shadow_ copies of the data DBIs to keep track of
+When the LMDB is not in a native format, Lightning Stream needs to create _shadow_ copies of the data DBIs to keep track of
 change timestamps. Every second it will check if the local LMDB has changes (last transaction ID has changed), and merge
 the local data into the shadow DBIs when changes have been detected. This requires a full scan over all records.
 
 Non-native mode can be used by setting the `schema_tracks_changes` setting is set to `false`.
 
-If the LMDB also uses `MDB_DUPSORT` functionality, LightningStream can support it by setting `dupsort_hack` to `true`.
+If the LMDB also uses `MDB_DUPSORT` functionality, Lightning Stream can support it by setting `dupsort_hack` to `true`.
 This comes with additional caveats. `MDB_DUPSORT` is not supported at all in native mode.
 
 ## Older PowerDNS Authoritative versions
@@ -31,8 +31,8 @@ Consider this example, in order of execution, but within one second or so:
 
 - On instance A, key "example" is set to "A".
 - On instance B, key "example" is set to "B".
-- LightningStream on B performs a sync iteration. 
-- LightningStream on A performs a sync iteration.
+- Lightning Stream on B performs a sync iteration. 
+- Lightning Stream on A performs a sync iteration.
 
 In this example, the value "A" will end up with a later timestamp than value "B", and the instances will soon converge
 on this value "A", which is an older value.
@@ -45,11 +45,11 @@ will always immediately see the changes it applied, and in the right order.
 
 ### The dupsort_hack
 
-When the schema contains DBIs with `MDB_DUPSORT` set, LightningStream needs to perform an additional transformation, as
+When the schema contains DBIs with `MDB_DUPSORT` set, Lightning Stream needs to perform an additional transformation, as
 its merge algorithm requires unique keys. The `dupsort_hack` rewrites keys in the shadow tables for these DBIs to
 include part of the value, to make all keys unique.
 
-For these DBIs, every time a change is detected LightningStream currently needs to completely rewrite the shadow DBI, and
+For these DBIs, every time a change is detected Lightning Stream currently needs to completely rewrite the shadow DBI, and
 the original DBI if it needs to sync back changes from remote instances.
 
 ### Long write locks

@@ -1,10 +1,10 @@
 # Native header schema
 
 Native mode is used when the `schema_tracks_changes` setting is set to `true`. This is the recommended mode of operation,
-but it can only be used if the application natively supports LightningStream headers. This mode provides nanosecond
+but it can only be used if the application natively supports Lightning Stream headers. This mode provides nanosecond
 precision timestamps for conflict resolution and the best performance.
 
-The PowerDNS Authoritative server supports native LightningStream headers starting from version 4.8. As of March 2023,
+The PowerDNS Authoritative server supports native Lightning Stream headers starting from version 4.8. As of March 2023,
 the latest release with this support is 4.8.0-alpha1.
 
 Native mode benefits include:
@@ -16,7 +16,7 @@ Native mode benefits include:
 
 ## Native header
 
-The native LightningStream header (LS header) MUST be added to every value in the LMDB. The basic header is 24 bytes long, with the
+The native Lightning Stream header (LS header) MUST be added to every value in the LMDB. The basic header is 24 bytes long, with the
 possibility to extend this with additional 8-byte blocks in the future. 
 
 The header consists of the following fields:
@@ -75,8 +75,8 @@ records allow deletes to be propagated to other instances.
 
 !!! note
 
-    We will provide a mechanism to make LightningStream automaticaly clean old deleted entries in the future.
-    LightningStream needs to be in charge of this, because it also needs to ignore old deleted entries in snapshots
+    We will provide a mechanism to make Lightning Stream automaticaly clean old deleted entries in the future.
+    Lightning Stream needs to be in charge of this, because it also needs to ignore old deleted entries in snapshots
     to not recreate them.
 
 Applications MUST ignore unknown flags when reading, and they MUST NOT set or retain flags they do not understand. Any flag additions
@@ -98,7 +98,7 @@ not been worked out yet.
 
 ## DBI flag limitations
 
-In native mode, LightningStream only supports DBIs without any special DBI flags. More specifically, the following DBI flags
+In native mode, Lightning Stream only supports DBIs without any special DBI flags. More specifically, the following DBI flags
 are NOT supported in native mode:
 
 - `MDB_DUPSORT`
@@ -113,7 +113,7 @@ The reverse keys are currently also not supported in non-native mode, or at leas
 
 ## Old timestamp-only headers
 
-Before version 0.3.0, LightningStream used a simpler header with only an 8 byte timestamp. No native application ever used this
+Before version 0.3.0, Lightning Stream used a simpler header with only an 8 byte timestamp. No native application ever used this
 (it was used in the old shadow DBIs), but you may see references to this in parts of the code or older documentation.
 These are obsolete and no longer supported.
 

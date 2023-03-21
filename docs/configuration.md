@@ -16,7 +16,7 @@ The configuration consists of the following general sections:
 - Sync parameter tweaking
 - Monitoring and logging
 
-LightningStream allows environment variables in the YAML configuration files, e.g.:
+Lightning Stream allows environment variables in the YAML configuration files, e.g.:
 
 ```yaml
 instance: ${LS_INSTANCE}
@@ -60,7 +60,7 @@ in a raw domain name or hostname is safe.
 
 ## Storage
 
-LightningStream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support
+Lightning Stream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support
 different storage backends. At the moment of writing, it supports S3 and local filesystem
 backends.
 
@@ -123,7 +123,7 @@ storage:
 
 ## LMDBs
 
-The `lmdbs` section configures which LMDB databases to sync. One LightningStream instance can sync more than
+The `lmdbs` section configures which LMDB databases to sync. One Lightning Stream instance can sync more than
 one LMDB database. Snapshots are independent per LMDB.
 
 Every database requires a name that must not change over time,
@@ -151,7 +151,7 @@ Some commonly use LMDB options:
 - `create`: create the LMDB if it does not exist yet.
 - `map_size`: the LMDB map size, which is the maximum size the LMDB can grow to.
 
-The `schema_tracks_changes` indicates if the LMDB supported the [native LightningStream schema](schema-native.md).
+The `schema_tracks_changes` indicates if the LMDB supported the [native Lightning Stream schema](schema-native.md).
 
 If the LMDB does not support a native schema, you can use a configuration like this:
 
@@ -212,7 +212,7 @@ This example configuration assumes a PowerDNS Authoritative server setup with na
 explains every available option.
 
 ```yaml
-# This is a LightningStream (LS) example configuration for use with the
+# This is a Lightning Stream (LS) example configuration for use with the
 # the PowerDNS Authoritative DNS server (PDNS Auth) LMDB backend.
 # This example configuration is based on version 4.8 of PDNS Auth, which
 # uses a native LS compatible schema. This version has not been released yet as
@@ -446,7 +446,7 @@ log:
   #  error_duration: 5m0s
   #  # If true, a failing startup sequence will be included in the healthz
   #  # overall status. This can be used to prevent marking the node ready
-  #  # before LightningStream has completed an initial sync.
+  #  # before Lightning Stream has completed an initial sync.
   #  report_healthz: false
   #  # Controls if the healthz 'startup_[db name]' metadata field will be used
   #  # to report the status of the startup sequence for each db.
