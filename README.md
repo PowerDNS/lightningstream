@@ -19,7 +19,7 @@ with the PowerDNS Authoritative server.
 
 Its use is not limited to the PowerDNS Authoritative server, however. Lightning Stream does not make any assumptions
 about the contents of the LMDB, and can be used to sync LMDBs for other applications, as long as the data is stored
-using a [compatible schema](schema.md).
+using a [compatible schema](docs/schema.md).
 
 
 ## Basic Operation
@@ -38,7 +38,7 @@ The merge of a key is performed based on a per-record last-modified timestamp:
 the most recent version of the entry wins. Deleted entries are cleared and marked as deleted, together with
 their deletion timestamp. This allows Lightning Stream to provide **Eventual Consistency** across all nodes.
 
-If the application uses a [carefully designed data schema](schema.md), this approach can be used to support
+If the application uses a [carefully designed data schema](docs/schema.md), this approach can be used to support
 multiple simultaneously active writers. In other instances, it can often be used to sync data from one writer to
 multiple read-only receivers. Or it can simply create a near real-time backup of a single instance.
 

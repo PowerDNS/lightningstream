@@ -1,6 +1,7 @@
 site_name: PowerDNS Lightning Stream
 site_url: https://doc.powerdns.com/lightningstream/
 repo_url: https://github.com/PowerDNS/lightningstream
+edit_uri: https://github.com/PowerDNS/lightningstream/edit/main/docs/
 copyright: PowerDNS.com B.V.
 markdown_extensions:
  - toc:
