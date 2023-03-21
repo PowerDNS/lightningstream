@@ -27,13 +27,7 @@ const (
 
 // Sync opens the env and starts the two-way sync loop.
 func (s *Syncer) Sync(ctx context.Context) error {
-	// Open the env
-	env, err := s.openEnv()
-	if err != nil {
-		return err
-	}
-	defer s.closeEnv(env)
-
+	env := s.env
 	status.AddLMDBEnv(s.name, env)
 	defer status.RemoveLMDBEnv(s.name)
 

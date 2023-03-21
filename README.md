@@ -1,4 +1,3 @@
-
 # Lightning Stream
 
 [User documentation can be found here](https://doc.powerdns.com/lightningstream/)
@@ -6,7 +5,6 @@
 ![Go build](https://github.com/PowerDNS/lightningstream/actions/workflows/go.yml/badge.svg)
 ![Documentation build](https://github.com/PowerDNS/lightningstream/actions/workflows/documentation.yml/badge.svg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/PowerDNS/lightningstream.svg)](https://pkg.go.dev/github.com/PowerDNS/lightningstream)
-
 
 Lightning Stream is a tool to sync changes between a local LMDB (Lightning Memory-Mapped Database) and 
 an S3 bucket in near real-time. If the application schema is compatible, this can be used in a multi-writer
@@ -62,7 +60,7 @@ Easy cross compiling is not supported, because the LMDB bindings require CGo.
 ## Example in Docker Compose
 
 This repo includes an example of syncing the PowerDNS Authoritative Nameserver LMDB. It runs two DNS
-servers with each their own syncer, syncing to a bucket in a MinIO server.
+servers, each with their own syncer, syncing to a bucket in a MinIO server.
 
 The Lightning Stream config used can be found in `docker/pdns/lightningstream.yaml`. Note that the
 config file contents can reference environment variables.

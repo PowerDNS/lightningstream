@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/syncer/cleaner"
@@ -13,7 +14,7 @@ import (
 	"powerdns.com/platform/lightningstream/status/starttracker"
 )
 
-func New(name string, st simpleblob.Interface, c config.Config, lc config.LMDB, opt Options) (*Syncer, error) {
+func New(name string, env *lmdb.Env, st simpleblob.Interface, c config.Config, lc config.LMDB, opt Options) (*Syncer, error) {
 	l := logrus.WithField("db", name)
 
 	// Start cleaner, but make sure it is disabled if we run in receive-only mode
@@ -35,6 +36,7 @@ func New(name string, st simpleblob.Interface, c config.Config, lc config.LMDB, 
 		opt:                opt,
 		shadow:             true,
 		generation:         0,
+		env:                env,
 		lastByInstance:     make(map[string]time.Time),
 		cleaner:            cl,
 		storageStoreHealth: healthtracker.New(c.Health.StorageStore, fmt.Sprintf("%s_storage_store", name), "write to storage backend"),
@@ -63,6 +65,7 @@ type Syncer struct {
 	l          logrus.FieldLogger
 	shadow     bool // use shadow database for timestamps?
 	generation uint64
+	env        *lmdb.Env
 
 	// lastByInstance tracks the last snapshot loaded by instance, so that the
 	// cleaner can make safe decisions about when to remove stale snapshots.

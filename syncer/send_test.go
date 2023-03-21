@@ -37,15 +37,12 @@ func doBenchmarkSyncerSendOnce(b *testing.B, native, dupsort bool) {
 		extraDBIFlags = lmdb.DupSort
 	}
 
-	syncer, err := New("test", memory.New(), config.Config{}, config.LMDB{
-		SchemaTracksChanges: native,
-		DupSortHack:         dupsort,
-	}, Options{})
-	require.NoError(t, err)
-
 	l, hook := test.NewNullLogger()
 	_ = hook
-	syncer.l = l
+	lc := config.LMDB{
+		SchemaTracksChanges: native,
+		DupSortHack:         dupsort,
+	}
 
 	// Fixed value
 	// We add a header, but we can also benchmark this as all app value
@@ -53,10 +50,14 @@ func doBenchmarkSyncerSendOnce(b *testing.B, native, dupsort bool) {
 	header.PutBasic(val, header.TimestampFromTime(now), 42, header.NoFlags)
 	val = append(val, "TESTING-123456789"...)
 
-	err = lmdbenv.TestEnv(func(env *lmdb.Env) error {
+	err := lmdbenv.TestEnv(func(env *lmdb.Env) error {
 		info, err := env.Info()
 		require.NoError(t, err)
 		t.Logf("env info: %+v", info)
+
+		syncer, err := New("test", env, memory.New(), config.Config{}, lc, Options{})
+		require.NoError(t, err)
+		syncer.l = l
 
 		// Fill some data to dump
 		err = env.Update(func(txn *lmdb.Txn) error {
