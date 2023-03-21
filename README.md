@@ -1,16 +1,53 @@
+
 # Lightning Stream
 
-Lightning Stream is a tool to stream Lightning Memory-Mapped Database (LMDB) changes to an S3 bucket in
-near realtime. Receiving instances can update a local LMDB from these snapshots in near realtime to
-reflect remote changes, with a typical replication delay of a few seconds.
+[User documentation can be found here](https://doc.powerdns.com/lightningstream/)
 
-It is inspired by [Litestream](https://litestream.io/), which does something similar for sqlite3 databases,
-but without the realtime receiving capabilities.
+![Go build](https://github.com/PowerDNS/lightningstream/actions/workflows/go.yml/badge.svg)
+![Documentation build](https://github.com/PowerDNS/lightningstream/actions/workflows/documentation.yml/badge.svg)
+[![Go Reference](https://pkg.go.dev/badge/github.com/PowerDNS/lightningstream.svg)](https://pkg.go.dev/github.com/PowerDNS/lightningstream)
+
+
+Lightning Stream is a tool to sync changes between a local LMDB (Lightning Memory-Mapped Database) and 
+an S3 bucket in near real-time. If the application schema is compatible, this can be used in a multi-writer
+setup where any instance can update any data, with a global eventually-consistent view of the data in seconds.
+
+Our main target application is the sync of LMDB databases in the 
+[PowerDNS Authoritative Nameserver](https://doc.powerdns.com/authoritative/) (PDNS Auth). We are excited
+about how Lightning Stream simplifies running multiple distributed PowerDNS Authoritative servers, with full support
+for keeping DNSSEC keys in sync.
+Check the [Getting Started](docs/getting-started.md) section to understand how you can use Lightning Stream together
+with the PowerDNS Authoritative server.
+
+Its use is not limited to the PowerDNS Authoritative server, however. Lightning Stream does not make any assumptions
+about the contents of the LMDB, and can be used to sync LMDBs for other applications, as long as the data is stored
+using a [compatible schema](schema.md).
+
+
+## Basic Operation
+
+Lightning Stream is deployed next to an application that uses an LMDB for its data storage:
+
+![Overview](docs/images/lightningstream-overview.png)
+
+Its operation boils down to the following:
+
+- Whenever it detects that the LMDB has changed, it writes a snapshot of the data to an S3 bucket.
+- Whenever it sees a new snapshot written by a _different instance_ in the S3 bucket, it downloads the snapshot
+  and merges the data into the local LMDB. 
+
+The merge of a key is performed based on a per-record last-modified timestamp:
+the most recent version of the entry wins. Deleted entries are cleared and marked as deleted, together with
+their deletion timestamp. This allows Lightning Stream to provide **Eventual Consistency** across all nodes.
+
+If the application uses a [carefully designed data schema](schema.md), this approach can be used to support
+multiple simultaneously active writers. In other instances, it can often be used to sync data from one writer to
+multiple read-only receivers. Or it can simply create a near real-time backup of a single instance.
 
 
 ## Building
 
-At the moment of writing, this project requires Go 1.17. Please check the `go.mod` file for the current
+At the moment of writing, this project requires Go 1.19. Please check the `go.mod` file for the current
 version.
 
 To install the binary in a given location, simply run:
@@ -25,7 +62,7 @@ Easy cross compiling is not supported, because the LMDB bindings require CGo.
 ## Example in Docker Compose
 
 This repo includes an example of syncing the PowerDNS Authoritative Nameserver LMDB. It runs two DNS
-servers with each their own syncer, syncing to a bucket in a Minio server.
+servers with each their own syncer, syncing to a bucket in a MinIO server.
 
 The Lightning Stream config used can be found in `docker/pdns/lightningstream.yaml`. Note that the
 config file contents can reference environment variables.
@@ -74,7 +111,19 @@ To view a dump of the LMDB contents:
     docker/pdns/dump-lmdb -i 1
     docker/pdns/dump-lmdb -i 2
 
-You can browse the snapshots in Minio at <http://localhost:4731/buckets/lightningstream/browse>
+You can browse the snapshots in MinIO at <http://localhost:4731/buckets/lightningstream/browse>
 (login with minioadmin / minioadmin).
+
+
+
+## Open Source
+
+This is the documentation for the Open Source edition of Lightning Stream.
+For more information on how we provide support for Open Source products, please read
+[our blog post on this topic](https://blog.powerdns.com/2016/01/18/open-source-support-out-in-the-open/).
+
+PowerDNS also offers an Enterprise edition of Lightning Stream that includes professional support, advanced features, deployment
+tooling for large deployments, Kubernetes integration, and more.
+
 
 

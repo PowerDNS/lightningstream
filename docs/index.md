@@ -11,7 +11,7 @@ for keeping DNSSEC keys in sync.
 Check the [Getting Started](getting-started.md) section to understand how you can use Lightning Stream together
 with the PowerDNS Authoritative server.
 
-Its use is not limited to the PowerDNS Authoritative server however. Lightning Stream does not make any assumptions
+Its use is not limited to the PowerDNS Authoritative server, however. Lightning Stream does not make any assumptions
 about the contents of the LMDB, and can be used to sync LMDBs for other applications, as long as the data is stored
 using a [compatible schema](schema.md).
 

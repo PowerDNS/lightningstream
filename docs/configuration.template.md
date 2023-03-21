@@ -63,9 +63,9 @@ backends.
 ### S3 backend
 
 This is currently the only backend that makes sense for a production environment. It stores
-snapshots in an S3 or compatible storage. We have tested it against Amazon AWS S3 and Minio servers.
+snapshots in an S3 or compatible storage. We have tested it against Amazon AWS S3 and MinIO servers.
 
-Minio example for testing without TLS:
+MinIO example for testing without TLS:
 
 ```yaml
 storage:

@@ -54,8 +54,8 @@ instance: ${LS_INSTANCE}
 ```
 
 The instance name should be composed of safe characters, like ASCII letters, numbers, dashes and dots.
-It MUST NOT contain underscores, slashes, spaces or other special characters. Basically what is allowed
-in a raw domain name or hostname is safe.
+It MUST NOT contain underscores, slashes, spaces or other special characters. Basically, what is allowed
+in a hostname is safe.
 
 
 ## Storage
@@ -68,9 +68,9 @@ backends.
 ### S3 backend
 
 This is currently the only backend that makes sense for a production environment. It stores
-snapshots in an S3 or compatible storage. We have tested it against Amazon AWS S3 and Minio servers.
+snapshots in an S3 or compatible storage. We have tested it against Amazon AWS S3 and MinIO servers.
 
-Minio example for testing without TLS:
+MinIO example for testing without TLS:
 
 ```yaml
 storage:
@@ -131,7 +131,7 @@ as it is included in the snapshot filenames. The name should only contain
 lowercase letters and must not contains spaces, underscores or special characters.
 If you are bad at naming things and have only one database, "main" is a good safe choice.
 
-A basic example for an LMDB with a native schema:
+A basic example for an LMDB with a [native schema](schema-native.md):
 
 ```yaml
 lmdbs:
