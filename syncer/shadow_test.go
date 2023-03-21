@@ -39,12 +39,12 @@ func TestSyncer_shadow(t *testing.T) {
 	ts2 := testTS(2)
 	ts3 := testTS(3)
 
-	s, err := New("test", nil, config.Config{}, config.LMDB{}, Options{})
-	assert.NoError(t, err)
+	err := lmdbenv.TestEnv(func(env *lmdb.Env) error {
+		s, err := New("test", env, nil, config.Config{}, config.LMDB{}, Options{})
+		assert.NoError(t, err)
 
-	err = lmdbenv.TestEnv(func(env *lmdb.Env) error {
 		// Initial data
-		err := env.Update(func(txn *lmdb.Txn) error {
+		err = env.Update(func(txn *lmdb.Txn) error {
 			// First insert the initial data into the main database
 			dbi, err := txn.OpenDBI("foo", lmdb.Create)
 			assert.NoError(t, err)

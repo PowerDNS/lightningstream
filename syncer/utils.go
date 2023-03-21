@@ -9,10 +9,7 @@ import (
 	"time"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/c2h5oh/datasize"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/lmdbenv"
 	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/stats"
@@ -81,37 +78,6 @@ func (s *Syncer) instanceID() string {
 // instanceID returns a safe instance name
 func (s *Syncer) generationID() string {
 	return fmt.Sprintf("G-%016x", s.generation)
-}
-
-// openEnv opens the LMDB env with the right options
-func (s *Syncer) openEnv() (env *lmdb.Env, err error) {
-	s.l.WithField("lmdbpath", s.lc.Path).Info("Opening LMDB")
-	env, err = lmdbenv.NewWithOptions(s.lc.Path, s.lc.Options)
-	if err != nil {
-		return nil, err
-	}
-
-	// Print some env info
-	info, err := env.Info()
-	if err != nil {
-		return nil, err
-	}
-	s.l.WithFields(logrus.Fields{
-		"MapSize":   datasize.ByteSize(info.MapSize).HumanReadable(),
-		"LastTxnID": info.LastTxnID,
-	}).Info("Env info")
-
-	// TODO: Perhaps check data if SchemaTracksChanges is set. Check if
-	//       the timestamp is in a reasonable range or 0.
-
-	return env, nil
-}
-
-// closeEnv closes the LMDB env, logging any unexpected errors for easy defer
-func (s *Syncer) closeEnv(env *lmdb.Env) {
-	if err := env.Close(); err != nil {
-		s.l.WithError(err).Warn("Env close returned error")
-	}
 }
 
 // readDBI reads a DBI into a snapshot DBI.

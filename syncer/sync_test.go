@@ -13,7 +13,7 @@ import (
 	"github.com/PowerDNS/simpleblob"
 	"github.com/PowerDNS/simpleblob/backends/memory"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/config/logger"
 	"powerdns.com/platform/lightningstream/lmdbenv"
@@ -23,7 +23,7 @@ import (
 
 const testLMDBName = "default"
 const testDBIName = "test"
-const tick = 100 * time.Millisecond
+const tick = 10 * time.Millisecond
 
 func TestSyncer_Sync_startup(t *testing.T) {
 	t.Run("with-timestamped-schema", func(t *testing.T) {
@@ -44,6 +44,13 @@ func doTest(t *testing.T, withHeader bool) {
 	syncerA, envA := createInstance(t, "a", st, withHeader)
 	syncerB, envB := createInstance(t, "b", st, withHeader)
 
+	// For some reason trying to close the envs in this test segfaults on Linux (not on macOS).
+	// It appears like this is caused by the syncer still running after cancellation
+	// (and thus after the env is closed), but I did not get to the bottom of this yet.
+	// [signal SIGSEGV: segmentation violation code=0x1 addr=0x7fd015132090 pc=0x8dc942]
+	//defer envA.Close()
+	//defer envB.Close()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	ctxA, cancelA := context.WithCancel(ctx)
@@ -56,45 +63,35 @@ func doTest(t *testing.T, withHeader bool) {
 	go runSync(ctxA, syncerA)
 
 	t.Log("----------")
-	time.Sleep(2 * tick)
-	t.Log("----------")
 
 	// Expecting one snapshot on startup, because not empty
-	logSnapshotList(t, st)
-	entries := listInstanceSnapshots(st, "a")
-	assert.Len(t, entries, 1, "A")
+	requireSnapshotsLenWait(t, st, 1, "A")
 
 	// Start syncer B with an empty LMDB
+	// Starting with an empty LMDB is a special case that will not trigger any
+	// local snapshot.
 	t.Log("Starting syncer B")
 	go runSync(ctxB, syncerB)
 
 	t.Log("----------")
-	time.Sleep(2 * tick)
-	t.Log("----------")
 
-	// No snapshot, because empty
-	logSnapshotList(t, st)
-	entries = listInstanceSnapshots(st, "b")
-	assert.Len(t, entries, 0, "B")
+	// Wait until the data from A was synced to B
+	assertKeyWait(t, envB, "foo", "v1", withHeader)
 
-	assertKey(t, envB, "foo", "v1", withHeader)
+	// No snapshot made by B, because we started empty
+	requireSnapshotsLenWait(t, st, 0, "B")
 
 	// Now set something in B
 	setKey(t, envB, "foo", "v2", withHeader)
 
 	t.Log("----------")
-	time.Sleep(3 * tick)
-	t.Log("----------")
 
 	// New snapshot in B, no new one in A
-	logSnapshotList(t, st)
-	entries = listInstanceSnapshots(st, "b")
-	assert.Len(t, entries, 1, "B")
-	entries = listInstanceSnapshots(st, "a")
-	assert.Len(t, entries, 1, "A")
+	requireSnapshotsLenWait(t, st, 1, "B")
+	requireSnapshotsLenWait(t, st, 1, "A")
 
 	// New value should be present in A
-	assertKey(t, envB, "foo", "v2", withHeader)
+	assertKeyWait(t, envB, "foo", "v2", withHeader)
 
 	// Restart syncer for A
 	t.Log("Restarting syncer A")
@@ -104,15 +101,12 @@ func doTest(t *testing.T, withHeader bool) {
 	go runSync(ctxA, syncerA)
 
 	t.Log("----------")
-	time.Sleep(3 * tick)
-	t.Log("----------")
 
 	// Check is the contents of A are still correct after restart
-	assertKey(t, envA, "foo", "v2", withHeader)
-	entries = listInstanceSnapshots(st, "a")
+	assertKeyWait(t, envA, "foo", "v2", withHeader)
 	// A new snapshot should always be created on startup, in case the LMDB
 	// was modified while it was down.
-	assert.Len(t, entries, 2, "A")
+	requireSnapshotsLenWait(t, st, 2, "A")
 
 	// Stopping syncer for A
 	t.Log("Stopping syncer A")
@@ -127,15 +121,12 @@ func doTest(t *testing.T, withHeader bool) {
 	ctxA, cancelA = context.WithCancel(ctx)
 	go runSync(ctxA, syncerA)
 	t.Log("----------")
-	time.Sleep(6 * tick)
-	t.Log("----------")
 
+	// New value in A should get synced to B
+	assertKeyWait(t, envB, "new", "hello", withHeader)
 	// Check if the contents of A are still correct after restart
-	assertKey(t, envA, "new", "hello", withHeader)
-	// It should also be synced to B
-	assertKey(t, envB, "new", "hello", withHeader)
-	entries = listInstanceSnapshots(st, "a")
-	assert.Len(t, entries, 3, "A")
+	assertKeyWait(t, envA, "new", "hello", withHeader)
+	requireSnapshotsLenWait(t, st, 3, "A")
 
 	cancelA()
 	cancelB()
@@ -144,16 +135,16 @@ func doTest(t *testing.T, withHeader bool) {
 
 func createInstance(t *testing.T, name string, st simpleblob.Interface, timestamped bool) (*Syncer, *lmdb.Env) {
 	env, tmp, err := createLMDB(t)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	c := createConfig(name, tmp, timestamped)
-	syncer, err := New("default", st, c, c.LMDBs[testLMDBName], Options{})
-	assert.NoError(t, err)
+	syncer, err := New("default", env, st, c, c.LMDBs[testLMDBName], Options{})
+	require.NoError(t, err)
 
 	return syncer, env
 }
 
-func logSnapshotList(t *testing.T, st simpleblob.Interface) {
+func LogSnapshotList(t *testing.T, st simpleblob.Interface) {
 	ctx := context.Background()
 	entries, _ := st.List(ctx, "")
 	var lines []string
@@ -178,6 +169,28 @@ func listInstanceSnapshots(st simpleblob.Interface, instance string) simpleblob.
 	return entries
 }
 
+func requireSnapshotsLenWait(t *testing.T, st simpleblob.Interface, expLen int, instance string) {
+	var list simpleblob.BlobList
+	// Retry until it succeeds
+	var i int
+	const maxIter = 150
+	const sleepTime = 10 * time.Millisecond
+	defer func() {
+		t.Logf("Waited %d/%d iterations for the expected snapshot length", i, maxIter)
+	}()
+	for i = 0; i < maxIter; i++ {
+		list = listInstanceSnapshots(st, strings.ToLower(instance))
+		l := len(list)
+		if l == expLen {
+			return
+		}
+		time.Sleep(sleepTime)
+	}
+	// This one is actually expected to fail, call it for the formatting
+	t.Logf("Gave up on waiting for the expected snapshot length")
+	require.Len(t, list, expLen, instance)
+}
+
 func runSync(ctx context.Context, syncer *Syncer) {
 	err := syncer.Sync(ctx)
 	if err != nil && err != context.Canceled {
@@ -185,10 +198,28 @@ func runSync(ctx context.Context, syncer *Syncer) {
 	}
 }
 
-func assertKey(t *testing.T, env *lmdb.Env, key, val string, withHeader bool) {
-	kv, err := dumpData(env, withHeader)
-	assert.NoError(t, err)
-	assert.Equal(t, val, kv[key])
+func assertKeyWait(t *testing.T, env *lmdb.Env, key, val string, withHeader bool) {
+	var kv map[string]string
+	var err error
+	var i int
+	const maxIter = 150
+	const sleepTime = 10 * time.Millisecond
+	defer func() {
+		t.Logf("Waited %d/%d iterations for the expected key", i, maxIter)
+	}()
+	for i = 0; i < maxIter; i++ {
+		kv, err = dumpData(env, withHeader)
+		if err != nil && !lmdb.IsNotFound(err) {
+			require.NoError(t, err)
+		}
+		if kv[key] == val {
+			return
+		}
+		time.Sleep(sleepTime)
+	}
+	// Expected to fail now, called for formatting
+	t.Logf("Gave up on waiting for the expected key")
+	require.Equal(t, val, kv[key])
 }
 
 func setKey(t *testing.T, env *lmdb.Env, key, val string, withHeader bool) {
@@ -210,13 +241,13 @@ func setKey(t *testing.T, env *lmdb.Env, key, val string, withHeader bool) {
 		err = txn.Put(dbi, []byte(key), valb, 0)
 		return err
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func dumpData(env *lmdb.Env, withHeader bool) (map[string]string, error) {
 	data := make(map[string]string)
 	err := env.View(func(txn *lmdb.Txn) error {
-		dbi, err := txn.OpenDBI(testDBIName, lmdb.Create)
+		dbi, err := txn.OpenDBI(testDBIName, 0)
 		if err != nil {
 			return err
 		}
