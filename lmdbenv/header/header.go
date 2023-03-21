@@ -188,6 +188,14 @@ func Skip(val []byte) (value []byte, err error) {
 	return val[offset:], nil
 }
 
+// ParseTimestamp parses a timestamp from the first 8 bytes of the value
+func ParseTimestamp(val []byte) (ts Timestamp, err error) {
+	if len(val) < 8 {
+		return ts, ErrTooShort
+	}
+	return Timestamp(binary.BigEndian.Uint64(val[:8])), nil
+}
+
 func getNumExtra(val []byte) int {
 	return int(binary.BigEndian.Uint16(val[NumExtraOffsetHigh : NumExtraOffsetHigh+2]))
 }
