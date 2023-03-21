@@ -1,0 +1,63 @@
+--
+name: 'Documentation'
+
+on:
+  push:
+    # docs is the branch on which we are developing this, can be removed later
+    branches: [ "main", "docs" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+
+  build-upload-docs:
+    name: Build and upload docs
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - id: get-version
+        run: echo "ls_version=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - id: setup-ssh
+        run: |-
+          mkdir -m 700 -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          echo "$HOST_KEY" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/*
+          echo "have_ssh_key=yes" >> $GITHUB_OUTPUT
+        env:
+          SSH_KEY: ${{secrets.WEB1_DOCS_SECRET}}
+          HOST_KEY: ${{vars.WEB1_HOSTKEY}}
+        if: ${{ (github.ref_name == 'main' || github.ref_name == 'docs') && env.SSH_KEY != '' }}
+
+      - run: python3 -m venv .venv
+      - run: .venv/bin/pip3 install -r docs/requirements.txt
+      - run: .venv/bin/mkdocs build
+      - run: mv site lightningstream-html-docs
+      - run: tar cf lightningstream-html-docs.tar lightningstream-html-docs
+      
+      - uses: actions/upload-artifact@v3
+        with:
+          name: lightningstream-html-docs-${{steps.get-version.outputs.ls_version}}
+          path: ./lightningstream-html-docs.tar
+
+      - run: bzip2 lightningstream-html-docs.tar
+        if: ${{ (github.ref_name == 'main' || github.ref_name == 'docs') }}
+
+      - run: |-
+           rsync -crv --delete --no-p --chmod=g=rwX --exclude '*~' ./lightningstream-html-docs/ "$LS_USERNAME@$DOCS_HOST:$LS_DOCS_DIR"
+           rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./lightningstream-html-docs.tar.bz2 "$LS_USERNAME@$DOCS_HOST:$LS_DOCS_DIR/html-docs.tar.bz2"
+        env:
+          DOCS_HOST: ${{vars.DOCS_HOST}}
+          LS_DOCS_DIR: ${{vars.LS_DOCS_DIR}}
+          LS_USERNAME: ${{vars.LS_USERNAME}}
+        if: ${{ (github.ref_name == 'main' || github.ref_name == 'docs') && steps.setup-ssh.outputs.have_ssh_key != '' }}
+
