@@ -38,7 +38,6 @@ Lightning Stream requires the following PowerDNS Authoritative server settings:
 
 ```
 # Lightning Stream uses the LMDB backend 
-load-modules=liblmdbbackend.so
 launch=lmdb
 
 # Path to the directory where the LMDB databases for this instance will be stored.
@@ -75,16 +74,16 @@ A basic Lightning Stream configuration for PowerDNS Authoritative looks like thi
 instance: unique-instance-name  # IMPORTANT: change this
 lmdbs:
   main:
-    # Auth 'lmdb-filename' plus '/db'
-    path: /path/to/lmdb/db
+    # Auth 'lmdb-filename'
+    path: /path/to/lmdb
     schema_tracks_changes: true
     options:
       no_subdir: true
       create: true      # optional for 'main', as auth will create it on startup, if needed
       map_size: 1000MB  # for create=true, make sure to match auth's lmdb-map-size
   shard:
-    # Auth 'lmdb-filename' plus '/db-0'
-    path: /path/to/lmdb/db-0
+    # Auth 'lmdb-filename' plus '-0' for the first shard
+    path: /path/to/lmdb-0
     schema_tracks_changes: true
     options:
       no_subdir: true
