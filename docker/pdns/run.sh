@@ -32,6 +32,9 @@ webserver-allow-from=0.0.0.0/0
 api=yes
 api-key=changeme
 
+zone-cache-refresh-interval=0
+zone-metadata-cache-ttl=0
+
 load-modules=liblmdbbackend.so
 launch=lmdb
 lmdb-filename=/lmdb/instance-$instance/db

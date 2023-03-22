@@ -57,6 +57,13 @@ lmdb-flag-deleted=yes
 
 # You may want a lower number than 16000 MB, which is the default on 64 bit systems.
 lmdb-map-size=1000
+
+# You may want to reduce the cache interval to 1 second, or disable it
+# altogether with 0, to quickly see your changes. The default is 300 seconds.
+# An interval of 1 second will likely provide you with most of the benefits of caching,
+# with a barely noticeable delay.
+zone-cache-refresh-interval=0
+zone-metadata-cache-ttl=0
 ```
 
 
