@@ -45,7 +45,7 @@ lightningstream-sync2-1   lightningstream-sync2   sync2     127.0.0.1:4792->8500
 lightningstream-sync3-1   lightningstream-sync3   sync3     127.0.0.1:4793->8500/tcp
 ```
 
-Open one terminal to see all the logs:
+Open a new terminal to see all the logs, to get a feeling of how and when Lightning Stream syncs data:
 
     docker-compose logs
 
@@ -55,6 +55,7 @@ Then, in another terminal, call these convenience scripts, with a delay between 
     docker/pdns/pdnsutil -i 1 secure-zone example.org
     docker/pdns/pdnsutil -i 1 set-meta example.org foo bar
     docker/pdns/pdnsutil -i 2 generate-tsig-key example123
+    docker/pdns/pdnsutil -i 1 add-record example.org www A 60 192.168.0.2
 
     sleep 2
 
@@ -62,12 +63,38 @@ Then, in another terminal, call these convenience scripts, with a delay between 
     docker/pdns/curl-api -i 2 /api/v1/servers/localhost/zones/example.org/metadata
     docker/pdns/curl-api -i 1 /api/v1/servers/localhost/tsigkeys
 
-To view a dump of the LMDB contents:
+These scripts execute `pdnsutil` and `curl` inside of the Docker containers. The `-i` flag specifies the instance number
+to operate on.
+
+For example, you can check if the records were correctly synced to instance 2 with this command:
+
+    $ docker/pdns/pdnsutil -i 2 list-zone example.org
+    $ORIGIN .
+    example.org	3600	IN	SOA	a.misconfigured.dns.server.invalid hostmaster.example.org 0 10800 3600 604800 3600
+    www.example.org	60	IN	A	192.0.2.3
+
+The same should be true for instance 3, which is in receive-only mode:
+
+    $ docker/pdns/pdnsutil -i 3 list-zone example.org
+    $ORIGIN .
+    example.org	3600	IN	SOA	a.misconfigured.dns.server.invalid hostmaster.example.org 0 10800 3600 604800 3600
+    www.example.org	60	IN	A	192.0.2.3
+
+You can use `dig` against the DNS servers to verify that the new `A` record works:
+
+    $ dig +short -p 4753 @127.0.0.1 www.example.org
+    192.0.2.3
+
+To list all the generated snapshots, you can use this script:
+
+    docker/pdns/lightningstream -i 1 snapshots list -l
+
+To view a dump of the LMDB contents, you can use the `dump-lmdb` command:
 
     docker/pdns/dump-lmdb -i 1
     docker/pdns/dump-lmdb -i 2
 
-You can browse the snapshots in MinIO at <http://localhost:4731/buckets/lightningstream/browse>
+You can also browse the snapshots in MinIO at <http://localhost:4731/buckets/lightningstream/browse>
 (login with minioadmin / minioadmin).
 
 

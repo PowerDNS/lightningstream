@@ -1,7 +1,7 @@
-# Lightning Stream with PowerDNS Authoritative 
+# Lightning Stream with PowerDNS Authoritative server
 
-This section explains how to install and run Lightning Stream with PowerDNS Authoritative
-the old fashioned way.
+This section explains how to install and run Lightning Stream with the PowerDNS Authoritative
+server the old fashioned way.
 
 !!! TODO
 
