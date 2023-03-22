@@ -43,10 +43,10 @@ Lightning Stream will pick it up and start syncing the new DBI to other instance
 ignore it until they are upgraded. The tricky part is how they will decide when they need to
 migrate the data.
 
-In this case, you cannot safely use a common DBI that is shared between version to tell the application
+In this case, you cannot safely use a common DBI that is shared between versions to tell the application
 what the current schema version is, because that one will be increased as soon as the first instance
 performs a schema migration. The other instances will think the database is already upgraded, and you
-may lose your most recent changed.
+may lose your most recent changes.
 
 If you can prevent any new changes during your upgrade, or writes only go to the instance you
 upgrade first, this method can work.
@@ -66,6 +66,3 @@ it could end up syncing data to the wrong bucket.
 Lightning Stream allows you to use environment variables in its YAML configuration, like
 `${APP_SCHEMA_VERSION}`. If you can reliably set this before starting Lightning Stream, you can use
 this to automatically write different schema versions to different S3 bucket prefixes.
-
-
-
