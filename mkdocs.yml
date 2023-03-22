@@ -17,6 +17,7 @@ nav:
   - 'Commands': commands.md
   - 'PowerDNS Integration':
     - 'Getting Started': getting-started.md
+    - 'Traditional installation': pdns-auth-installation.md
   - 'Schema':
     - 'General considerations': schema.md
     - 'Native header schema': schema-native.md
