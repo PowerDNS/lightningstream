@@ -2,7 +2,7 @@
 //
 // A strategy is responsible for updating the LMDB with a new snapshot or
 // delta. This package contains implementations of insert strategies and
-// a function to pick the the best strategy for a given situation.
+// a function to pick the best strategy for a given situation.
 package strategy
 
 import (

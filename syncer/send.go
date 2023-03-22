@@ -174,7 +174,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	}
 	if err != nil {
 		s.l.WithError(err).Warn("Store failed too many times, giving up")
-		metricSnapshotsStoreFailedPermenantly.WithLabelValues(s.name).Inc()
+		metricSnapshotsStoreFailedPermanently.WithLabelValues(s.name).Inc()
 		return 0, err
 	}
 	tStored := time.Now()

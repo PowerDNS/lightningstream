@@ -36,7 +36,7 @@ var (
 		},
 		[]string{"lmdb"},
 	)
-	metricSnapshotsStoreFailedPermenantly = prometheus.NewCounterVec(
+	metricSnapshotsStoreFailedPermanently = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "lightningstream_syncer_snapshots_store_failed_permanently_total",
 			Help: "Number of permanent snapshot store failures",
@@ -65,7 +65,7 @@ func init() {
 	prometheus.MustRegister(metricSnapshotsLastTimestamp)
 	prometheus.MustRegister(metricSnapshotsLastSize)
 	prometheus.MustRegister(metricSnapshotsStoreFailed)
-	prometheus.MustRegister(metricSnapshotsStoreFailedPermenantly)
+	prometheus.MustRegister(metricSnapshotsStoreFailedPermanently)
 	prometheus.MustRegister(metricSnapshotsStoreCalls)
 	prometheus.MustRegister(metricSnapshotsStoreBytes)
 }

@@ -75,7 +75,7 @@ records allow deletes to be propagated to other instances.
 
 !!! note
 
-    We will provide a mechanism to make Lightning Stream automaticaly clean old deleted entries in the future.
+    We will provide a mechanism to make Lightning Stream automatically clean old deleted entries in the future.
     Lightning Stream needs to be in charge of this, because it also needs to ignore old deleted entries in snapshots
     to not recreate them.
 
