@@ -29,7 +29,14 @@ func TestReceiver(t *testing.T) {
 	defer cancel()
 
 	st := memory.New()
-	r := New(st, config.Config{}, "test", logrus.New(), "self")
+	r := New(st, config.Config{
+		// Poll very often for fast tests
+		StoragePollInterval: 10 * time.Millisecond,
+		// If this is exceeded, the downloader will wait a second before
+		// checking again, so this needs to be high enough.
+		MemoryDownloadedSnapshots:   2,
+		MemoryDecompressedSnapshots: 2,
+	}, "test", logrus.New(), "self")
 	go func() {
 		err := r.Run(ctx)
 		if err != nil && err != context.Canceled {
@@ -37,8 +44,8 @@ func TestReceiver(t *testing.T) {
 		}
 	}()
 
-	// FIXME: can we get rid of the sleeps?
-	time.Sleep(50 * time.Millisecond)
+	// Initial sleep to check that we do not have one without adding one
+	time.Sleep(100 * time.Millisecond)
 
 	// No snapshots yet
 	inst, _ := r.Next()
@@ -47,15 +54,29 @@ func TestReceiver(t *testing.T) {
 	// Add a snapshot
 	err := st.Store(ctx, snapshot.Name("test", "other", "G-0", ts), emptySnapshot())
 	assert.NoError(t, err)
-	time.Sleep(1100 * time.Millisecond)
-	inst, _ = r.Next()
+	for i := 0; i < 50; i++ {
+		time.Sleep(20 * time.Millisecond)
+		inst, _ = r.Next()
+		if inst != "" {
+			break
+		}
+	}
 	assert.Equal(t, "other", inst)
+
+	// No snapshots anymore
+	inst, _ = r.Next()
+	assert.Equal(t, "", inst)
 
 	// Add another snapshot for the same instance
 	err = st.Store(ctx, snapshot.Name("test", "other", "G-0", ts.Add(time.Second)), emptySnapshot())
 	assert.NoError(t, err)
-	time.Sleep(1100 * time.Millisecond)
-	inst, _ = r.Next()
+	for i := 0; i < 50; i++ {
+		time.Sleep(20 * time.Millisecond)
+		inst, _ = r.Next()
+		if inst != "" {
+			break
+		}
+	}
 	assert.Equal(t, "other", inst)
 
 	// No snapshots anymore
