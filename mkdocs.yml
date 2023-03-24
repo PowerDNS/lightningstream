@@ -6,8 +6,8 @@ copyright: PowerDNS.com B.V.
 markdown_extensions:
  - toc:
      permalink: True
- - admonition    # Use sparingly, not compatible with Github
- # Consider for compatibility with Github rendering: - nl2br
+ - admonition    # Use sparingly, not compatible with GitHub
+ # Consider for compatibility with GitHub rendering: - nl2br
 theme:
   name: readthedocs
 

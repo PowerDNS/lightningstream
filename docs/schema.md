@@ -25,14 +25,14 @@ of changes made by Lightning Stream when syncing data from other instances.
 For example, it could have an in-memory cache of the state and only invalidate this cache when itself writes
 a change to the LMDB.
 
-Another example would be where the LMDB would map IDs to Names, and the applications maintains an in-memory
+Another example would be where the LMDB would map IDs to Names, and the application maintains an in-memory
 reverse index from Name to ID.
 
 #### Solution
 
 Since LMDB is so fast, it may be feasible to store all state in the LMDB and read it on demand.
 
-Alternatively, a cache could be short-lived (e.g. 1 second), or the application should check if the LMDB's LastTxnID
+Alternatively, a cache could be short-lived (e.g. 1 second), or the application could check if the LMDB's LastTxnID
 has changed since the last cache update.
 
 !!! TODO
@@ -89,7 +89,7 @@ Example:
 
 The value part can be kept empty, or contain some data, as needed.
 
-When you need a list of values, perform an `MDB_SET_RANGE` query for fetch all keys that start with
+When you need a list of values, perform an `MDB_SET_RANGE` query to fetch all keys that start with
 "accounts-owned-by-jane:".
 
 If a safe separator cannot be found, the key can be prefixed with one or two bytes indicating the length

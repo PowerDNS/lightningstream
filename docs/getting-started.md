@@ -1,7 +1,7 @@
 # Getting started
 
 The easiest way try out Lightning Stream with the PowerDNS Authoritative server is through the Docker Compose demo
-in the [Lightning Stream Github repository](https://github.com/PowerDNS/lightningstream/).
+in the [Lightning Stream GitHub repository](https://github.com/PowerDNS/lightningstream/).
 
 For manual installation instructions, please check [this section](pdns-auth-installation.md).
 
