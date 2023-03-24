@@ -25,11 +25,13 @@ jobs:
 
     - name: Build (amd64)
       run: GOOS=linux GOARCH=amd64 CGO_EMABLED=1 ./build.sh
+    - name: Compress
+      run: gzip bin/lightningstream
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
-        name: lightningstream_linux_amd64.bin
-        path: bin/lightningstream
+        name: lightningstream_linux_amd64.bin.gz
+        path: bin/lightningstream.gz
 
   build_macos:
     # We use one version older than the latest, to ensure compatibility
@@ -45,17 +47,21 @@ jobs:
 
     - name: Build (amd64)
       run: GOOS=darwin GOARCH=amd64 CGO_EMABLED=1 ./build.sh
+    - name: Compress
+      run: gzip bin/lightningstream
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
-        name: lightningstream_darwin_amd64.bin
-        path: bin/lightningstream
+        name: lightningstream_darwin_amd64.bin.gz
+        path: bin/lightningstream.gz
 
     - name: Build (arm64)
       run: GOOS=darwin GOARCH=arm64 CGO_EMABLED=1 ./build.sh
+    - name: Compress
+      run: gzip bin/lightningstream
     - name: Upload binary
       uses: actions/upload-artifact@v3
       with:
-        name: lightningstream_darwin_arm64.bin
-        path: bin/lightningstream
+        name: lightningstream_darwin_arm64.bin.gz
+        path: bin/lightningstream.gz
 
