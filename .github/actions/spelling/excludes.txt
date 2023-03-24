@@ -66,4 +66,4 @@
 ^\Q.github/workflows/spelling.yml\E$
 ^\Qbin/.placeholder\E$
 ignore$
-^\.github/actions/
+^\.github/workflows/
