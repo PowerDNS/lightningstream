@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -60,7 +61,7 @@ func doTest(t *testing.T, withHeader bool) {
 
 	// Start syncer A with one key
 	t.Log("Starting syncer A")
-	go runSync(ctxA, syncerA)
+	goRunSync(ctxA, syncerA)
 
 	t.Log("----------")
 
@@ -71,7 +72,7 @@ func doTest(t *testing.T, withHeader bool) {
 	// Starting with an empty LMDB is a special case that will not trigger any
 	// local snapshot.
 	t.Log("Starting syncer B")
-	go runSync(ctxB, syncerB)
+	goRunSync(ctxB, syncerB)
 
 	t.Log("----------")
 
@@ -98,7 +99,7 @@ func doTest(t *testing.T, withHeader bool) {
 	cancelA()
 	ctxA, cancelA = context.WithCancel(ctx)
 	t.Log("----------")
-	go runSync(ctxA, syncerA)
+	goRunSync(ctxA, syncerA)
 
 	t.Log("----------")
 
@@ -119,7 +120,7 @@ func doTest(t *testing.T, withHeader bool) {
 	t.Log("----------")
 	t.Log("Starting syncer A again")
 	ctxA, cancelA = context.WithCancel(ctx)
-	go runSync(ctxA, syncerA)
+	goRunSync(ctxA, syncerA)
 	t.Log("----------")
 
 	// New value in A should get synced to B
@@ -189,6 +190,32 @@ func requireSnapshotsLenWait(t *testing.T, st simpleblob.Interface, expLen int, 
 	// This one is actually expected to fail, call it for the formatting
 	t.Logf("Gave up on waiting for the expected snapshot length")
 	require.Len(t, list, expLen, instance)
+}
+
+// Ensure that we there are never two Sync goroutines running at the same time,
+// because this can cause a data race.
+// Protected by mutex, just in case the test is ever run in parallel mode.
+var (
+	runningSyncersMu sync.Mutex
+	runningSyncers   = map[*Syncer]*sync.WaitGroup{}
+)
+
+func goRunSync(ctx context.Context, syncer *Syncer) {
+	runningSyncersMu.Lock()
+	wg, exists := runningSyncers[syncer]
+	if !exists {
+		wg = &sync.WaitGroup{}
+		runningSyncers[syncer] = wg
+	}
+	runningSyncersMu.Unlock()
+	go func() {
+		logrus.Info("Wait for any previous Syncer instance to exit")
+		wg.Wait()
+		logrus.Info("Wait for any previous Syncer done")
+		wg.Add(1)
+		defer wg.Done()
+		runSync(ctx, syncer)
+	}()
 }
 
 func runSync(ctx context.Context, syncer *Syncer) {
