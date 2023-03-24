@@ -29,7 +29,7 @@ separately.
 
 !!! warning
 
-    This section assumes the use of PowerDNS Authoratitive version 4.8 and higher, which uses [native Lightning Stream value headers](schema.md).
+    This section assumes the use of PowerDNS Authoritative version 4.8 and higher, which uses [native Lightning Stream value headers](schema.md).
     As of March 2023, an alpha release of 4.8 is available for testing. 
 
     These instructions will NOT work with earlier versions, but scroll down if you insist on trying it out with 4.7.
