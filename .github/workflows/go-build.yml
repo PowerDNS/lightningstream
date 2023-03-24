@@ -54,6 +54,8 @@ jobs:
       with:
         name: lightningstream_darwin_amd64.bin.gz
         path: bin/lightningstream.gz
+    - name: Cleanup
+      run: rm bin/lightningstream.gz
 
     - name: Build (arm64)
       run: GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 ./build.sh
