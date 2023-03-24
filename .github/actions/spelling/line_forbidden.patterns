@@ -1,4 +1,6 @@
-# reject `m_data` as there's a certain OS which has evil defines that break things if it's used elsewhere
+# reject `m_data` as VxWorks defined it and that breaks things if it's used elsewhere
+# see [fprime](https://github.com/nasa/fprime/commit/d589f0a25c59ea9a800d851ea84c2f5df02fb529)
+# and [Qt](https://github.com/qtproject/qt-solutions/blame/fb7bc42bfcc578ff3fa3b9ca21a41e96eb37c1c7/qtscriptclassic/src/qscriptbuffer_p.h#L46)
 # \bm_data\b
 
 # If you have a framework that uses `it()` for testing and `fit()` for debugging a specific test,
