@@ -11,6 +11,7 @@ import (
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
 	"powerdns.com/platform/lightningstream/lmdbenv/header"
 	"powerdns.com/platform/lightningstream/lmdbenv/stats"
