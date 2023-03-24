@@ -24,7 +24,7 @@ jobs:
         check-latest: true
 
     - name: Build (amd64)
-      run: GOOS=linux GOARCH=amd64 CGO_EMABLED=1 ./build.sh
+      run: GOOS=linux GOARCH=amd64 CGO_ENABLED=1 ./build.sh
     - name: Compress
       run: gzip bin/lightningstream
     - name: Upload binary
@@ -46,7 +46,7 @@ jobs:
         check-latest: true
 
     - name: Build (amd64)
-      run: GOOS=darwin GOARCH=amd64 CGO_EMABLED=1 ./build.sh
+      run: GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 ./build.sh
     - name: Compress
       run: gzip bin/lightningstream
     - name: Upload binary
@@ -56,7 +56,7 @@ jobs:
         path: bin/lightningstream.gz
 
     - name: Build (arm64)
-      run: GOOS=darwin GOARCH=arm64 CGO_EMABLED=1 ./build.sh
+      run: GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 ./build.sh
     - name: Compress
       run: gzip bin/lightningstream
     - name: Upload binary
