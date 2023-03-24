@@ -5,15 +5,17 @@ name: Go Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
 
   build_linux:
     # TODO: see if we can cross compile for other archs with CGo
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Go build (Linux)
     steps:
     - uses: actions/checkout@v3

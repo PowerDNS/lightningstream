@@ -5,17 +5,21 @@ name: Go Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        go: [ '1.20', '1.19' ]
+        go:
+          - '1.19'
+          - '1.20'
         
     name: Go ${{ matrix.go }} tests
     steps:
