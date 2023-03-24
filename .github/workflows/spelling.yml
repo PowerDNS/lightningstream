@@ -93,7 +93,7 @@ jobs:
         suppress_push_for_open_pull_request: 1
         checkout: true
         check_file_names: 1
-        spell_check_this: check-spelling/spell-check-this@prerelease
+        spell_check_this: powerdns/lightningstream@main
         post_comment: 0
         use_magic_file: 1
         extra_dictionary_limit: 10
