@@ -1,0 +1,63 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  build_linux:
+    # TODO: see if we can cross compile for other archs with CGo
+    runs-on: ubuntu-22.04
+    name: Go build (Linux)
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.20'
+        check-latest: true
+
+    - name: Build (amd64)
+      run: GOOS=linux GOARCH=amd64 CGO_ENABLED=1 ./build.sh
+    - name: Upload binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: lightningstream_linux_amd64.bin
+        path: bin/lightningstream
+
+  build_macos:
+    # We use one version older than the latest, to ensure compatibility
+    runs-on: macos-11
+    name: Go build (macOS)
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.20'
+        check-latest: true
+
+    - name: Build (amd64)
+      run: GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 ./build.sh
+    - name: Upload binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: lightningstream_darwin_amd64.bin
+        path: bin/lightningstream
+
+    - name: Build (arm64)
+      run: GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 ./build.sh
+    - name: Upload binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: lightningstream_darwin_arm64.bin
+        path: bin/lightningstream
+
