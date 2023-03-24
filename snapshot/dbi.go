@@ -54,8 +54,6 @@ type DBI struct {
 	flags     uint64
 	transform string
 
-	//index []int  // offsets into protobuf data for each KV // FIXME: needed?
-
 	// data contains the written protobuf data. DBI only ever appends to this.
 	data []byte
 
@@ -223,7 +221,6 @@ func (d *DBI) Next() (kv KV, err error) {
 func (d *DBI) indexData() error {
 	var offset = 0
 	data := d.data
-	//d.index = d.index[:0]
 	d.flushed = true // we do not allow changing top-level keys once this is called
 
 	for {
@@ -262,7 +259,7 @@ func (d *DBI) indexData() error {
 			b := data[offset : offset+size : offset+size]
 			switch tag {
 			case FieldDBIEntries:
-				//d.index = append(d.index, offset)
+				// ignore
 			case FieldDBIName:
 				d.name = string(b)
 			case FieldDBITransform:
@@ -292,23 +289,6 @@ func (d *DBI) indexData() error {
 		}
 	}
 }
-
-/*
-func (d *DBI) Get(i int) (kv KV) {
-	if i >= len(d.index) {
-		d.Err = io.ErrUnexpectedEOF
-		return
-	}
-	offset := d.index[i]
-	// FIXME: skip tag header
-	// The index points at the DBI.Entries tag, so we need to strip that first
-	var kvData []byte
-	if err := kv.Unmarshal(kvData); err != nil {
-		d.Err = err
-	}
-	return kv
-}
-*/
 
 // Append appends a new KV to the DBI protobuf.
 // The data that KV.Key and KV.Value refer to is copied in the process, so it
@@ -364,9 +344,6 @@ func (d *DBI) Append(kv KV) {
 	}
 	// Expand the data slide to make room for new message
 	d.data = d.data[:len(d.data)+outerSize]
-
-	// The index points at the newDBI.Entries tag
-	// FIXME: d.index = append(d.index, offset)
 
 	// First write an DBI.Entries tag header and size
 	offset += csproto.EncodeTag(d.data[offset:], FieldDBIEntries, csproto.WireTypeLengthDelimited)
