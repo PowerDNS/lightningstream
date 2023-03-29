@@ -6,11 +6,11 @@
 ![Documentation build](https://github.com/PowerDNS/lightningstream/actions/workflows/documentation.yml/badge.svg)
 [![Go Reference](https://pkg.go.dev/badge/github.com/PowerDNS/lightningstream.svg)](https://pkg.go.dev/github.com/PowerDNS/lightningstream)
 
-Lightning Stream is a tool to sync changes between a local LMDB (Lightning Memory-Mapped Database) and 
+Lightning Stream is a tool to sync changes between a local LMDB (Lightning Memory-Mapped Database) and
 an S3 bucket in near real-time. If the application schema is compatible, this can be used in a multi-writer
 setup where any instance can update any data, with a global eventually-consistent view of the data in seconds.
 
-Our main target application is the sync of LMDB databases in the 
+Our main target application is the sync of LMDB databases in the
 [PowerDNS Authoritative Nameserver](https://doc.powerdns.com/authoritative/) (PDNS Auth). We are excited
 about how Lightning Stream simplifies running multiple distributed PowerDNS Authoritative servers, with full support
 for keeping DNSSEC keys in sync.
@@ -32,7 +32,7 @@ Its operation boils down to the following:
 
 - Whenever it detects that the LMDB has changed, it writes a snapshot of the data to an S3 bucket.
 - Whenever it sees a new snapshot written by a _different instance_ in the S3 bucket, it downloads the snapshot
-  and merges the data into the local LMDB. 
+  and merges the data into the local LMDB.
 
 The merge of a key is performed based on a per-record last-modified timestamp:
 the most recent version of the entry wins. Deleted entries are cleared and marked as deleted, together with
@@ -52,7 +52,7 @@ To install the binary in a given location, simply run:
 
     GOBIN=$HOME/bin go install ./cmd/lightningstream/
 
-Or run `./build.sh` to install it in a `bin/` subdirectory of this repo. 
+Or run `./build.sh` to install it in a `bin/` subdirectory of this repo.
 
 Easy cross compiling is not supported, because the LMDB bindings require CGo.
 
