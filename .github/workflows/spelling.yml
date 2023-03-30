@@ -75,6 +75,10 @@ on:
 jobs:
   spelling:
     name: Check Spelling
+    # By default github permissions are quite generous. Best practices
+    # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#restricting-permissions-for-tokens
+    # are that each and every workflow/job define the maximum that it can possibly
+    # need (which should be much smaller, at least in range, than the defaults).
     permissions:
       contents: read
       pull-requests: read
@@ -93,7 +97,7 @@ jobs:
         suppress_push_for_open_pull_request: 1
         checkout: true
         check_file_names: 1
-        spell_check_this: check-spelling/spell-check-this@prerelease
+        spell_check_this: powerdns/lightningstream@main
         post_comment: 0
         use_magic_file: 1
         extra_dictionary_limit: 10
