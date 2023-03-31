@@ -203,6 +203,7 @@ var pdnsV5FixDuplicateDomainsCmd = &cobra.Command{
 						if err := patchDomain(newDomain, newest, header.NoFlags); err != nil {
 							return err
 						}
+						domainsToDelete = append(domainsToDelete, displayDomain(newDomain))
 					} else {
 						logrus.Info("Not patching, because --dangerous-do-rename not set")
 					}
