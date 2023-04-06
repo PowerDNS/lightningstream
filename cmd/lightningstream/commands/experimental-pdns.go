@@ -19,14 +19,14 @@ import (
 func init() {
 	experimentalCmd.AddCommand(pdnsV5FixDuplicateDomainsCmd)
 	pdnsV5FixDuplicateDomainsCmd.Flags().StringP("database", "d", "",
-		"Named database to operate on (must me the main database for pdns auth)")
+		"Named database to operate on (must be the main database for pdns auth)")
 	pdnsV5FixDuplicateDomainsCmd.Flags().Bool("dangerous-do-rename", false,
 		"Automatically rename the newer duplicate domain name to fix")
 	_ = pdnsV5FixDuplicateDomainsCmd.MarkFlagRequired("database")
 }
 
 const pdnsV5FixDuplicateDomainsLong = `
-The PowerDNS Auth 4.8 schema version 5 makes is possible to create duplicate
+The PowerDNS Auth 4.8 schema version 5 makes it possible to create duplicate
 domain entries on different instances, which can cause an error in early version
 of Auth. This command allows you to remove those duplicate entries.
 `
