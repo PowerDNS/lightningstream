@@ -164,6 +164,30 @@ lightningstream experimental migrate-timestamps [flags]
       --src-dbi string               Source DBI
 ```
 
+## lightningstream experimental pdns-v5-fix-duplicate-domains
+
+Fix duplicate domain entries for PowerDNS Auth 4.8 with schema version 5
+
+### Synopsis
+
+
+The PowerDNS Auth 4.8 schema version 5 makes it possible to create duplicate
+domain entries on different instances, which can cause an error in early version
+of Auth. This command allows you to remove those duplicate entries.
+
+
+```
+lightningstream experimental pdns-v5-fix-duplicate-domains [flags]
+```
+
+### Options
+
+```
+      --dangerous-do-rename   Automatically rename the newer duplicate domain name to fix
+  -d, --database string       Named database to operate on (must be the main database for pdns auth)
+  -h, --help                  help for pdns-v5-fix-duplicate-domains
+```
+
 ## lightningstream help
 
 Help about any command
@@ -225,7 +249,7 @@ lightningstream snapshots dump [flags]
 
 ```
   -d, --dbi string      Only output DBI with this exact name
-  -f, --format string   Output format, one of: 'debug' (default), 'text' (default "debug")
+  -f, --format string   Output format, one of: 'debug' (default), 'text' (same) (default "debug")
   -h, --help            help for dump
   -l, --local           Dump a local file instead of a remote snapshot
 ```
