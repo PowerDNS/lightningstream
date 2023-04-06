@@ -49,6 +49,7 @@ gocritic
 GOFLAGS
 gogofast
 gogoproto
+gogosnapshot
 goimports
 golangci
 golint
