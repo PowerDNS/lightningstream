@@ -8,7 +8,7 @@ var (
 	metricLimit = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "lightningstream_climit_limit",
-			Help: "COnfigured maximum number of tokens that can be active at once",
+			Help: "Configured maximum number of tokens that can be active at once",
 		},
 		[]string{"lmdb", "limit_name"},
 	)
