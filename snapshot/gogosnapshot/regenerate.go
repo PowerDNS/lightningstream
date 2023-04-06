@@ -1,3 +1,3 @@
-package snapshot
+package gogosnapshot
 
 //go:generate ./regenerate.sh

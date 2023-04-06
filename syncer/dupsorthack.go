@@ -74,43 +74,40 @@ func dupSortHackDecodeOne(e snapshot.KV) (result snapshot.KV, err error) {
 	return result, nil
 }
 
-// dupSortHackEncode changes a slice of entries in-place with dupSortHackEncodeOne
-func dupSortHackEncode(entries []snapshot.KV) error {
+// dupSortHackEncode creates a copy of a snapshot.DBI with KVs transformed
+// with dupSortHackEncodeOne.
+func dupSortHackEncode(dbiMsg *snapshot.DBI) (*snapshot.DBI, error) {
 	var prevKey []byte
-	for i, e := range entries {
-		r, err := dupSortHackEncodeOne(e)
+	return dbiMsg.Map(snapshot.TransformDupSortHackV1, func(kv snapshot.KV) (snapshot.KV, error) {
+		kv, err := dupSortHackEncodeOne(kv)
 		if err != nil {
-			return err
+			return kv, err
 		}
-		cmp := bytes.Compare(prevKey, r.Key)
+		cmp := bytes.Compare(prevKey, kv.Key)
 		if cmp == 0 {
 			// Can happen if the value difference is in the second part
-			return fmt.Errorf(
+			return kv, fmt.Errorf(
 				"dupsort_hack does not result in unique keys for key %s",
-				utils.DisplayASCII(e.Key))
+				utils.DisplayASCII(kv.Key))
 		}
 		if cmp > 0 {
 			// Can only happen if the separator can be found in keys and beginning
 			// of values.
 			// The separator itself was chosen as zeros to not affect ordering.
-			return fmt.Errorf(
+			return kv, fmt.Errorf(
 				"dupsort_hack results in reverse sort order for key %s",
-				utils.DisplayASCII(e.Key))
+				utils.DisplayASCII(kv.Key))
 		}
-		prevKey = r.Key
-		entries[i] = r
-	}
-	return nil
+		prevKey = kv.Key
+		return kv, nil
+	})
 }
 
-// dupSortHackDecode changes a slice of entries in-place with dupSortHackDecodeOne
-func dupSortHackDecode(entries []snapshot.KV) error {
-	for i, e := range entries {
-		r, err := dupSortHackDecodeOne(e)
-		if err != nil {
-			return err
-		}
-		entries[i] = r
-	}
-	return nil
+// dupSortHackDecode creates a copy of a snapshot.DBI with KVs untransformed
+// with dupSortHackDecodeOne
+func dupSortHackDecode(dbiMsg *snapshot.DBI) (*snapshot.DBI, error) {
+	// No transform string
+	return dbiMsg.Map("", func(kv snapshot.KV) (snapshot.KV, error) {
+		return dupSortHackDecodeOne(kv)
+	})
 }

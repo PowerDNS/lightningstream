@@ -5,8 +5,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
+	"runtime"
 	"strings"
 	"time"
+
+	"github.com/c2h5oh/datasize"
+	"github.com/sirupsen/logrus"
 )
 
 // SleepContext sleeps for given duration. If the context closes in the
@@ -96,6 +100,26 @@ func Cut(s, sep string) (before, after string, found bool) {
 	return s, "", false
 }
 
+// TimeDiff returns the difference between two times, rounded to milliseconds.
 func TimeDiff(t1, t0 time.Time) time.Duration {
 	return t1.Sub(t0).Round(time.Millisecond)
+}
+
+// GC runs the garbage collector and logs some memory stats
+func GC() time.Duration {
+	var before, after runtime.MemStats
+	t0 := time.Now()
+	runtime.ReadMemStats(&before)
+	runtime.GC()
+	runtime.ReadMemStats(&after)
+	t1 := time.Now()
+	dt := TimeDiff(t1, t0)
+	freed := after.Frees - before.Frees
+	logrus.WithFields(logrus.Fields{
+		"time_gc":      dt,
+		"freed":        datasize.ByteSize(freed),
+		"alloc_before": datasize.ByteSize(before.Alloc),
+		"alloc_after":  datasize.ByteSize(after.Alloc),
+	}).Debug("GC stats")
+	return dt
 }

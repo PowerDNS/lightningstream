@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -153,7 +154,16 @@ func LogSnapshotList(t *testing.T, st simpleblob.Interface) {
 		name := e.Name
 		data, _ := st.Load(ctx, name)
 		msg, _ := snapshot.LoadData(data)
-		for _, se := range msg.Databases[0].Entries {
+		dbiMsg := msg.Databases[0]
+		dbiMsg.ResetCursor()
+		for {
+			se, err := dbiMsg.Next()
+			if err != nil {
+				if err != io.EOF {
+					t.Errorf("Unexpected error from dbimsg.Next(): %v", err)
+				}
+				break
+			}
 			lines = append(lines,
 				fmt.Sprintf("%s : %s = %q @ %s",
 					name, se.Key, se.Value,

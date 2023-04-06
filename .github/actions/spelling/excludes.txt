@@ -67,3 +67,4 @@
 ^\Qbin/.placeholder\E$
 ignore$
 ^\.github/workflows/
+\.go$

@@ -3,13 +3,14 @@ package commands
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/PowerDNS/simpleblob"
-	"github.com/gogo/protobuf/proto"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -32,7 +33,7 @@ func init() {
 
 	snapshotsCmd.AddCommand(snapshotsDumpCmd)
 	snapshotsDumpCmd.Flags().StringP("format", "f", "debug",
-		"Output format, one of: 'debug' (default), 'text'")
+		"Output format, one of: 'debug' (default), 'text' (same)")
 	snapshotsDumpCmd.Flags().StringP("dbi", "d", "", "Only output DBI with this exact name")
 	snapshotsDumpCmd.Flags().BoolP("local", "l", false,
 		"Dump a local file instead of a remote snapshot")
@@ -169,7 +170,7 @@ var snapshotsDumpCmd = &cobra.Command{
 		// Filter DBIs if needed
 		if dbiName != "" {
 			snap.Databases = lo.Filter(snap.Databases, func(item *snapshot.DBI, index int) bool {
-				return item.Name == dbiName
+				return item.Name() == dbiName
 			})
 		}
 
@@ -181,20 +182,29 @@ var snapshotsDumpCmd = &cobra.Command{
 		}
 
 		switch format {
-		case "debug":
-			// Print top level fields using prototext marshaler, so that we
-			// do not forget any new attributes.
+		case "debug", "text":
 			databases := snap.Databases
 			snap.Databases = nil
-			tm := proto.TextMarshaler{}
-			_ = tm.Marshal(out, snap)
+			j, err := json.MarshalIndent(snap, "", "  ")
+			if err != nil {
+				return err
+			}
+			outf("%s\n", string(j))
 
 			// Print DBI contents
 			now := time.Now()
 			for _, dbi := range databases {
 				outf("\n### %s (transform=%q, flags=%q)\n\n",
-					dbi.Name, dbi.Transform, dbiflags.Flags(dbi.Flags))
-				for _, e := range dbi.Entries {
+					dbi.Name(), dbi.Transform(), dbiflags.Flags(dbi.Flags()))
+				dbi.ResetCursor()
+				for {
+					e, err := dbi.Next()
+					if err != nil {
+						if err != io.EOF {
+							return err
+						}
+						break
+					}
 					t := header.Timestamp(e.TimestampNano).Time()
 					outf("%s  =  %s  (%s, %s ago; flags=%02x)\n",
 						utils.DisplayASCII(e.Key),
@@ -206,9 +216,6 @@ var snapshotsDumpCmd = &cobra.Command{
 				}
 			}
 			return nil
-		case "text":
-			tm := proto.TextMarshaler{}
-			return tm.Marshal(out, snap)
 		default:
 			panic("unhandled output format: " + format)
 		}

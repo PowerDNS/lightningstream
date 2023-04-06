@@ -28,28 +28,31 @@ func TransformSupported(transform string) bool {
 
 // ValidateTransform checks if the transform field is set to a supported value.
 func (d *DBI) ValidateTransform(formatVersion uint32, nativeSchema bool) error {
-	dbiName := d.Name
-	if !TransformSupported(d.Transform) {
+	dbiName := d.Name()
+	flags := uint(d.Flags())
+	transform := d.Transform()
+
+	if !TransformSupported(transform) {
 		return fmt.Errorf("snapshot dbi %q: transform %q not supported",
-			dbiName, d.Transform)
+			dbiName, transform)
 	}
-	if nativeSchema && d.Transform != TransformNone {
+	if nativeSchema && transform != TransformNone {
 		return fmt.Errorf("snapshot dbi %q: no transforms supported "+
-			"for native schema, got %q", dbiName, d.Transform)
+			"for native schema, got %q", dbiName, transform)
 	}
 	// First formatVersion that has the transform field
 	if formatVersion >= 3 {
-		flagsDupSort := uint(d.Flags)&lmdb.DupSort > 0
-		transformDupSort := d.Transform == TransformDupSortHackV1
+		flagsDupSort := flags&lmdb.DupSort > 0
+		transformDupSort := transform == TransformDupSortHackV1
 		if flagsDupSort && !transformDupSort {
 			return fmt.Errorf("snapshot dbi %q: dupsort DBI flag without "+
 				"expected transform (got %q, expected %q)",
-				dbiName, d.Transform, TransformDupSortHackV1)
+				dbiName, transform, TransformDupSortHackV1)
 		}
 		if !flagsDupSort && transformDupSort {
 			return fmt.Errorf("snapshot dbi %q: non-dupsort DBI flags with "+
 				"unexpected dupsort transform (got %q)",
-				dbiName, d.Transform)
+				dbiName, transform)
 		}
 	}
 	return nil

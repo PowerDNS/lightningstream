@@ -8,6 +8,7 @@ import (
 
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
+	"powerdns.com/platform/lightningstream/utils/climit"
 
 	"powerdns.com/platform/lightningstream/config"
 	"powerdns.com/platform/lightningstream/snapshot"
@@ -31,6 +32,17 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 		corruptSnapshots:       make(map[string]error),
 		storageListHealth:      healthtracker.New(c.Health.StorageList, fmt.Sprintf("%s_storage_list", dbname), "list snapshots on storage backend"),
 		storageLoadHealth:      healthtracker.New(c.Health.StorageLoad, fmt.Sprintf("%s_storage_load", dbname), "load a snapshot from storage backend"),
+
+		decompressedSnapshotLimit: climit.New(
+			dbname,
+			"decompress",
+			c.MemoryDecompressedSnapshots,
+			l.WithField("token", "Decompress")),
+		downloadSnapshotLimit: climit.New(
+			dbname,
+			"download",
+			c.MemoryDownloadedSnapshots,
+			l.WithField("token", "Download")),
 	}
 
 	return r
@@ -62,6 +74,10 @@ type Receiver struct {
 	downloadersByInstance map[string]*Downloader
 	hasSnapshots          bool
 	corruptSnapshots      map[string]error
+
+	// Limit number of concurrent decompressed snapshots in memory
+	decompressedSnapshotLimit *climit.ConcurrencyLimit
+	downloadSnapshotLimit     *climit.ConcurrencyLimit
 
 	// Health trackers
 	storageListHealth *healthtracker.HealthTracker

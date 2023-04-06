@@ -84,9 +84,12 @@ func (d *Downloader) Run(ctx context.Context) error {
 }
 
 func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
-	t0 := time.Now()
+	// Limit number of downloaded compressed snapshots in memory
+	downloadToken := d.r.downloadSnapshotLimit.Acquire()
+	defer downloadToken.Release()
 
 	// Fetch the blob from the storage
+	t0 := time.Now()
 	metricSnapshotsLoadCalls.Inc()
 	data, err := d.r.st.Load(ctx, ni.FullName)
 	if err != nil {
@@ -102,22 +105,46 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	d.r.storageLoadHealth.AddSuccess()
 
 	metricSnapshotsLoadBytes.Add(float64(len(data)))
+
+	// Limit number of decompressed snapshots in memory
+	// CAUTION: we cannot defer the Release, check all error paths!
+	token := d.r.decompressedSnapshotLimit.Acquire()
+
 	t1 := time.Now()
 
 	msg, err := snapshot.LoadData(data)
 	if err != nil {
+		d.l.Debug("Returning DecompressedSnapshotToken")
+		token.Release()
 		// This snapshot is considered corrupt, we will ignore it from now on
 		d.r.MarkCorrupt(ni.FullName, err)
 		d.last = ni
 		return err
 	}
 
+	// Release the download token once we have released the downloaded snapshot
+	data = nil // allow it to be freed
+	_ = data   // silence linter
+	downloadToken.Release()
+
 	// Make snapshot available to the syncer, replacing any previous one
 	// that has not been loaded yet.
 	d.r.mu.Lock()
+	// FIXME: use *snapshot.Update pointer in APIs with new tokens
 	d.r.snapshotsByInstance[d.instance] = snapshot.Update{
 		Snapshot: msg,
 		NameInfo: ni,
+		OnClose: func(u *snapshot.Update) {
+			if u.Snapshot == nil {
+				return // already called?
+			}
+			d.l.Debug("Returning DecompressedSnapshotToken")
+			// Clear it before returning the token
+			u.Snapshot = nil
+			utils.GC()
+			// Return token
+			token.Release()
+		},
 	}
 	d.r.mu.Unlock()
 

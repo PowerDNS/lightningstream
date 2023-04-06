@@ -1,9 +1,15 @@
 syntax = "proto3";
 
-import "gogo.proto";
+package gogosnapshot;
 
+//option go_package = "powerdns.com/platform/lightningstream/snapshot";
+
+import "gogo.proto";
 option (gogoproto.goproto_unrecognized_all) = false;
 option (gogoproto.goproto_sizecache_all) = false;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+option (gogoproto.populate_all) = true;
 
 message KV {
   bytes key = 1;
