@@ -3,6 +3,7 @@ module powerdns.com/platform/lightningstream
 go 1.19
 
 require (
+	github.com/CrowdStrike/csproto v0.23.1
 	github.com/PowerDNS/lmdb-go v1.9.0
 	github.com/PowerDNS/simpleblob v0.2.2
 	github.com/bufbuild/buf v0.56.0
@@ -23,7 +24,6 @@ require (
 )
 
 require (
-	github.com/CrowdStrike/csproto v0.23.1 // indirect
 	github.com/PowerDNS/go-tlsconfig v0.0.0-20221101135152-0956853b28df // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
