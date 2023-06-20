@@ -33,6 +33,12 @@ jobs:
         name: lightningstream_linux_amd64.bin
         path: bin/lightningstream
 
+    - name: Release
+      uses: actions/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: bin/lightningstream
+
   build_macos:
     # We use one version older than the latest, to ensure compatibility
     runs-on: macos-11
