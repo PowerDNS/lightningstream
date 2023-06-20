@@ -34,7 +34,7 @@ jobs:
         path: bin/lightningstream
 
     - name: Release
-      uses: actions/action-gh-release@v1
+      uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: bin/lightningstream
