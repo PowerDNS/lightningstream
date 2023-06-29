@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/CrowdStrike/csproto v0.23.1
 	github.com/PowerDNS/lmdb-go v1.9.0
-	github.com/PowerDNS/simpleblob v0.2.3
+	github.com/PowerDNS/simpleblob v0.2.4
 	github.com/bufbuild/buf v0.56.0
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/gogo/protobuf v1.3.2
