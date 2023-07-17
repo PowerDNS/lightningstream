@@ -54,7 +54,7 @@ Then, in another terminal, call these convenience scripts, with a delay between 
     docker/pdns/pdnsutil -i 1 create-zone example.org
     docker/pdns/pdnsutil -i 1 secure-zone example.org
     docker/pdns/pdnsutil -i 1 set-meta example.org foo bar
-    docker/pdns/pdnsutil -i 2 generate-tsig-key example123
+    docker/pdns/pdnsutil -i 2 generate-tsig-key example123 hmac-sha512
     docker/pdns/pdnsutil -i 1 add-record example.org www A 60 192.0.2.3
 
     sleep 2
