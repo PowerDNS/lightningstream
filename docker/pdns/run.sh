@@ -39,8 +39,7 @@ load-modules=liblmdbbackend.so
 launch=lmdb
 lmdb-filename=/lmdb/instance-$instance/db
 lmdb-shards=1
-lmdb-random-ids=yes
-lmdb-flag-deleted=yes
+lmdb-lightning-stream
 " > /etc/powerdns/pdns.conf
 
 pdns_server || (
