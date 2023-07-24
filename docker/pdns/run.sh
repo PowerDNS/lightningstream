@@ -39,7 +39,7 @@ load-modules=liblmdbbackend.so
 launch=lmdb
 lmdb-filename=/lmdb/instance-$instance/db
 lmdb-shards=1
-lmdb-lightning-stream
+lmdb-lightning-stream=yes
 " > /etc/powerdns/pdns.conf
 
 pdns_server || (
