@@ -94,6 +94,7 @@ Currently available options:
 | init_timeout | duration | Time allowed for initialisation (default: "20s") |
 | use_update_marker | bool | Reduce LIST commands, see link below |
 | update_marker_force_list_interval | duration | See link below for details |
+| disable_send_content_md5 | bool | Disble sending Content-MD5 header |
 
 The `use_update_marker` option can reduce your AWS S3 bill in small personal
 deployments without compromises on update latency, as GET operations are 10 times cheaper
