@@ -130,6 +130,9 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	// Make snapshot available to the syncer, replacing any previous one
 	// that has not been loaded yet.
 	d.r.mu.Lock()
+	// If we are about to replace an Update in the snapshotsByInstance map,
+	// we will need to Close it so as to release its concurrency limit token.
+	overwrittenSnap, hasOverwrittenSnap := d.r.snapshotsByInstance[d.instance]
 	// FIXME: use *snapshot.Update pointer in APIs with new tokens
 	d.r.snapshotsByInstance[d.instance] = snapshot.Update{
 		Snapshot: msg,
@@ -147,6 +150,12 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 		},
 	}
 	d.r.mu.Unlock()
+
+	if hasOverwrittenSnap {
+		d.l.WithField("overwritten_snapshot", overwrittenSnap.NameInfo.FullName).
+			Debug("Closing overwritten snapshot")
+		overwrittenSnap.Close()
+	}
 
 	t2 := time.Now()
 	d.l.WithFields(logrus.Fields{
