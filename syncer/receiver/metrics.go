@@ -63,7 +63,20 @@ var (
 			Help: "Number of bytes downloaded successfully",
 		},
 	)
-	// TODO: add total space used by all snapshots
+	metricSnapshotsStorageCount = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_receiver_snapshots_count_in_storage",
+			Help: "Number of snapshots in storage",
+		},
+		[]string{"lmdb"},
+	)
+	metricSnapshotsStorageBytes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_receiver_snapshots_last_bytes_in_storage",
+			Help: "Number of bytes occupied by snapshots in storage",
+		},
+		[]string{"lmdb"},
+	)
 )
 
 func init() {
@@ -74,4 +87,6 @@ func init() {
 	prometheus.MustRegister(metricSnapshotsLoadFailed)
 	prometheus.MustRegister(metricSnapshotsListFailed)
 	prometheus.MustRegister(metricSnapshotsLoadBytes)
+	prometheus.MustRegister(metricSnapshotsStorageCount)
+	prometheus.MustRegister(metricSnapshotsStorageBytes)
 }

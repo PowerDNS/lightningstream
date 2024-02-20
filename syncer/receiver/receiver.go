@@ -164,6 +164,9 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 		return fmt.Errorf("list snapshots: %w", err)
 	}
 
+	// Update snapshot metrics
+	metricSnapshotsStorageCount.WithLabelValues(r.lmdbname).Set(float64(ls.Len()))
+
 	// Signal success to health tracker
 	r.storageListHealth.AddSuccess()
 
