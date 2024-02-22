@@ -71,3 +71,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/PowerDNS/simpleblob v0.2.5 => github.com/PowerDNS/simpleblob v0.2.7-0.20240222075823-2d5a347a5aeb
