@@ -65,14 +65,14 @@ var (
 	)
 	metricSnapshotsStorageCount = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "lightningstream_receiver_snapshots_count_in_storage",
+			Name: "lightningstream_receiver_snapshots_in_storage_count",
 			Help: "Number of snapshots in storage",
 		},
 		[]string{"lmdb"},
 	)
 	metricSnapshotsStorageBytes = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "lightningstream_receiver_snapshots_bytes_in_storage",
+			Name: "lightningstream_receiver_snapshots_in_storage_bytes",
 			Help: "Number of bytes occupied by snapshots in storage",
 		},
 		[]string{"lmdb"},
