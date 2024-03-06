@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/CrowdStrike/csproto v0.23.1
 	github.com/PowerDNS/lmdb-go v1.9.0
-	github.com/PowerDNS/simpleblob v0.2.5
+	github.com/PowerDNS/simpleblob v0.2.7
 	github.com/bufbuild/buf v0.56.0
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/gogo/protobuf v1.3.2
@@ -71,5 +71,3 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/PowerDNS/simpleblob v0.2.5 => github.com/PowerDNS/simpleblob v0.2.7-0.20240222075823-2d5a347a5aeb
