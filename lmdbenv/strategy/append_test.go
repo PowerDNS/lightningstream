@@ -3,8 +3,8 @@ package strategy
 import (
 	"testing"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"powerdns.com/platform/lightningstream/lmdbenv"
 )
 
 func TestAppend(t *testing.T) {

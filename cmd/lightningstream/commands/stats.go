@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv/stats"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/lmdbenv"
-	"powerdns.com/platform/lightningstream/lmdbenv/stats"
 )
 
 func init() {

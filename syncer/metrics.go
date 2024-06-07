@@ -1,8 +1,8 @@
 package syncer
 
 import (
+	"github.com/PowerDNS/lightningstream/lmdbenv/stats"
 	"github.com/prometheus/client_golang/prometheus"
-	"powerdns.com/platform/lightningstream/lmdbenv/stats"
 )
 
 var (

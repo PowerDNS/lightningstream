@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv/header"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/simpleblob/backends/memory"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/lmdbenv"
-	"powerdns.com/platform/lightningstream/lmdbenv/header"
 )
 
 func BenchmarkSyncer_SendOnce_native_100k(b *testing.B) {

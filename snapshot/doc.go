@@ -22,13 +22,13 @@ In total that is 440 MB data uncompressed. It turns out that half of the
 allocation was used by the code copying all key and value bytes.
 
 	     flat  flat%   sum%        cum   cum%
-	2047.55MB 56.26% 56.26%  2722.09MB 74.80%  powerdns.com/platform/lightningstream/snapshot.(*DBI).Unmarshal
-	 674.54MB 18.54% 98.45%   674.54MB 18.54%  powerdns.com/platform/lightningstream/snapshot.(*KV).Unmarshal
+	2047.55MB 56.26% 56.26%  2722.09MB 74.80%  github.com/PowerDNS/lightningstream/snapshot.(*DBI).Unmarshal
+	 674.54MB 18.54% 98.45%   674.54MB 18.54%  github.com/PowerDNS/lightningstream/snapshot.(*KV).Unmarshal
 
 Patching the generated code to not copy the data reduced the total memory use to
 1.4 GB:
 
-	1378.77MB 52.20% 52.20%  1378.77MB 52.20%  powerdns.com/platform/lightningstream/snapshot.(*DBI).Unmarshal
+	1378.77MB 52.20% 52.20%  1378.77MB 52.20%  github.com/PowerDNS/lightningstream/snapshot.(*DBI).Unmarshal
 
 That is still significantly more than the 440 MB we would expect. Part of it
 is likely because the allocated slices are up to 2x larger than needed with

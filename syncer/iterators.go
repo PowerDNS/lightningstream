@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv/header"
+	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/lmdbenv/header"
-	"powerdns.com/platform/lightningstream/snapshot"
 )
 
 func NewNativeIterator(

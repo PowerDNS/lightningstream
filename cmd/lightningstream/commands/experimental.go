@@ -4,13 +4,13 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv/header"
+	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/lmdb-go/lmdbscan"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"powerdns.com/platform/lightningstream/lmdbenv"
-	"powerdns.com/platform/lightningstream/lmdbenv/header"
-	"powerdns.com/platform/lightningstream/utils"
 )
 
 func init() {

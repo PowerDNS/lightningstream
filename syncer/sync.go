@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv/dbiflags"
+	"github.com/PowerDNS/lightningstream/lmdbenv/header"
+	"github.com/PowerDNS/lightningstream/lmdbenv/strategy"
+	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/status"
+	"github.com/PowerDNS/lightningstream/syncer/receiver"
+	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/lmdbenv"
-	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
-	"powerdns.com/platform/lightningstream/lmdbenv/header"
-	"powerdns.com/platform/lightningstream/lmdbenv/strategy"
-	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/status"
-	"powerdns.com/platform/lightningstream/syncer/receiver"
-	"powerdns.com/platform/lightningstream/utils"
 )
 
 const (

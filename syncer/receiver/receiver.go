@@ -6,14 +6,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/utils/climit"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/utils/climit"
 
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/status/healthtracker"
-	"powerdns.com/platform/lightningstream/utils"
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/status/healthtracker"
+	"github.com/PowerDNS/lightningstream/utils"
 )
 
 func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string) *Receiver {

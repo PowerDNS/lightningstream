@@ -10,15 +10,15 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv/dbiflags"
+	"github.com/PowerDNS/lightningstream/lmdbenv/header"
+	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
-	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
-	"powerdns.com/platform/lightningstream/lmdbenv/header"
-	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/utils"
 )
 
 func init() {

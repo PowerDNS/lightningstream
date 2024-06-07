@@ -1,7 +1,7 @@
 package main
 
 import (
-	"powerdns.com/platform/lightningstream/cmd/lightningstream/commands"
+	"github.com/PowerDNS/lightningstream/cmd/lightningstream/commands"
 
 	// Register storage backends
 	_ "github.com/PowerDNS/simpleblob/backends/fs"

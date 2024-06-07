@@ -9,7 +9,7 @@ import (
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
 
-	"powerdns.com/platform/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
 )
 
 type TestIterator struct {

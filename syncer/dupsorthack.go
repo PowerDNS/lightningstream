@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/utils"
+	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/utils"
 )
 
 const (

@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/PowerDNS/simpleblob/backends/memory"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/snapshot"
 )
 
 func mt(timeString string) time.Time {

@@ -7,15 +7,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv/dbiflags"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
 
-	"powerdns.com/platform/lightningstream/config/logger"
-	"powerdns.com/platform/lightningstream/lmdbenv"
-	"powerdns.com/platform/lightningstream/status/healthtracker"
-	"powerdns.com/platform/lightningstream/status/starttracker"
+	"github.com/PowerDNS/lightningstream/config/logger"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/status/healthtracker"
+	"github.com/PowerDNS/lightningstream/status/starttracker"
 )
 
 const (

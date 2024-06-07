@@ -11,8 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/snapshot"
 )
 
 func emptySnapshot() []byte {
