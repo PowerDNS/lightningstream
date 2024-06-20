@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
-	"powerdns.com/platform/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
 )
 
 // Collector implements an LMDB stats collector for Prometheus.

@@ -4,14 +4,14 @@ import (
 	"context"
 	"os"
 
+	"github.com/PowerDNS/lightningstream/status"
+	"github.com/PowerDNS/lightningstream/syncer"
+	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/wojas/go-healthz"
 	"golang.org/x/sync/errgroup"
-	"powerdns.com/platform/lightningstream/status"
-	"powerdns.com/platform/lightningstream/syncer"
-	"powerdns.com/platform/lightningstream/utils"
 )
 
 var (

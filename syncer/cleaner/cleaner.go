@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/slices"
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/utils"
 )
 
 func New(name string, st simpleblob.Interface, cc config.Cleanup, logger logrus.FieldLogger) *Worker {

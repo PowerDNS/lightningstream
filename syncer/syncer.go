@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/syncer/cleaner"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/syncer/cleaner"
 
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/status/healthtracker"
-	"powerdns.com/platform/lightningstream/status/starttracker"
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/status/healthtracker"
+	"github.com/PowerDNS/lightningstream/status/starttracker"
 )
 
 func New(name string, env *lmdb.Env, st simpleblob.Interface, c config.Config, lc config.LMDB, opt Options) (*Syncer, error) {

@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv/header"
+	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/stretchr/testify/assert"
-	"powerdns.com/platform/lightningstream/lmdbenv/header"
-	"powerdns.com/platform/lightningstream/snapshot"
 )
 
 func rep(ch byte, n int) []byte {

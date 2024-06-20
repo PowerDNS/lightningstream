@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"powerdns.com/platform/lightningstream/lmdbenv/header"
-	"powerdns.com/platform/lightningstream/utils"
+	"github.com/PowerDNS/lightningstream/lmdbenv/header"
+	"github.com/PowerDNS/lightningstream/utils"
 )
 
 const (

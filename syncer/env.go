@@ -1,11 +1,11 @@
 package syncer
 
 import (
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
 	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/lmdbenv"
 )
 
 // OpenEnv opens the LMDB env with the right options

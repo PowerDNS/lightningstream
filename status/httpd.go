@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/wojas/go-healthz"
 
-	"powerdns.com/platform/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/config"
 )
 
 func StartHTTPServer(c config.Config) {

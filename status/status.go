@@ -4,13 +4,13 @@ import (
 	"context"
 	"sync"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv/dbiflags"
+	"github.com/PowerDNS/lightningstream/lmdbenv/stats"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/c2h5oh/datasize"
 	"github.com/pkg/errors"
-	"powerdns.com/platform/lightningstream/lmdbenv"
-	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
-	"powerdns.com/platform/lightningstream/lmdbenv/stats"
 )
 
 type info struct {

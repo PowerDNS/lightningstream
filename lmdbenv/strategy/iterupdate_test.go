@@ -3,7 +3,7 @@ package strategy
 import (
 	"testing"
 
-	"powerdns.com/platform/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
 )
 
 func TestIterUpdate_empty(t *testing.T) {

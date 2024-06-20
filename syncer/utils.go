@@ -9,14 +9,14 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv/dbiflags"
+	"github.com/PowerDNS/lightningstream/lmdbenv/header"
+	"github.com/PowerDNS/lightningstream/lmdbenv/stats"
+	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/lmdbenv/dbiflags"
-	"powerdns.com/platform/lightningstream/lmdbenv/header"
-	"powerdns.com/platform/lightningstream/lmdbenv/stats"
-	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/utils"
 )
 
 const (

@@ -3,7 +3,7 @@ package strategy
 import (
 	"testing"
 
-	"powerdns.com/platform/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
 )
 
 // Test iterator does not do dedup!

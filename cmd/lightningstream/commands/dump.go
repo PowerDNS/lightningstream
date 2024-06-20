@@ -5,14 +5,14 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/lmdbenv"
+	"github.com/PowerDNS/lightningstream/syncer"
+	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/lmdbenv"
-	"powerdns.com/platform/lightningstream/syncer"
-	"powerdns.com/platform/lightningstream/utils"
 )
 
 var (

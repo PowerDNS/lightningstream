@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/prometheus/client_golang/prometheus"
-	"powerdns.com/platform/lightningstream/lmdbenv"
 )
 
 func TestCollector(t *testing.T) {

@@ -4,10 +4,10 @@ package stats
 import (
 	"os"
 
+	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/lmdbenv"
 )
 
 // Log logs all LMDB statistics once using logrus

@@ -6,8 +6,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/stretchr/testify/assert"
-	"powerdns.com/platform/lightningstream/snapshot"
 )
 
 func Test_roundtrip_compat_generated(t *testing.T) {
@@ -31,7 +31,7 @@ func Test_roundtrip_compat_manual(t *testing.T) {
 		},
 		Databases: []*DBI{
 			{
-				Name: "test-dbi-1",
+				Name:    "test-dbi-1",
 				Entries: []KV{
 					// Filled below
 				},
@@ -39,7 +39,7 @@ func Test_roundtrip_compat_manual(t *testing.T) {
 				Transform: "",
 			},
 			{
-				Name: "test-dbi-2",
+				Name:    "test-dbi-2",
 				Entries: []KV{
 					// Filled below
 				},

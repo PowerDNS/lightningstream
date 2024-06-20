@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/sirupsen/logrus"
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/snapshot"
-	"powerdns.com/platform/lightningstream/utils"
 )
 
 type Downloader struct {

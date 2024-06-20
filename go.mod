@@ -1,4 +1,4 @@
-module powerdns.com/platform/lightningstream
+module github.com/PowerDNS/lightningstream
 
 go 1.19
 

@@ -7,11 +7,11 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/config"
+	"github.com/PowerDNS/lightningstream/config/logger"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"powerdns.com/platform/lightningstream/config"
-	"powerdns.com/platform/lightningstream/config/logger"
 )
 
 const (
