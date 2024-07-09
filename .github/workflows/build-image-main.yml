@@ -1,5 +1,5 @@
 ---
-name: Build and push Docker image tagged master
+name: Build and push Docker image tagged main
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Build and push Docker image tagged master
+    name: Build and push Docker image tagged main
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
@@ -32,4 +32,4 @@ jobs:
           push: true
           sbom: true
           tags: >-
-            ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ vars.IMAGE_NAME }}:master
+            ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ vars.IMAGE_NAME }}:main
