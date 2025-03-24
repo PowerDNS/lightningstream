@@ -43,7 +43,7 @@ jobs:
       - run: mv site lightningstream-html-docs
       - run: tar cf lightningstream-html-docs.tar lightningstream-html-docs
       
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: lightningstream-html-docs-${{steps.get-version.outputs.ls_version}}
           path: ./lightningstream-html-docs.tar
