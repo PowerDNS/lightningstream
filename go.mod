@@ -2,8 +2,6 @@ module github.com/PowerDNS/lightningstream
 
 go 1.23.0
 
-toolchain go1.24.0
-
 require (
 	github.com/CrowdStrike/csproto v0.35.0
 	github.com/PowerDNS/lmdb-go v1.9.3
