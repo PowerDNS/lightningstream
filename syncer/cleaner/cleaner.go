@@ -139,10 +139,10 @@ func (w *Worker) RunOnce(ctx context.Context, now time.Time) error {
 	slices.SortFunc(removalCandidates, func(a, b snapshot.NameInfo) int {
 		switch {
 		case a.Timestamp.After(b.Timestamp):
-			return 1
+			return -1 // this is so as to sort in descending order
 
 		case a.Timestamp.Before(b.Timestamp):
-			return -1
+			return 1
 		}
 
 		return 0
