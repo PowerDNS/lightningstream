@@ -1,6 +1,6 @@
 # Builder
 # Note: Not using Alpine, because of CGo deps
-FROM golang:1.19-buster as builder
+FROM golang:1.24-bookworm as builder
 ENV GOBIN=/usr/local/bin
 ARG GOPROXY=
 
@@ -18,7 +18,7 @@ RUN echo "GOFLAGS=$GOFLAGS"; go install ./cmd/...
 
 # Dist
 # Note: When using Alpine, ls prevents auth api from correctly functioning (most likely some locking issue)
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 
 RUN ulimit -n 2000 \
         && apt-get update \

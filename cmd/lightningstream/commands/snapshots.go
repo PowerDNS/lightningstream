@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/PowerDNS/lightningstream/lmdbenv/dbiflags"
@@ -296,21 +297,32 @@ var snapshotsPutCmd = &cobra.Command{
 }
 
 func sortByTime(list simpleblob.BlobList) {
-	slices.SortFunc(list, func(a, b simpleblob.Blob) bool {
+	slices.SortFunc(list, func(a, b simpleblob.Blob) int {
 		na, errA := snapshot.ParseName(a.Name)
 		nb, errB := snapshot.ParseName(b.Name)
+
+		switch {
 		// Invalid names are sorted by name
-		if errA != nil && errB != nil {
-			return a.Name < b.Name
-		}
+		case errA != nil && errB != nil:
+			return strings.Compare(a.Name, b.Name)
+
 		// Invalid names come before valid names
-		if errA != nil {
-			return true
+		case errA != nil:
+			return -1
+
+		case errB != nil:
+			return 1
 		}
-		if errB != nil {
-			return false
-		}
+
 		// Valid names are sorted by timestamp
-		return na.Timestamp.Before(nb.Timestamp)
+		switch {
+		case na.Timestamp.Before(nb.Timestamp):
+			return -1
+
+		case na.Timestamp.After(nb.Timestamp):
+			return 1
+		}
+
+		return 0
 	})
 }
