@@ -2,6 +2,7 @@ package cleaner
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/PowerDNS/simpleblob"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 )
 
 func New(name string, st simpleblob.Interface, cc config.Cleanup, logger logrus.FieldLogger) *Worker {
