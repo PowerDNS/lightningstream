@@ -315,14 +315,6 @@ func sortByTime(list simpleblob.BlobList) {
 		}
 
 		// Valid names are sorted by timestamp
-		switch {
-		case na.Timestamp.Before(nb.Timestamp):
-			return -1
-
-		case na.Timestamp.After(nb.Timestamp):
-			return 1
-		}
-
-		return 0
+		return na.Timestamp.Compare(nb.Timestamp)
 	})
 }
