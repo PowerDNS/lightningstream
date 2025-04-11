@@ -1,40 +1,62 @@
-# See https://github.com/golangci/golangci-lint/blob/master/.golangci.yml for more examples
+version: "2"
 
 linters:
-    enabled:
-        # In addition to default standard linters (see: golangci-lint help linters)
-        # Try extra ones line this: golangci-lint run --disable-all --enable=lll
-        - goimports
-        # For future consideration (requires some extra work, but suggestions look useful)
-        # - gocritic
-        # - golint # can sometimes be a bit pedantic
-        # - lll
-
-run:
-    skip-files: []
-
-linters-settings:
+  settings:
     govet:
-        # settings per analyzer
-        settings:
-            printf: # analyzer name, run `go tool vet help` to see all analyzers
-                funcs: # run `go tool vet help printf` to see available settings for `printf` analyzer
-                    - (*github.com/sirupsen/logrus.Entry).Debugf
-                    - (*github.com/sirupsen/logrus.Entry).Infof
-                    - (*github.com/sirupsen/logrus.Entry).Logf
-                    - (*github.com/sirupsen/logrus.Entry).Warnf
-                    - (*github.com/sirupsen/logrus.Entry).Errorf
-                    - (*github.com/sirupsen/logrus.Entry).Fatalf
-                    - github.com/sirupsen/logrus.Debugf
-                    - github.com/sirupsen/logrus.Infof
-                    - github.com/sirupsen/logrus.Logf
-                    - github.com/sirupsen/logrus.Warnf
-                    - github.com/sirupsen/logrus.Errorf
-                    - github.com/sirupsen/logrus.Fatalf
+      settings:
+        printf:
+          funcs:
+            - (*github.com/sirupsen/logrus.Entry).Debugf
+            - (*github.com/sirupsen/logrus.Entry).Infof
+            - (*github.com/sirupsen/logrus.Entry).Logf
+            - (*github.com/sirupsen/logrus.Entry).Warnf
+            - (*github.com/sirupsen/logrus.Entry).Errorf
+            - (*github.com/sirupsen/logrus.Entry).Fatalf
+            - github.com/sirupsen/logrus.Debugf
+            - github.com/sirupsen/logrus.Infof
+            - github.com/sirupsen/logrus.Logf
+            - github.com/sirupsen/logrus.Warnf
+            - github.com/sirupsen/logrus.Errorf
+            - github.com/sirupsen/logrus.Fatalf
+    staticcheck:
+      checks:
+        - "all"
+        # excluded by default
+        #- "-ST1000"
+        #- "-ST1003" 
+        #- "-ST1016"
+        #- "-ST1020"
+        #- "-ST1021"
+        #- "-ST1022"
+        # Allow `createIsSet := false` initialization for clarity
+        - "-QF1007"
 
-issues:
-    exclude-rules:
-        # Ignore complaints about using lmdbenv.KVString without labels in tests
-        - path: _test\.go
-          text: lmdbenv.KVString struct literal uses unkeyed fields
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        text: lmdbenv.KVString struct literal uses unkeyed fields
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - powerdns.com
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 

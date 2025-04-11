@@ -1,11 +1,12 @@
 # Builder
 # Note: Not using Alpine, because of CGo deps
-FROM golang:1.19-buster as builder
+FROM golang:1.24-bookworm as builder
 ENV GOBIN=/usr/local/bin
 ARG GOPROXY=
 
 # GOFLAGS workaround for Go 1.19 when building from subrepos
 # Issue: https://github.com/golang/go/issues/53640
+# TODO: Check if still needed for 1.24+
 ARG GOFLAGS
 ENV GOFLAGS ${GOFLAGS}
 
@@ -18,6 +19,8 @@ RUN echo "GOFLAGS=$GOFLAGS"; go install ./cmd/...
 
 # Dist
 # Note: When using Alpine, ls prevents auth api from correctly functioning (most likely some locking issue)
+# Reason: When you have multiple processing accessing the same LMDB, they MUST use the same libc, otherwise
+#         way file locking is done will conflict.
 FROM debian:buster-slim
 
 RUN ulimit -n 2000 \
