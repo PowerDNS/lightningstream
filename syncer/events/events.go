@@ -11,7 +11,9 @@ func New() *Events {
 	return &Events{
 		List:                       topics.New[simpleblob.BlobList](),
 		LastSeenSnapshotByInstance: topics.New[map[string]snapshot.NameInfo](),
-		UpdateLoaded:               topics.New[snapshot.NameInfo](),
+		UpdateLoaded:               topics.New[UpdateInfo](),
+		UpdateStored:               topics.New[UpdateInfo](),
+		SnapshotOverdue:            topics.New[struct{}](),
 	}
 }
 
@@ -27,10 +29,17 @@ type Events struct {
 
 	// UpdateLoaded is triggered when an update is successfully loaded into
 	// the LMDB.
-	// FIXME: LSE: Also add transaction info? Stats?
-	UpdateLoaded *topics.Topic[snapshot.NameInfo]
+	UpdateLoaded *topics.Topic[UpdateInfo]
 
 	// UpdateStored is triggered when we successfully uploaded a snapshot.
-	// FIXME: LSE: Also add transaction info? Stats?
-	UpdateStored *topics.Topic[snapshot.NameInfo]
+	UpdateStored *topics.Topic[UpdateInfo]
+
+	// SnapshotOverdue is triggered when we force a snapshot due to a
+	// forced snapshot interval.
+	SnapshotOverdue *topics.Topic[struct{}]
+}
+
+type UpdateInfo struct {
+	NameInfo snapshot.NameInfo
+	Meta     snapshot.Meta
 }

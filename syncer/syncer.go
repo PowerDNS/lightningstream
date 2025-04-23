@@ -51,6 +51,7 @@ func New(name string, env *lmdb.Env, st simpleblob.Interface, c config.Config, l
 		events:             ev,
 		hooks:              h,
 		lastByInstance:     make(map[string]time.Time),
+		lastSnapshotTime:   time.Time{}, // zero
 		cleaner:            cl,
 		storageStoreHealth: healthtracker.New(c.Health.StorageStore, fmt.Sprintf("%s_storage_store", name), "write to storage backend"),
 		startTracker:       starttracker.New(c.Health.Start, name),
@@ -85,6 +86,10 @@ type Syncer struct {
 	// lastByInstance tracks the last snapshot loaded by instance, so that the
 	// cleaner can make safe decisions about when to remove stale snapshots.
 	lastByInstance map[string]time.Time
+
+	// lastSnapshotTime is the last time we generated a snapshot, used to force
+	// a new one
+	lastSnapshotTime time.Time
 
 	// cleaner cleans old snapshots in the background
 	cleaner *cleaner.Worker

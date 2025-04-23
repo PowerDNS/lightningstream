@@ -12,6 +12,7 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv/strategy"
 	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/PowerDNS/lightningstream/status"
+	"github.com/PowerDNS/lightningstream/syncer/events"
 	"github.com/PowerDNS/lightningstream/syncer/receiver"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
@@ -113,7 +114,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 
 	if hasDataAtStart && !s.lc.SchemaTracksChanges {
 		// Sync to shadow using a time in the past to not overwrite newer data.
-		// At least is allows us to save newer entries that were added
+		// At least it allows us to save newer entries that were added
 		// while the syncer was not running. It will not save updated entries.
 		s.l.Info("Syncing main to shadow, in case data was changed before start")
 		err := env.Update(func(txn *lmdb.Txn) error {
@@ -155,7 +156,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	}
 
 	// To force periodic snapshots
-	lastSnapshotTime := time.Now()
 	forceSnapshotInterval := s.c.StorageForceSnapshotInterval
 	forceSnapshotEnabled := forceSnapshotInterval > 0
 
@@ -184,6 +184,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			if instance == "" {
 				break loadReadySnapshotsLoop // no more ready remote snapshots
 			}
+
 			// New remote snapshot to load
 			nLoads++
 			if instance == ownInstanceID {
@@ -197,8 +198,10 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				return err
 			}
 
-			// Publish successful load
-			s.events.UpdateLoaded.Publish(update.NameInfo)
+			// Publish a successful load
+			s.events.UpdateLoaded.Publish(events.UpdateInfo{
+				NameInfo: update.NameInfo,
+			})
 
 			utils.GC()
 			if !localChanged {
@@ -231,8 +234,9 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 
 		// Check if we need to do a periodic snapshot
 		snapshotOverdue := false
-		if dt := time.Since(lastSnapshotTime); forceSnapshotEnabled && dt > forceSnapshotInterval {
+		if dt := time.Since(s.lastSnapshotTime); forceSnapshotEnabled && dt > forceSnapshotInterval {
 			snapshotOverdue = true
+			s.events.SnapshotOverdue.Publish(struct{}{})
 			logrus.WithField(
 				"last_snapshot_time_passed", dt.Round(time.Second).String(),
 			).Info("Snapshot overdue, forcing one")
@@ -273,7 +277,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 						return err
 					}
 					lastSyncedTxnID = actualTxnID
-					lastSnapshotTime = time.Now()
 					// Start tracker: Initial snapshot stored
 					s.startTracker.SetPassedInitialStore()
 				} else if !warnedEmpty {

@@ -13,6 +13,7 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
 	"github.com/PowerDNS/lightningstream/lmdbenv/stats"
 	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
@@ -166,6 +167,9 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 	}
 	defer c.Close()
 
+	filterReadDBI := s.hooks.FilterReadDBI
+	filtered := false
+
 	var prev []byte
 	var flag uint = lmdb.First
 	for {
@@ -187,6 +191,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		prev = key
 
 		var ts header.Timestamp
+		var txnID header.TxnID
 		var flags header.Flags
 		if !rawValues {
 			h, appVal, err := header.Parse(val)
@@ -203,6 +208,19 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		}
 
 		flag = lmdb.Next
+
+		// Filter and append
+		if filterReadDBI != nil {
+			include := filterReadDBI(hooks.FilterReadDBIParams{
+				Timestamp: ts,
+				TxnID:     txnID,
+				Flags:     flags,
+			})
+			if !include {
+				filtered = true
+				continue
+			}
+		}
 		dbiMsg.Append(snapshot.KV{
 			Key:           key,
 			Value:         val,
@@ -221,6 +239,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		"size_hint_used":   int(sizeHint),
 		"actual_data_size": actualSize,
 		"hint_efficiency":  efficiency,
+		"filtered":         filtered, // if filtered, the estimate is not accurate
 	}).Debug("Check our pre-alloc size estimate (<1 is OK)")
 
 	return dbiMsg, nil

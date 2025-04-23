@@ -9,6 +9,8 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
 	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/syncer/events"
+	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
@@ -136,13 +138,35 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		return txnID, nil
 	}
 
+	// Build a filename
+	ni := snapshot.NameInfo{
+		Kind:         snapshot.KindSnapshot,
+		Extension:    snapshot.DefaultExtension,
+		SyncerName:   s.name,
+		InstanceID:   s.instanceID(),
+		GenerationID: s.generationID(),
+		Timestamp:    ts,
+	}
+	if s.hooks.UpdateSnapshotInfo != nil {
+		err := s.hooks.UpdateSnapshotInfo(hooks.SnapshotInfo{
+			Snapshot: msg,
+			NameInfo: &ni,
+		})
+		if err != nil {
+			return 0, fmt.Errorf("hooks.UpdateSnapshotInfo: %w", err)
+		}
+	}
+	name := ni.BuildName()
+
+	// Compress the snapshot and release memory
 	out, dds, err := snapshot.DumpData(msg)
 	if err != nil {
 		return 0, err
 	}
 	tDumpedData := time.Now()
 
-	msg = nil // no longer needed
+	meta := msg.Meta // keep a copy of metadata for events
+	msg = nil        // no longer needed
 	timeGC := utils.GC()
 
 	metricSnapshotsLoaded.WithLabelValues(s.name).Inc()
@@ -150,7 +174,6 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	metricSnapshotsLastSize.WithLabelValues(s.name).Set(float64(len(out)))
 
 	// Send it to storage
-	name := snapshot.Name(s.name, s.instanceID(), s.generationID(), ts)
 	for i := 0; i < s.c.StorageRetryCount || s.c.StorageRetryForever; i++ {
 		metricSnapshotsStoreCalls.Inc()
 		err = s.st.Store(ctx, name, out)
@@ -168,6 +191,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		}
 		s.l.Debug("Store succeeded")
 		metricSnapshotsStoreBytes.Add(float64(len(out)))
+
+		s.events.UpdateStored.Publish(events.UpdateInfo{
+			NameInfo: ni,
+			Meta:     meta,
+		})
 
 		// Signal success to health tracker
 		s.storageStoreHealth.AddSuccess()
@@ -199,8 +227,13 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		"compression_ratio": compressionRatio,
 		"snapshot_size":     datasize.ByteSize(len(out)).HumanReadable(),
 		"snapshot_name":     name,
+		"snapshot_kind":     ni.Kind,
 		"txnID":             txnID,
 	}).Info("Stored snapshot")
+
+	if ni.Kind == snapshot.KindSnapshot {
+		s.lastSnapshotTime = time.Now()
+	}
 
 	// Tell the cleaner which snapshots made by other instances have been
 	// incorporated in the last snapshot that we sent.
