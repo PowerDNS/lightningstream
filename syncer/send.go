@@ -119,6 +119,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 
 	// If no actual changes were made, LMDB will not record the transaction
 	// and reuse the ID the next time, so we need to adjust the txnID we return.
+	// This is only relevant for write transactions, which are only used for
+	// a non-native schema with shadow DBIs, not for native schema.
+	// In such case there is a race present, where the application could have
+	// written new data under the txnID we think we have written.
+	// TODO: Further investigate this non-native potential race
 	info, err := env.Info()
 	if err != nil {
 		return 0, err
