@@ -66,6 +66,13 @@ var rootCmd = &cobra.Command{
 	Short: "This tool syncs one or more LMDB databases with an S3 bucket",
 	Long:  rootHelp,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Workaround for #85: do not require config file for the automatically
+		// registered 'completion' command. It does not look like we can override
+		// PersistentPreRun there like we do for commands like 'version'.
+		if len(os.Args) > 1 && os.Args[1] == "completion" {
+			return
+		}
+
 		conf = config.Default()
 		conf.Version = version
 		err := conf.LoadYAMLFile(configFile, true)
