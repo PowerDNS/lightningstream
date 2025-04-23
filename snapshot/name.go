@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
-	"github.com/PowerDNS/lightningstream/utils"
 )
 
 const (
@@ -40,7 +39,7 @@ func Name(syncerName, instanceID, generationID string, ts time.Time) string {
 
 func ParseName(name string) (NameInfo, error) {
 	var ni, empty NameInfo
-	basename, ext, found := utils.Cut(name, ".")
+	basename, ext, found := strings.Cut(name, ".")
 	if !found {
 		return empty, fmt.Errorf("invalid name: no dot: %s", name)
 	}
