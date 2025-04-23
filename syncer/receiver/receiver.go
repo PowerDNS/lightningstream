@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PowerDNS/lightningstream/syncer/events"
 	"github.com/PowerDNS/lightningstream/utils/climit"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
@@ -16,8 +17,9 @@ import (
 	"github.com/PowerDNS/lightningstream/utils"
 )
 
-func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string) *Receiver {
+func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string, ev *events.Events) *Receiver {
 	r := &Receiver{
+		events:                 ev,
 		st:                     st,
 		c:                      c,
 		lmdbname:               dbname,
@@ -55,6 +57,7 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 // It spawns per-instance Downloader goroutines to take care of the actual
 // downloading.
 type Receiver struct {
+	events      *events.Events
 	st          simpleblob.Interface
 	c           config.Config
 	lmdbname    string
@@ -164,7 +167,10 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 		return fmt.Errorf("list snapshots: %w", err)
 	}
 
+	r.events.List.Publish(ls)
+
 	// Update snapshot metrics
+	// FIXME: May contain other file too now
 	metricSnapshotsStorageCount.WithLabelValues(r.lmdbname).Set(float64(ls.Len()))
 	metricSnapshotsStorageBytes.WithLabelValues(r.lmdbname).Set(float64(ls.Size()))
 
@@ -197,12 +203,19 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 			r.ignoredFilenames[name] = true
 			continue
 		}
-		// Since the names are sorted alphabetically, this newer ones will
+
+		if ni.Kind != snapshot.KindSnapshot {
+			continue
+		}
+
+		// Since the names are sorted alphabetically, this newer one will
 		// always overwrite older ones.
 		lastSeenByInstance[ni.InstanceID] = ni
 	}
 
 	now := time.Now()
+
+	r.events.LastSeenSnapshotByInstance.Publish(lastSeenByInstance)
 
 	// It is safe to continue using the map after this, because the map is not
 	// mutated from this point on.

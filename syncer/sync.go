@@ -40,6 +40,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		s.name,
 		s.l,
 		s.instanceID(),
+		s.events,
 	)
 
 	return s.syncLoop(ctx, env, r)
@@ -53,7 +54,9 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		return err
 	}
 
-	// The lastSyncedTxnID starts as 0 to force at least one snapshot on startup
+	// The lastSyncedTxnID starts as 0 to force at least one snapshot on startup.
+	// It represents last TxnID that we uploaded to remote storage in the
+	// current run.
 	var lastSyncedTxnID header.TxnID
 	hasDataAtStart := info.LastTxnID > 0
 	warnedEmpty := false
@@ -193,6 +196,10 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			if err != nil {
 				return err
 			}
+
+			// Publish successful load
+			s.events.UpdateLoaded.Publish(update.NameInfo)
+
 			utils.GC()
 			if !localChanged {
 				// Prevent triggering a local snapshot if there were no local

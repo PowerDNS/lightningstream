@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/PowerDNS/lightningstream/syncer/cleaner"
+	"github.com/PowerDNS/lightningstream/syncer/events"
+	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
@@ -28,6 +30,15 @@ func New(name string, env *lmdb.Env, st simpleblob.Interface, c config.Config, l
 	}
 	cl := cleaner.New(name, st, cleanupConf, l)
 
+	ev := opt.Events
+	if ev == nil {
+		ev = events.New()
+	}
+	h := opt.Hooks
+	if h == nil {
+		h = hooks.New()
+	}
+
 	s := &Syncer{
 		name:               name,
 		st:                 st,
@@ -37,6 +48,8 @@ func New(name string, env *lmdb.Env, st simpleblob.Interface, c config.Config, l
 		shadow:             true,
 		generation:         0,
 		env:                env,
+		events:             ev,
+		hooks:              h,
 		lastByInstance:     make(map[string]time.Time),
 		cleaner:            cl,
 		storageStoreHealth: healthtracker.New(c.Health.StorageStore, fmt.Sprintf("%s_storage_store", name), "write to storage backend"),
@@ -66,6 +79,8 @@ type Syncer struct {
 	shadow     bool // use shadow database for timestamps?
 	generation uint64
 	env        *lmdb.Env
+	events     *events.Events
+	hooks      *hooks.Hooks
 
 	// lastByInstance tracks the last snapshot loaded by instance, so that the
 	// cleaner can make safe decisions about when to remove stale snapshots.

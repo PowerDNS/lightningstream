@@ -71,6 +71,8 @@ func runSync(receiveOnly bool) error {
 
 		opt := syncer.Options{
 			ReceiveOnly: receiveOnly,
+			Events:      Events,
+			Hooks:       Hooks,
 		}
 		s, err := syncer.New(name, env, st, conf, lc, opt)
 		if err != nil {

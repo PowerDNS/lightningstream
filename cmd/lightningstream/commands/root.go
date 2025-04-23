@@ -9,6 +9,8 @@ import (
 
 	"github.com/PowerDNS/lightningstream/config"
 	"github.com/PowerDNS/lightningstream/config/logger"
+	"github.com/PowerDNS/lightningstream/syncer/events"
+	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -30,9 +32,14 @@ var (
 )
 
 var (
-	// These are ste by Execute
+	// These are set by Execute
 	rootCtx    context.Context
 	rootCancel context.CancelFunc
+)
+
+var (
+	Events = events.New()
+	Hooks  = hooks.New()
 )
 
 const (
