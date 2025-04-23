@@ -30,14 +30,14 @@ func NameTimestampFromNano(tsNano header.Timestamp) string {
 
 // Name constructs a snapshot name
 func Name(syncerName, instanceID, generationID string, ts time.Time) string {
-	fileTimestamp := NameTimestamp(ts)
-	name := fmt.Sprintf("%s__%s__%s__%s.pb.gz",
-		syncerName,
-		instanceID,
-		fileTimestamp,
-		generationID,
-	)
-	return name
+	ni := NameInfo{
+		Extension:    DefaultExtension,
+		SyncerName:   syncerName,
+		InstanceID:   instanceID,
+		GenerationID: generationID,
+		Timestamp:    ts,
+	}
+	return ni.BuildName()
 }
 
 var (
@@ -52,8 +52,10 @@ func RegisterExtension(extension, kind string) {
 
 const KindSnapshot = "snapshot"
 
+const DefaultExtension = "pb.gz"
+
 func init() {
-	RegisterExtension("pb.gz", KindSnapshot)
+	RegisterExtension(DefaultExtension, KindSnapshot)
 }
 
 // ParseName parses a snapshot filename
@@ -111,6 +113,25 @@ type NameInfo struct {
 // ShortHash returns a short hash of name info to visually distinguish snapshots in logs
 func (ni NameInfo) ShortHash() string {
 	return ShortHash(ni.InstanceID, ni.TimestampString)
+}
+
+// BuildName creates a filename from basic info
+func (ni NameInfo) BuildName() string {
+	var nb strings.Builder
+	nb.WriteString(ni.SyncerName)
+	nb.WriteString("__")
+	nb.WriteString(ni.InstanceID)
+	nb.WriteString("__")
+	nb.WriteString(NameTimestamp(ni.Timestamp))
+	nb.WriteString("__")
+	nb.WriteString(ni.GenerationID)
+	for _, extraItem := range ni.Extra {
+		nb.WriteString("__")
+		nb.WriteString(extraItem.String())
+	}
+	nb.WriteString(".")
+	nb.WriteString(ni.Extension)
+	return nb.String()
 }
 
 // NameExtra are extra values added to the filename after the GenerationID field.
