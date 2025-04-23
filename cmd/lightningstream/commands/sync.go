@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	"github.com/PowerDNS/lightningstream/status"
@@ -71,9 +72,11 @@ func runSync(receiveOnly bool) error {
 
 		opt := syncer.Options{
 			ReceiveOnly: receiveOnly,
-			Events:      Events,
-			Hooks:       Hooks,
 		}
+		if SyncerOptionsCallback != nil {
+			opt = SyncerOptionsCallback(opt)
+		}
+
 		s, err := syncer.New(name, env, st, conf, lc, opt)
 		if err != nil {
 			return err
@@ -87,7 +90,7 @@ func runSync(receiveOnly bool) error {
 			}()
 			err := s.Sync(ctx)
 			if err != nil {
-				if err == context.Canceled {
+				if errors.Is(err, context.Canceled) {
 					l.Error("Sync cancelled")
 					return err
 				}

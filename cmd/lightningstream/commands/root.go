@@ -9,8 +9,7 @@ import (
 
 	"github.com/PowerDNS/lightningstream/config"
 	"github.com/PowerDNS/lightningstream/config/logger"
-	"github.com/PowerDNS/lightningstream/syncer/events"
-	"github.com/PowerDNS/lightningstream/syncer/hooks"
+	"github.com/PowerDNS/lightningstream/syncer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -38,8 +37,7 @@ var (
 )
 
 var (
-	Events = events.New()
-	Hooks  = hooks.New()
+	SyncerOptionsCallback func(syncer.Options) syncer.Options
 )
 
 const (
