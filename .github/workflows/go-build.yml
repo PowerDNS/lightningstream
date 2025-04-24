@@ -35,7 +35,7 @@ jobs:
 
   build_macos:
     # We use one version older than the latest, to ensure compatibility
-    runs-on: macos-11
+    runs-on: macos-15
     name: Go build (macOS)
     steps:
     - uses: actions/checkout@v4
