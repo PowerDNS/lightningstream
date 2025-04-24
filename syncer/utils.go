@@ -78,9 +78,12 @@ func (s *Syncer) instanceID() string {
 	return n
 }
 
-// instanceID returns a safe instance name
+// generationID returns the generation ID.
+// This concept is currently not used, but it is a required part of the
+// filenames, so we just return the minimum requirement (start with 'G',
+// followed by a value 'X').
 func (s *Syncer) generationID() string {
-	return fmt.Sprintf("G-%016x", s.generation)
+	return "GX"
 }
 
 // readDBI reads a DBI into a snapshot DBI.
