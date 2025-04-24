@@ -15,7 +15,7 @@ jobs:
 
   build_linux:
     # TODO: see if we can cross compile for other archs with CGo
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: Go build (Linux)
     steps:
     - uses: actions/checkout@v3
