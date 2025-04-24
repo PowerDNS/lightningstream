@@ -236,6 +236,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		efficiency = math.Round(100*float64(actualSize)/sizeHint) / 100
 	}
 	s.l.WithFields(logrus.Fields{
+		"entries":          dbiMsg.NumWrittenEntries,
 		"size_hint_used":   int(sizeHint),
 		"actual_data_size": actualSize,
 		"hint_efficiency":  efficiency,

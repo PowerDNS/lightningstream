@@ -62,6 +62,9 @@ type DBI struct {
 	flushed bool // indicates that data have already been written
 
 	cur int // current read offset
+
+	// Some statistics for logging (not persisted)
+	NumWrittenEntries int64 // Only incremented when writing
 }
 
 func (d *DBI) Name() string {
@@ -298,6 +301,8 @@ func (d *DBI) Append(kv KV) {
 	if d.dirty {
 		d.flushFields()
 	}
+
+	d.NumWrittenEntries++
 
 	// Start writing here
 	offset := len(d.data)
