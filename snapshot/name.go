@@ -162,13 +162,14 @@ func (ne NameExtra) Swap(i, j int) {
 // NameExtraItem represents one NameExtra value, e.g. "X1234".
 //
 // Requirements for these values:
-//  - Start with a unique capital ascii letter [A-Z] indicating the type
-//  - 'G' is reserved to prevent confusion with the GenerationID.
-//  - Followed by zero or more string characters for the value.
-//  - These items are separated by "__" in the filename, so they cannot contain
-//    this substring.
-//  - A type cannot appear more than once.
-//  - The items SHOULD appear sorted alphabetically.
+//
+//   - Start with a unique capital ascii letter [A-Z] indicating the type
+//   - 'G' is reserved to prevent confusion with the GenerationID.
+//   - Followed by zero or more string characters for the value.
+//   - These items are separated by "__" in the filename, so they cannot contain
+//     this substring.
+//   - A type cannot appear more than once.
+//   - The items SHOULD appear sorted alphabetically.
 type NameExtraItem string
 
 // Type returns the type byte (first letter)
