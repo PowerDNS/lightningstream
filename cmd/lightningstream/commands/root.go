@@ -37,7 +37,7 @@ var (
 )
 
 var (
-	SyncerOptionsCallback func(syncer.Options) syncer.Options
+	SyncerOptionsCallback func(syncer.Options, logrus.FieldLogger) syncer.Options
 )
 
 const (

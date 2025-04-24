@@ -74,7 +74,7 @@ func runSync(receiveOnly bool) error {
 			ReceiveOnly: receiveOnly,
 		}
 		if SyncerOptionsCallback != nil {
-			opt = SyncerOptionsCallback(opt)
+			opt = SyncerOptionsCallback(opt, l)
 		}
 
 		s, err := syncer.New(name, env, st, conf, lc, opt)

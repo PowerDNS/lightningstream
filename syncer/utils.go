@@ -206,6 +206,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 				}
 			}
 			ts = h.Timestamp
+			txnID = h.TxnID
 			flags = h.Flags
 			val = appVal
 		}
@@ -238,12 +239,18 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 	if sizeHint > 0 {
 		efficiency = math.Round(100*float64(actualSize)/sizeHint) / 100
 	}
+	var writtenPercent float64 = 100
+	if stat.Entries > 0 {
+		writtenPercent = float64(dbiMsg.NumWrittenEntries) / float64(stat.Entries) * 100
+		writtenPercent = math.Round(writtenPercent*100) / 100 // two percentage digits
+	}
 	s.l.WithFields(logrus.Fields{
-		"entries":          dbiMsg.NumWrittenEntries,
-		"size_hint_used":   int(sizeHint),
-		"actual_data_size": actualSize,
-		"hint_efficiency":  efficiency,
-		"filtered":         filtered, // if filtered, the estimate is not accurate
+		"written_entries":     dbiMsg.NumWrittenEntries,
+		"written_entries_pct": writtenPercent,
+		"size_hint_used":      int(sizeHint),
+		"actual_data_size":    actualSize,
+		"hint_efficiency":     efficiency,
+		"filtered":            filtered, // if filtered, the estimate is not accurate
 	}).Debug("Check our pre-alloc size estimate (<1 is OK)")
 
 	return dbiMsg, nil
