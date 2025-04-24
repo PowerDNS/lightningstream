@@ -23,7 +23,7 @@ services:
             - "minio:/data" 
 
     auth1:
-        image: powerdns/pdns-auth-48
+        image: powerdns/pdns-auth-49
         environment:
             instance: 1
             port: 53
@@ -40,7 +40,7 @@ services:
         entrypoint: /run.sh
     
     auth2:
-        image: powerdns/pdns-auth-48
+        image: powerdns/pdns-auth-49
         environment:
             instance: 2
             port: 53
@@ -57,7 +57,7 @@ services:
         entrypoint: /run.sh
 
     auth3:
-        image: powerdns/pdns-auth-48
+        image: powerdns/pdns-auth-49
         environment:
             instance: 3
             port: 53

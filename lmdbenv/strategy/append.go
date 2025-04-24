@@ -19,7 +19,6 @@ import (
 // - Sorted input
 //
 // Uses: make the very first snapshot load fast.
-//
 func Append(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 	prevKey := make([]byte, 0, LMDBMaxKeySize)
 	for {

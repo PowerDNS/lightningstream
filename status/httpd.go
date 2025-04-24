@@ -177,6 +177,6 @@ func (p *Page) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err := statusTemplate.Execute(w, data)
 	if err != nil {
 		w.WriteHeader(500)
-		_, _ = w.Write([]byte(fmt.Sprintf("Template execution error: %v", err)))
+		_, _ = fmt.Fprintf(w, "Template execution error: %v", err)
 	}
 }
