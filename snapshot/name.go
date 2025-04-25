@@ -122,7 +122,11 @@ func (ni NameInfo) BuildName() string {
 	nb.WriteString("__")
 	nb.WriteString(ni.InstanceID)
 	nb.WriteString("__")
-	nb.WriteString(NameTimestamp(ni.Timestamp))
+	ts := ni.TimestampString
+	if ts == "" {
+		ts = NameTimestamp(ni.Timestamp)
+	}
+	nb.WriteString(ts)
 	nb.WriteString("__")
 	nb.WriteString(ni.GenerationID)
 	for _, extraItem := range ni.Extra {

@@ -215,6 +215,7 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 
 	now := time.Now()
 
+	// This is safe, because it is a new map on every run
 	r.events.LastSeenSnapshotByInstance.Publish(lastSeenByInstance)
 
 	// It is safe to continue using the map after this, because the map is not

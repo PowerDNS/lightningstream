@@ -300,7 +300,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		}
 
 		// Sleep before next check for snapshots and local changes
-		s.l.Debug("Waiting for a new transaction")
+		//s.l.Debug("Waiting for a new transaction")
 		if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
 			return err
 		}
