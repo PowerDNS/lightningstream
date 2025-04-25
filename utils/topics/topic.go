@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"context"
 	"sync"
 )
 
@@ -55,7 +56,7 @@ func (t *Topic[T]) Last() (value T, ok bool) {
 
 // Subscribe creates a new Subscription.
 // By default, this is an unbuffered channel.
-// Is sendLast is set:
+// If sendLast is set:
 // - We will immediately send the last value, if any.
 // - The channel will be a buffered one with size 1.
 func (t *Topic[T]) Subscribe(sendLast bool) *Subscription[T] {
@@ -86,6 +87,23 @@ func (t *Topic[T]) Subscribe(sendLast bool) *Subscription[T] {
 		ch:    ch,
 	}
 	return sub
+}
+
+// Handle makes it easy to consume a topic with a simple handler func.
+// This function only returns when the callback returns an error or
+// the context is canceled.
+func (t *Topic[T]) Handle(ctx context.Context, cb func(T) error) error {
+	sub := t.Subscribe(false)
+	defer sub.Close()
+	for {
+		v, err := sub.Next(ctx)
+		if err != nil {
+			return err
+		}
+		if err := cb(v); err != nil {
+			return err
+		}
+	}
 }
 
 // unsubscribeID is called by Subscription.Close()
