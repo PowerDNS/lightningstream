@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/PowerDNS/lightningstream/snapshot/storage"
 	"github.com/PowerDNS/lightningstream/status"
 	"github.com/PowerDNS/lightningstream/syncer"
 	"github.com/PowerDNS/lightningstream/utils"
@@ -39,6 +40,7 @@ func runSync(receiveOnly bool) error {
 		return err
 	}
 	logrus.WithField("storage_type", conf.Storage.Type).Info("Storage backend initialised")
+	storage.SetGlobal(st)
 	status.SetStorage(st)
 
 	// If enabled, wait for marker file to be present in storage before starting syncers
