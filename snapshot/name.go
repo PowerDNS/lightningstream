@@ -151,6 +151,17 @@ func (ne NameExtra) Get(extraType byte) (val string, ok bool) {
 	return "", false
 }
 
+func (ne NameExtra) String() string {
+	var sb strings.Builder
+	for i, nei := range ne {
+		if i > 0 {
+			sb.WriteString(" ")
+		}
+		sb.WriteString(nei.String())
+	}
+	return sb.String()
+}
+
 func (ne NameExtra) Len() int {
 	return len(ne)
 }

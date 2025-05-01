@@ -500,21 +500,26 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 
 	ts := snapshot.NameTimestampFromNano(header.Timestamp(snap.Meta.TimestampNano))
 	l := s.l.WithFields(logrus.Fields{
-		"time_total":        utils.TimeDiff(tLoaded, t0),
-		"time_write_lock":   utils.TimeDiff(tLoaded, tTxnAcquire),
-		"txnID":             txnID,
-		"snapshot_instance": instance,
-		"shorthash":         snapshot.ShortHash(snap.Meta.InstanceID, ts),
-		"timestamp":         ts,
+		"time_total":            utils.TimeDiff(tLoaded, t0),
+		"time_write_lock":       utils.TimeDiff(tLoaded, tTxnAcquire),
+		"txnID":                 txnID,
+		"snapshot_instance":     instance,
+		"shorthash":             snapshot.ShortHash(snap.Meta.InstanceID, ts),
+		"timestamp":             ts,
+		"kind":                  update.NameInfo.Kind,
+		"extra":                 update.NameInfo.Extra.String(),
+		"compressed_size_bytes": update.BlobSize.Bytes(),
 	})
-	l.Info("Loaded remote snapshot")
+	l.Info("Loaded remote update")
 
 	l.WithFields(logrus.Fields{
 		"time_acquire":      utils.TimeDiff(tTxnAcquire, t0),
 		"time_copy_shadow1": utils.TimeDiff(tShadow1End, tShadow1Start),
 		"time_copy_shadow2": utils.TimeDiff(tShadow2End, tShadow2Start),
 		"time_load":         utils.TimeDiff(tLoadEnd, tLoadStart),
-	}).Debug("Loaded remote snapshot (with timings)")
+		"kind":              update.NameInfo.Kind,
+		"extra":             update.NameInfo.Extra.String(),
+	}).Debug("Loaded remote update (with timings)")
 
 	s.lastByInstance[instance] = update.NameInfo.Timestamp
 

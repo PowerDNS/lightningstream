@@ -7,6 +7,7 @@ import (
 	"github.com/PowerDNS/lightningstream/config"
 	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/PowerDNS/lightningstream/utils"
+	"github.com/c2h5oh/datasize"
 	"github.com/sirupsen/logrus"
 )
 
@@ -104,7 +105,8 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	// Signal success to health tracker
 	d.r.storageLoadHealth.AddSuccess()
 
-	metricSnapshotsLoadBytes.Add(float64(len(data)))
+	blobSize := datasize.ByteSize(len(data))
+	metricSnapshotsLoadBytes.Add(float64(blobSize))
 
 	// Limit number of decompressed snapshots in memory
 	// CAUTION: we cannot defer the Release, check all error paths!
@@ -137,6 +139,7 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	d.r.snapshotsByInstance[d.instance] = snapshot.Update{
 		Snapshot: msg,
 		NameInfo: ni,
+		BlobSize: blobSize,
 		OnClose: func(u *snapshot.Update) {
 			if u.Snapshot == nil {
 				return // already called?
