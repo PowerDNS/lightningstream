@@ -110,6 +110,9 @@ func (r *Receiver) Next() (instance string, update snapshot.Update) {
 		delete(r.snapshotsByInstance, instance)
 	}
 	r.mu.Unlock()
+	if instance != "" {
+		return instance, update
+	}
 
 	// If no snapshots are ready, allow other updates (non-blocking).
 	select {
@@ -122,7 +125,7 @@ func (r *Receiver) Next() (instance string, update snapshot.Update) {
 		// nothing available, or chan nil
 	}
 
-	return instance, update
+	return "", update
 }
 
 // HasSnapshots indicates if there are any snapshots in the storage backend
