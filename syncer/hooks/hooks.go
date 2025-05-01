@@ -20,6 +20,9 @@ type Hooks struct {
 
 	// FilterReadDBI is called in readDBI to perform any filtering
 	FilterReadDBI func(p FilterReadDBIParams) bool // included if it returns true
+
+	// Returns a channel that can inject other updates into the sync loop
+	OtherUpdateSource func() <-chan snapshot.Update
 }
 
 type SnapshotInfo struct {

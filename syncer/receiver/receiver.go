@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/PowerDNS/lightningstream/syncer/events"
+	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/PowerDNS/lightningstream/utils/climit"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/sirupsen/logrus"
@@ -17,9 +18,10 @@ import (
 	"github.com/PowerDNS/lightningstream/utils"
 )
 
-func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string, ev *events.Events) *Receiver {
+func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string, ev *events.Events, h *hooks.Hooks) *Receiver {
 	r := &Receiver{
 		events:                 ev,
+		hooks:                  h,
 		st:                     st,
 		c:                      c,
 		lmdbname:               dbname,
@@ -47,6 +49,10 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 			l.WithField("token", "Download")),
 	}
 
+	if h.OtherUpdateSource != nil {
+		r.otherUpdates = h.OtherUpdateSource()
+	}
+
 	return r
 }
 
@@ -58,12 +64,16 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 // downloading.
 type Receiver struct {
 	events      *events.Events
+	hooks       *hooks.Hooks
 	st          simpleblob.Interface
 	c           config.Config
 	lmdbname    string
 	prefix      string
 	l           logrus.FieldLogger
 	ownInstance string
+
+	// Only set if hooks.OtherUpdateSource is set, may be nil
+	otherUpdates <-chan snapshot.Update
 
 	// Only accessed by Run goroutine
 	lastNotifiedByInstance map[string]snapshot.NameInfo
@@ -90,9 +100,8 @@ type Receiver struct {
 // Next returns the next remote snapshot.Update to process if there is one
 // It is to be called by the Syncer.
 func (r *Receiver) Next() (instance string, update snapshot.Update) {
+	// Prioritize snapshots
 	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	for instance, update = range r.snapshotsByInstance {
 		break // first is assigned to return values now
 	}
@@ -100,6 +109,19 @@ func (r *Receiver) Next() (instance string, update snapshot.Update) {
 		// Consider handled
 		delete(r.snapshotsByInstance, instance)
 	}
+	r.mu.Unlock()
+
+	// If no snapshots are ready, allow other updates (non-blocking).
+	select {
+	case u, ok := <-r.otherUpdates:
+		if !ok {
+			break // channel closed
+		}
+		return u.NameInfo.InstanceID, u
+	default:
+		// nothing available, or chan nil
+	}
+
 	return instance, update
 }
 

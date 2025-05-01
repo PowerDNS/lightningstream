@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/PowerDNS/lightningstream/syncer/events"
+	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/PowerDNS/simpleblob/backends/memory"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,7 @@ func TestReceiver(t *testing.T) {
 		// checking again, so this needs to be high enough.
 		MemoryDownloadedSnapshots:   2,
 		MemoryDecompressedSnapshots: 2,
-	}, "test", logrus.New(), "self", events.New())
+	}, "test", logrus.New(), "self", events.New(), hooks.New())
 	go func() {
 		err := r.Run(ctx)
 		if err != nil && err != context.Canceled {

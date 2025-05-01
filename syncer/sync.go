@@ -42,6 +42,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		s.l,
 		s.instanceID(),
 		s.events,
+		s.hooks,
 	)
 
 	return s.syncLoop(ctx, env, r)
@@ -178,6 +179,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		// a local snapshot after MaxConsecutiveSnapshotLoads loads.
 		// Additionally, in shadow mode, every load will implicitly trigger a
 		// snapshot when local changes are detected.
+		// TODO: LSE: Maybe also add MaxConsecutiveUpdateLoads, or base this on time?
 		nLoads := 0
 	loadReadySnapshotsLoop:
 		for {
@@ -186,12 +188,14 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				break loadReadySnapshotsLoop // no more ready remote snapshots
 			}
 
-			// New remote snapshot to load
-			nLoads++
+			// New update to load
 			if instance == ownInstanceID {
-				s.l.Info("Loading snapshot for own instance")
+				s.l.WithField("kind", update.NameInfo.Kind).Info("Loading update for own instance")
 			}
-			waitingForInstances.Remove(instance)
+			if update.NameInfo.Kind == snapshot.KindSnapshot {
+				nLoads++
+				waitingForInstances.Remove(instance)
+			}
 			actualTxnID, localChanged, err := s.LoadOnce(
 				ctx, env, instance, update, lastSyncedTxnID)
 			update.Close() // returns the DecompressedSnapshotToken
@@ -204,7 +208,9 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				NameInfo: update.NameInfo,
 			})
 
-			utils.GC()
+			if update.NameInfo.Kind == snapshot.KindSnapshot {
+				utils.GC()
+			}
 			if !localChanged {
 				// Prevent triggering a local snapshot if there were no local
 				// changes by bumping the transaction ID we consider synced
@@ -217,6 +223,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				break loadReadySnapshotsLoop // allow a local snapshot before proceeding
 			}
 		}
+		// end of loadReadySnapshotsLoop
 
 		// Check if any of the instances we are waiting for have disappeared,
 		// which can happen when a cleaner removes stale snapshots.
