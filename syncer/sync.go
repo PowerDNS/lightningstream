@@ -194,8 +194,15 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			}
 			if update.NameInfo.Kind == snapshot.KindSnapshot {
 				nLoads++
-				waitingForInstances.Remove(instance)
+				if waitingForInstances.Contains(instance) {
+					s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
+					waitingForInstances.Remove(instance)
+				}
 			}
+			s.l.WithFields(logrus.Fields{
+				"kind": update.NameInfo.Kind,
+				"file": update.NameInfo.FullName,
+			}).Debug("Loading update")
 			actualTxnID, localChanged, err := s.LoadOnce(
 				ctx, env, instance, update, lastSyncedTxnID)
 			update.Close() // returns the DecompressedSnapshotToken
