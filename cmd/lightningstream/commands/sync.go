@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 
 	"github.com/PowerDNS/lightningstream/snapshot/storage"
 	"github.com/PowerDNS/lightningstream/status"
@@ -19,12 +20,14 @@ import (
 var (
 	onlyOnce   bool
 	markerFile string
+	onlyDBs    []string
 )
 
 func init() {
 	rootCmd.AddCommand(syncCmd)
 	syncCmd.Flags().BoolVar(&onlyOnce, "only-once", false, "Only do a single run and exit")
 	syncCmd.Flags().StringVar(&markerFile, "wait-for-marker-file", "", "Marker file to wait for in storage before starting syncers")
+	syncCmd.Flags().StringArrayVar(&onlyDBs, "only-db", nil, "Only sync this named db (can be repeated)")
 }
 
 func runSync(receiveOnly bool) error {
@@ -67,6 +70,14 @@ func runSync(receiveOnly bool) error {
 	eg, ctx := errgroup.WithContext(ctx)
 	for name, lc := range conf.LMDBs {
 		l := logrus.WithField("db", name)
+
+		if len(onlyDBs) > 0 {
+			if !slices.Contains(onlyDBs, name) {
+				l.Warn("Skipping because of --only-db flag")
+				continue
+			}
+		}
+
 		env, err := syncer.OpenEnv(l, lc)
 		if err != nil {
 			return err
