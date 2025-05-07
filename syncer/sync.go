@@ -251,6 +251,11 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		snapshotOverdue := false
 		if dt := time.Since(s.lastSnapshotTime); forceSnapshotEnabled && dt > forceSnapshotInterval {
 			snapshotOverdue = true
+			if s.hooks.SnapshotOverdue != nil {
+				if err := s.hooks.SnapshotOverdue(); err != nil {
+					return err
+				}
+			}
 			s.events.SnapshotOverdue.Publish(struct{}{})
 			logrus.WithField(
 				"last_snapshot_time_passed", dt.Round(time.Second).String(),

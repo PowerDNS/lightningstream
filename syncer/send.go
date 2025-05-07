@@ -197,10 +197,18 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		s.l.Debug("Store succeeded")
 		metricSnapshotsStoreBytes.Add(float64(len(out)))
 
-		s.events.UpdateStored.Publish(events.UpdateInfo{
+		// UpdateStored hook and event
+		updateInfo := events.UpdateInfo{
 			NameInfo: ni,
 			Meta:     meta,
-		})
+		}
+		if s.hooks.UpdateStored != nil {
+			err := s.hooks.UpdateStored(updateInfo)
+			if err != nil {
+				return 0, err
+			}
+		}
+		s.events.UpdateStored.Publish(updateInfo)
 
 		// Signal success to health tracker
 		s.storageStoreHealth.AddSuccess()
