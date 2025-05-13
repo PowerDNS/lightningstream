@@ -4,6 +4,7 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
 	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/PowerDNS/lightningstream/syncer/events"
+	"github.com/PowerDNS/lmdb-go/lmdb"
 )
 
 func New() *Hooks {
@@ -31,6 +32,9 @@ type Hooks struct {
 	// processing.
 	SnapshotOverdue func() error
 
+	// BeforeRead is called in SendOnce when the transaction is just opened
+	BeforeRead func(params BeforeReadParams) error
+
 	// FilterReadDBI is called in readDBI to perform any filtering
 	FilterReadDBI func(p FilterReadDBIParams) bool // included if it returns true
 
@@ -47,4 +51,10 @@ type FilterReadDBIParams struct {
 	Timestamp header.Timestamp
 	TxnID     header.TxnID
 	Flags     header.Flags
+}
+
+type BeforeReadParams struct {
+	Snapshot *snapshot.Snapshot
+	Env      *lmdb.Env
+	Txn      *lmdb.Txn
 }

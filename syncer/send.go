@@ -46,6 +46,18 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	}
 
 	err = inTxn(func(txn *lmdb.Txn) error {
+		// Call hook if defined
+		if s.hooks.BeforeRead != nil {
+			params := hooks.BeforeReadParams{
+				Snapshot: msg,
+				Env:      env,
+				Txn:      txn,
+			}
+			if err := s.hooks.BeforeRead(params); err != nil {
+				return fmt.Errorf("hooks.BeforeRead: %w", err)
+			}
+		}
+
 		// We can speed SendOnce up by about 30% by setting txn.RawRead to true
 		// if this is env.View, but this is only safe if the returned []byte
 		// keys and values are not used outside the transaction, because
