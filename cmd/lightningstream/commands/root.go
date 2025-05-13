@@ -78,12 +78,11 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		conf = config.Default()
-		conf.Version = version
-		err := conf.LoadYAMLFile(configFile, true)
+		conf, err := LoadConfig(configFile)
 		if err != nil {
 			logrus.Fatalf("Load config file %q: %v", configFile, err)
 		}
+		conf.Version = version
 		// Also check at this stage. A config must always be valid, even if you
 		// later override some items.
 		if err := conf.Check(); err != nil {
@@ -115,6 +114,18 @@ var rootCmd = &cobra.Command{
 		_ = cmd.Help()
 	},
 	Version: version,
+}
+
+// RootCommand returns the Cobra root Command
+func RootCommand() *cobra.Command {
+	return rootCmd
+}
+
+// LoadConfig loads the config file at given location
+var LoadConfig = func(configFile string) (config.Config, error) {
+	conf = config.Default()
+	err := conf.LoadYAMLFile(configFile, true)
+	return conf, err
 }
 
 func init() {
