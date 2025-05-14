@@ -12,6 +12,7 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv/strategy"
 	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/PowerDNS/lightningstream/status"
+	"github.com/PowerDNS/lightningstream/syncer/events"
 	"github.com/PowerDNS/lightningstream/syncer/receiver"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
@@ -40,6 +41,8 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		s.name,
 		s.l,
 		s.instanceID(),
+		s.events,
+		s.hooks,
 	)
 
 	return s.syncLoop(ctx, env, r)
@@ -53,7 +56,9 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		return err
 	}
 
-	// The lastSyncedTxnID starts as 0 to force at least one snapshot on startup
+	// The lastSyncedTxnID starts as 0 to force at least one snapshot on startup.
+	// It represents last TxnID that we uploaded to remote storage in the
+	// current run.
 	var lastSyncedTxnID header.TxnID
 	hasDataAtStart := info.LastTxnID > 0
 	warnedEmpty := false
@@ -110,7 +115,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 
 	if hasDataAtStart && !s.lc.SchemaTracksChanges {
 		// Sync to shadow using a time in the past to not overwrite newer data.
-		// At least is allows us to save newer entries that were added
+		// At least it allows us to save newer entries that were added
 		// while the syncer was not running. It will not save updated entries.
 		s.l.Info("Syncing main to shadow, in case data was changed before start")
 		err := env.Update(func(txn *lmdb.Txn) error {
@@ -152,7 +157,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	}
 
 	// To force periodic snapshots
-	lastSnapshotTime := time.Now()
+	s.lastSnapshotTime = time.Now() // first not due to interval
 	forceSnapshotInterval := s.c.StorageForceSnapshotInterval
 	forceSnapshotEnabled := forceSnapshotInterval > 0
 
@@ -174,6 +179,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		// a local snapshot after MaxConsecutiveSnapshotLoads loads.
 		// Additionally, in shadow mode, every load will implicitly trigger a
 		// snapshot when local changes are detected.
+		// TODO: LSE: Maybe also add MaxConsecutiveUpdateLoads, or base this on time?
 		nLoads := 0
 	loadReadySnapshotsLoop:
 		for {
@@ -181,19 +187,37 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			if instance == "" {
 				break loadReadySnapshotsLoop // no more ready remote snapshots
 			}
-			// New remote snapshot to load
-			nLoads++
+
+			// New update to load
 			if instance == ownInstanceID {
-				s.l.Info("Loading snapshot for own instance")
+				s.l.WithField("kind", update.NameInfo.Kind).Info("Loading update for own instance")
 			}
-			waitingForInstances.Remove(instance)
+			if update.NameInfo.Kind == snapshot.KindSnapshot {
+				nLoads++
+				if waitingForInstances.Contains(instance) {
+					s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
+					waitingForInstances.Remove(instance)
+				}
+			}
+			s.l.WithFields(logrus.Fields{
+				"kind": update.NameInfo.Kind,
+				"file": update.NameInfo.FullName,
+			}).Debug("Loading update")
 			actualTxnID, localChanged, err := s.LoadOnce(
 				ctx, env, instance, update, lastSyncedTxnID)
 			update.Close() // returns the DecompressedSnapshotToken
 			if err != nil {
 				return err
 			}
-			utils.GC()
+
+			// Publish a successful load
+			s.events.UpdateLoaded.Publish(events.UpdateInfo{
+				NameInfo: update.NameInfo,
+			})
+
+			if update.NameInfo.Kind == snapshot.KindSnapshot {
+				utils.GC()
+			}
 			if !localChanged {
 				// Prevent triggering a local snapshot if there were no local
 				// changes by bumping the transaction ID we consider synced
@@ -206,6 +230,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				break loadReadySnapshotsLoop // allow a local snapshot before proceeding
 			}
 		}
+		// end of loadReadySnapshotsLoop
 
 		// Check if any of the instances we are waiting for have disappeared,
 		// which can happen when a cleaner removes stale snapshots.
@@ -224,8 +249,14 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 
 		// Check if we need to do a periodic snapshot
 		snapshotOverdue := false
-		if dt := time.Since(lastSnapshotTime); forceSnapshotEnabled && dt > forceSnapshotInterval {
+		if dt := time.Since(s.lastSnapshotTime); forceSnapshotEnabled && dt > forceSnapshotInterval {
 			snapshotOverdue = true
+			if s.hooks.SnapshotOverdue != nil {
+				if err := s.hooks.SnapshotOverdue(); err != nil {
+					return err
+				}
+			}
+			s.events.SnapshotOverdue.Publish(struct{}{})
 			logrus.WithField(
 				"last_snapshot_time_passed", dt.Round(time.Second).String(),
 			).Info("Snapshot overdue, forcing one")
@@ -266,7 +297,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 						return err
 					}
 					lastSyncedTxnID = actualTxnID
-					lastSnapshotTime = time.Now()
 					// Start tracker: Initial snapshot stored
 					s.startTracker.SetPassedInitialStore()
 				} else if !warnedEmpty {
@@ -289,7 +319,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		}
 
 		// Sleep before next check for snapshots and local changes
-		s.l.Debug("Waiting for a new transaction")
+		//s.l.Debug("Waiting for a new transaction")
 		if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
 			return err
 		}
@@ -489,21 +519,26 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 
 	ts := snapshot.NameTimestampFromNano(header.Timestamp(snap.Meta.TimestampNano))
 	l := s.l.WithFields(logrus.Fields{
-		"time_total":        utils.TimeDiff(tLoaded, t0),
-		"time_write_lock":   utils.TimeDiff(tLoaded, tTxnAcquire),
-		"txnID":             txnID,
-		"snapshot_instance": instance,
-		"shorthash":         snapshot.ShortHash(snap.Meta.InstanceID, ts),
-		"timestamp":         ts,
+		"time_total":            utils.TimeDiff(tLoaded, t0),
+		"time_write_lock":       utils.TimeDiff(tLoaded, tTxnAcquire),
+		"txnID":                 txnID,
+		"snapshot_instance":     instance,
+		"shorthash":             snapshot.ShortHash(snap.Meta.InstanceID, ts),
+		"timestamp":             ts,
+		"kind":                  update.NameInfo.Kind,
+		"extra":                 update.NameInfo.Extra.String(),
+		"compressed_size_bytes": update.BlobSize.Bytes(),
 	})
-	l.Info("Loaded remote snapshot")
+	l.Info("Loaded remote update")
 
 	l.WithFields(logrus.Fields{
 		"time_acquire":      utils.TimeDiff(tTxnAcquire, t0),
 		"time_copy_shadow1": utils.TimeDiff(tShadow1End, tShadow1Start),
 		"time_copy_shadow2": utils.TimeDiff(tShadow2End, tShadow2Start),
 		"time_load":         utils.TimeDiff(tLoadEnd, tLoadStart),
-	}).Debug("Loaded remote snapshot (with timings)")
+		"kind":              update.NameInfo.Kind,
+		"extra":             update.NameInfo.Extra.String(),
+	}).Debug("Loaded remote update (with timings)")
 
 	s.lastByInstance[instance] = update.NameInfo.Timestamp
 

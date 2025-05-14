@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/c2h5oh/datasize"
@@ -83,21 +82,6 @@ func DisplayASCII(b []byte) string {
 		}
 	}
 	return string(ret)
-}
-
-// Cut cuts s around the first instance of sep,
-// returning the text before and after sep.
-// The found result reports whether sep appears in s.
-// If sep does not appear in s, cut returns s, "", false.
-//
-// This is a copy of strings.Cut from Go 1.18,
-// see https://github.com/golang/go/issues/46336
-// TODO: remove when we switch to Go 1.18 and use strings.Cut
-func Cut(s, sep string) (before, after string, found bool) {
-	if i := strings.Index(s, sep); i >= 0 {
-		return s[:i], s[i+len(sep):], true
-	}
-	return s, "", false
 }
 
 // TimeDiff returns the difference between two times, rounded to milliseconds.

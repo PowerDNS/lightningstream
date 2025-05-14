@@ -37,6 +37,7 @@ message Snapshot {
     fixed64 timestampNano = 5; // UNIX timestamp in nanoseconds (year 1678-2262)
     reserved 6; // was: string previousSnapshot = 6;
     string databaseName = 7;
+    int64 fromLmdbTxnID = 8; // exclusive
   }
   Meta meta = 2 [(gogoproto.nullable) = false];
 

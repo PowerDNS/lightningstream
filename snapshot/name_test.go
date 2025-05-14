@@ -17,13 +17,14 @@ func TestParseName(t *testing.T) {
 	}{
 		{
 			"roundtrip",
-			Name("db1", "inst1", "gen1", ts),
+			Name("db1", "inst1", "G1", ts),
 			NameInfo{
-				FullName:        "db1__inst1__20220102-030405-012345678__gen1.pb.gz",
+				FullName:        "db1__inst1__20220102-030405-012345678__G1.pb.gz",
 				Extension:       "pb.gz",
+				Kind:            "snapshot",
 				SyncerName:      "db1",
 				InstanceID:      "inst1",
-				GenerationID:    "gen1",
+				GenerationID:    "G1",
 				TimestampString: "20220102-030405-012345678",
 				Timestamp:       ts,
 			},
@@ -31,15 +32,20 @@ func TestParseName(t *testing.T) {
 		},
 		{
 			"extra-fields",
-			"db1__inst1__20220102-030405-012345678__gen1__extra__extra.pb.gz",
+			"db1__inst1__20220102-030405-012345678__G1__X123__Y456.pb.gz",
 			NameInfo{
-				FullName:        "db1__inst1__20220102-030405-012345678__gen1__extra__extra.pb.gz",
+				FullName:        "db1__inst1__20220102-030405-012345678__G1__X123__Y456.pb.gz",
 				Extension:       "pb.gz",
+				Kind:            "snapshot",
 				SyncerName:      "db1",
 				InstanceID:      "inst1",
-				GenerationID:    "gen1",
+				GenerationID:    "G1",
 				TimestampString: "20220102-030405-012345678",
 				Timestamp:       ts,
+				Extra: []NameExtraItem{
+					"X123",
+					"Y456",
+				},
 			},
 			false,
 		},
@@ -51,7 +57,7 @@ func TestParseName(t *testing.T) {
 		},
 		{
 			"invalid-ext",
-			"db1__inst1__20220102-030405-012345678__gen1__extra__extra.pb.bz2",
+			"db1__inst1__20220102-030405-012345678__G1__X123__Y456.pb.invalid",
 			NameInfo{},
 			true,
 		},
@@ -63,7 +69,7 @@ func TestParseName(t *testing.T) {
 		},
 		{
 			"invalid-ts",
-			"db1__inst1__20220102-030405-012__gen1.pb.gz",
+			"db1__inst1__20220102-030405-012__G1.pb.gz",
 			NameInfo{},
 			true,
 		},

@@ -9,6 +9,8 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
 	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/syncer/events"
+	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
@@ -44,6 +46,18 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	}
 
 	err = inTxn(func(txn *lmdb.Txn) error {
+		// Call hook if defined
+		if s.hooks.BeforeRead != nil {
+			params := hooks.BeforeReadParams{
+				Snapshot: msg,
+				Env:      env,
+				Txn:      txn,
+			}
+			if err := s.hooks.BeforeRead(params); err != nil {
+				return fmt.Errorf("hooks.BeforeRead: %w", err)
+			}
+		}
+
 		// We can speed SendOnce up by about 30% by setting txn.RawRead to true
 		// if this is env.View, but this is only safe if the returned []byte
 		// keys and values are not used outside the transaction, because
@@ -117,6 +131,11 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 
 	// If no actual changes were made, LMDB will not record the transaction
 	// and reuse the ID the next time, so we need to adjust the txnID we return.
+	// This is only relevant for write transactions, which are only used for
+	// a non-native schema with shadow DBIs, not for native schema.
+	// In such case there is a race present, where the application could have
+	// written new data under the txnID we think we have written.
+	// TODO: Further investigate this non-native potential race
 	info, err := env.Info()
 	if err != nil {
 		return 0, err
@@ -136,13 +155,35 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		return txnID, nil
 	}
 
+	// Build a filename
+	ni := snapshot.NameInfo{
+		Kind:         snapshot.KindSnapshot,
+		Extension:    snapshot.DefaultExtension,
+		SyncerName:   s.name,
+		InstanceID:   s.instanceID(),
+		GenerationID: s.generationID(),
+		Timestamp:    ts,
+	}
+	if s.hooks.UpdateSnapshotInfo != nil {
+		err := s.hooks.UpdateSnapshotInfo(hooks.SnapshotInfo{
+			Snapshot: msg,
+			NameInfo: &ni,
+		})
+		if err != nil {
+			return 0, fmt.Errorf("hooks.UpdateSnapshotInfo: %w", err)
+		}
+	}
+	name := ni.BuildName()
+
+	// Compress the snapshot and release memory
 	out, dds, err := snapshot.DumpData(msg)
 	if err != nil {
 		return 0, err
 	}
 	tDumpedData := time.Now()
 
-	msg = nil // no longer needed
+	meta := msg.Meta // keep a copy of metadata for events
+	msg = nil        // no longer needed
 	timeGC := utils.GC()
 
 	metricSnapshotsLoaded.WithLabelValues(s.name).Inc()
@@ -150,7 +191,6 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	metricSnapshotsLastSize.WithLabelValues(s.name).Set(float64(len(out)))
 
 	// Send it to storage
-	name := snapshot.Name(s.name, s.instanceID(), s.generationID(), ts)
 	for i := 0; i < s.c.StorageRetryCount || s.c.StorageRetryForever; i++ {
 		metricSnapshotsStoreCalls.Inc()
 		err = s.st.Store(ctx, name, out)
@@ -168,6 +208,19 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		}
 		s.l.Debug("Store succeeded")
 		metricSnapshotsStoreBytes.Add(float64(len(out)))
+
+		// UpdateStored hook and event
+		updateInfo := events.UpdateInfo{
+			NameInfo: ni,
+			Meta:     meta,
+		}
+		if s.hooks.UpdateStored != nil {
+			err := s.hooks.UpdateStored(updateInfo)
+			if err != nil {
+				return 0, err
+			}
+		}
+		s.events.UpdateStored.Publish(updateInfo)
 
 		// Signal success to health tracker
 		s.storageStoreHealth.AddSuccess()
@@ -199,8 +252,13 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 		"compression_ratio": compressionRatio,
 		"snapshot_size":     datasize.ByteSize(len(out)).HumanReadable(),
 		"snapshot_name":     name,
+		"snapshot_kind":     ni.Kind,
 		"txnID":             txnID,
 	}).Info("Stored snapshot")
+
+	if ni.Kind == snapshot.KindSnapshot {
+		s.lastSnapshotTime = time.Now()
+	}
 
 	// Tell the cleaner which snapshots made by other instances have been
 	// incorporated in the last snapshot that we sent.

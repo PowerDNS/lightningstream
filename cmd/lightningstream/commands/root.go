@@ -9,6 +9,7 @@ import (
 
 	"github.com/PowerDNS/lightningstream/config"
 	"github.com/PowerDNS/lightningstream/config/logger"
+	"github.com/PowerDNS/lightningstream/syncer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -30,9 +31,13 @@ var (
 )
 
 var (
-	// These are ste by Execute
+	// These are set by Execute
 	rootCtx    context.Context
 	rootCancel context.CancelFunc
+)
+
+var (
+	SyncerOptionsCallback func(syncer.Options, logrus.FieldLogger) syncer.Options
 )
 
 const (
@@ -66,12 +71,19 @@ var rootCmd = &cobra.Command{
 	Short: "This tool syncs one or more LMDB databases with an S3 bucket",
 	Long:  rootHelp,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		conf = config.Default()
-		conf.Version = version
-		err := conf.LoadYAMLFile(configFile, true)
+		// Workaround for #85: do not require config file for the automatically
+		// registered 'completion' command. It does not look like we can override
+		// PersistentPreRun there like we do for commands like 'version'.
+		if len(os.Args) > 1 && os.Args[1] == "completion" {
+			return
+		}
+
+		var err error
+		conf, err = LoadConfig(configFile)
 		if err != nil {
 			logrus.Fatalf("Load config file %q: %v", configFile, err)
 		}
+		conf.Version = version
 		// Also check at this stage. A config must always be valid, even if you
 		// later override some items.
 		if err := conf.Check(); err != nil {
@@ -103,6 +115,18 @@ var rootCmd = &cobra.Command{
 		_ = cmd.Help()
 	},
 	Version: version,
+}
+
+// RootCommand returns the Cobra root Command
+func RootCommand() *cobra.Command {
+	return rootCmd
+}
+
+// LoadConfig loads the config file at given location
+var LoadConfig = func(configFile string) (config.Config, error) {
+	conf := config.Default()
+	err := conf.LoadYAMLFile(configFile, true)
+	return conf, err
 }
 
 func init() {
