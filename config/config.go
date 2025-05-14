@@ -104,6 +104,7 @@ var (
 type Config struct {
 	Instance string          `yaml:"instance"`
 	LMDBs    map[string]LMDB `yaml:"lmdbs"`
+	Sweeper  Sweeper         `yaml:"sweeper"`
 	Storage  Storage         `yaml:"storage"`
 	HTTP     HTTP            `yaml:"http"`
 	Log      logger.Config   `yaml:"log"`
@@ -197,6 +198,66 @@ type LMDB struct {
 	HeaderExtraPaddingBlock bool `yaml:"header_extra_padding_block"`
 }
 
+// Sweeper settings for the LMDB sweeper that removed deleted entries after
+// a while, also known as the "tomb sweeper".
+//
+// The key consideration for these settings is how long instance can be
+// expected to be disconnected from the storage (out of sync) before
+// rejoining. If the retention interval is set too low, old records that
+// have been removed during the downtime can reappear, which can cause
+// major issues.
+//
+// When picking a value, also take into account development, testing and
+// migration systems that only occasionally come online.
+//
+// TODO: Consider if we want to write a marker to keep track of the last
+//       sync, and reject sync once we have passed this interval.
+//       This would be the first instance of retained LS state. Up until now
+//       LS operates in a stateless way.
+type Sweeper struct {
+	// Enabled controls if the sweeper is enabled.
+	// It is DISABLED by default, because of the important consistency
+	// considerations that depend on the kind of deployment.
+	// When disabled, the deleted entries will never actually be removed.
+	Enabled bool `yaml:"enabled"`
+
+	// RetentionDays is the number of DAYS of retention. Unlike in most
+	// other places, this is specified in number of days instead of Duration
+	// because of the expected length of this.
+	// This is a float, so it is possible to use periods shorter than one day,
+	// but this is rarely a good idea. Best to set this as high as possible.
+	// Default: 370 (days, intentionally on the safe side)
+	RetentionDays float32 `yaml:"retention_days"`
+
+	// Interval is the interval between sweeps of the whole database to enforce
+	// RetentionDays.
+	// As a guideline, on a fast server sweeping 1 million records takes
+	// about 1 second.
+	// Default: 6h
+	Interval time.Duration `yaml:"interval"`
+
+	// FirstInterval is the first Interval immediately after
+	// startup, to allow one soon after extended downtime.
+	// Default: 10m
+	FirstInterval time.Duration `yaml:"first_interval"`
+
+	// LockDuration limits how long the sweeper may hold the exclusive write
+	// lock at one time. This effectively controls the maximum latency spike
+	// due to the sweeper for API calls that update the LMDB.
+	// Default: 50ms
+	LockDuration time.Duration `yaml:"lock_duration"`
+
+	// ReleaseDuration determines how long the sweeper must sleep before it
+	// is allowed to reacquire the exclusive write lock.
+	// If this is equal to LockDuration, it means that the sweeper can hold the
+	// LMDB at most half the time.
+	// Do not set this too high, as every sweep cycle will record a write
+	// transaction that can trigger a snapshot generation scan. It is best
+	// to get it over with in a short total sweep time.
+	// Default: 50ms
+	ReleaseDuration time.Duration `yaml:"release_duration"`
+}
+
 type DBIOptions struct {
 	// OverrideCreateFlags can override DBI create flags when loading a
 	// snapshot and the DBI does not create yet.
@@ -231,7 +292,7 @@ type Cleanup struct {
 	// appear in the bucket, even if a newer snapshot is available.
 	// This is a fairly short period (typically less than an hour) that is just
 	// long enough to give clients time to download this snapshot after they
-	// perform a listing, even if the snapshot is large and the connection slow.
+	// perform a listing, even if the snapshot is large and the connection is slow.
 	// Note that the latest snapshot will be retained as long as no new one
 	// comes in for the same instance.
 	MustKeepInterval time.Duration `yaml:"must_keep_interval"`
@@ -382,6 +443,15 @@ func Default() Config {
 		StorageForceSnapshotInterval: DefaultStorageForceSnapshotInterval,
 		MemoryDownloadedSnapshots:    DefaultMemoryDownloadedSnapshots,
 		MemoryDecompressedSnapshots:  DefaultMemoryDecompressedSnapshots,
+
+		Sweeper: Sweeper{
+			Enabled:         false,
+			RetentionDays:   370, // days
+			Interval:        6 * time.Hour,
+			FirstInterval:   10 * time.Minute,
+			LockDuration:    50 * time.Millisecond,
+			ReleaseDuration: 50 * time.Millisecond,
+		},
 
 		Storage: Storage{
 			Cleanup: Cleanup{
