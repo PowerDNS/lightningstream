@@ -78,7 +78,8 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		conf, err := LoadConfig(configFile)
+		var err error
+		conf, err = LoadConfig(configFile)
 		if err != nil {
 			logrus.Fatalf("Load config file %q: %v", configFile, err)
 		}
@@ -123,7 +124,7 @@ func RootCommand() *cobra.Command {
 
 // LoadConfig loads the config file at given location
 var LoadConfig = func(configFile string) (config.Config, error) {
-	conf = config.Default()
+	conf := config.Default()
 	err := conf.LoadYAMLFile(configFile, true)
 	return conf, err
 }
