@@ -244,6 +244,7 @@ type Sweeper struct {
 	// LockDuration limits how long the sweeper may hold the exclusive write
 	// lock at one time. This effectively controls the maximum latency spike
 	// due to the sweeper for API calls that update the LMDB.
+	// This is not a hard quota, the sweeper may overrun it slightly.
 	// Default: 50ms
 	LockDuration time.Duration `yaml:"lock_duration"`
 
