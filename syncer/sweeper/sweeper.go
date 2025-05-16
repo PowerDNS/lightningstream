@@ -177,6 +177,11 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 	}
 	st.timeTaken = time.Since(t0)
 	s.lastStats = st
+	metricCleanedTotal.WithLabelValues(s.name).Add(float64(st.nCleaned))
+	metricStatsTotal.WithLabelValues(s.name).Set(float64(st.nEntries))
+	metricStatsDeleted.WithLabelValues(s.name).Set(float64(st.nDeleted))
+	metricStatsAvailable.WithLabelValues(s.name).Set(1)
+	metricDurationSummary.WithLabelValues(s.name).Observe(st.timeTaken.Seconds())
 	s.l.WithFields(st.logFields()).
 		Info("Sweep for stale deleted entries completed")
 	return nil
