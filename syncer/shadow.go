@@ -78,6 +78,7 @@ func (s *Syncer) mainToShadow(ctx context.Context, txn *lmdb.Txn, tsNano header.
 			dbiMsg,
 			tsNano,
 			header.TxnID(txn.ID()),
+			s.deletedCutoff(t0),
 		)
 		if err != nil {
 			return fmt.Errorf("create native iterator: %w", err)

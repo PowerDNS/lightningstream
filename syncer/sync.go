@@ -447,6 +447,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				dbiMsg,
 				0, // no default timestamp
 				header.TxnID(txn.ID()),
+				s.deletedCutoff(t0),
 			)
 			if err != nil {
 				return fmt.Errorf("create native iterator: %w", err)
