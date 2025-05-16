@@ -11,16 +11,22 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
 	"github.com/PowerDNS/lightningstream/lmdbenv/limitscanner"
-	"github.com/PowerDNS/lightningstream/syncer"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	// SyncDBIPrefix is the shared DBI name prefix for all special tables that
+	// must not be synced.
+	// TODO: Duplicated from syncer to prevent import loop, move somewhere else
+	SyncDBIPrefix = "_sync"
+)
+
 func New(name string, conf config.Sweeper, env *lmdb.Env, l logrus.FieldLogger, schemaTracksChanges bool) *Sweeper {
 	return &Sweeper{
 		name:                name,
-		l:                   l,
+		l:                   l.WithField("component", "sweeper"),
 		env:                 env,
 		conf:                conf,
 		schemaTracksChanges: schemaTracksChanges,
@@ -45,17 +51,15 @@ type Sweeper struct {
 // Run runs the sweeper according to the configured schedule.
 // It only runs when an error occurs or the context is closed.
 func (s *Sweeper) Run(ctx context.Context) error {
-	// Technically we should only start this timer after the FirstInterval,
-	// but if FirstInterval is a lot shorter than Interval, this is good enough.
-	t := time.NewTicker(s.conf.Interval)
-	defer t.Stop()
+	wait := s.conf.FirstInterval
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(s.conf.FirstInterval):
-		case <-t.C:
+		// Wait
+		if err := utils.SleepContext(ctx, wait); err != nil {
+			return err // context closed
 		}
+		wait = s.conf.Interval
+
+		// Do sweep
 		err := s.sweep(ctx)
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
@@ -70,7 +74,7 @@ func (s *Sweeper) Run(ctx context.Context) error {
 func (s *Sweeper) sweep(ctx context.Context) error {
 	t0 := time.Now()
 
-	retention := time.Duration(s.conf.RetentionDays * float32(24*time.Hour))
+	retention := s.conf.RetentionDuration()
 	cutoff := time.Now().Add(-retention)
 	cutoffTS := header.TimestampFromTime(cutoff)
 
@@ -96,7 +100,7 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 		// We must not corrupt the data if a non-native schema is used for
 		// the main data. In this case we only sweep our own shadow and meta
 		// DBIs, which do use our native format.
-		if !s.schemaTracksChanges && !strings.HasPrefix(dbiName, syncer.SyncDBIPrefix) {
+		if !s.schemaTracksChanges && !strings.HasPrefix(dbiName, SyncDBIPrefix) {
 			continue
 		}
 

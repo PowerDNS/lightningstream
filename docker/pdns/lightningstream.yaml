@@ -13,6 +13,17 @@ lmdbs:
       no_subdir: true
       create: true
 
+sweeper:
+  # We want to run in the devenv, but we do not want anything to be
+  # actually cleaned, because we do not have the right consistency
+  # guarantees here. The devenv is expected to only be spun up occasionally.
+  enabled: true
+  retention_days: 3650  # 10 years
+  interval: 6h
+  first_interval: 1m
+  lock_duration: 50ms
+  release_duration: 50ms
+
 storage:
   #type: fs
   type: s3

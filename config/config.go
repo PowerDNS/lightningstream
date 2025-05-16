@@ -259,6 +259,10 @@ type Sweeper struct {
 	ReleaseDuration time.Duration `yaml:"release_duration"`
 }
 
+func (sw Sweeper) RetentionDuration() time.Duration {
+	return time.Duration(sw.RetentionDays * float32(24*time.Hour))
+}
+
 type DBIOptions struct {
 	// OverrideCreateFlags can override DBI create flags when loading a
 	// snapshot and the DBI does not create yet.

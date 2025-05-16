@@ -179,6 +179,7 @@ sweeper:
   # It is DISABLED by default, because of the important consistency
   # considerations that depend on the kind of deployment.
   # When disabled, the deleted entries will never actually be removed.
+  # Stats are only available when the sweeper is enabled.
   #enabled: false
   
   # RetentionDays is the number of DAYS of retention. Unlike in most
