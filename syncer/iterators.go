@@ -17,6 +17,7 @@ func NewNativeIterator(
 	dbiMsg *snapshot.DBI,
 	defaultTS header.Timestamp,
 	txnID header.TxnID,
+	deletedCutoff header.Timestamp,
 ) (*NativeIterator, error) {
 	if formatVersion == 0 {
 		return nil, errors.New("no snapshot formatVersion provided, or 0")
@@ -41,6 +42,7 @@ func NewNativeIterator(
 		TxnID:                txnID,
 		FormatVersion:        formatVersion,
 		HeaderPaddingBlock:   false,
+		DeletedCutoff:        deletedCutoff,
 	}, nil
 }
 
@@ -57,6 +59,7 @@ type NativeIterator struct {
 	TxnID                header.TxnID     // Current write TxnID (required)
 	FormatVersion        uint32           // Snapshot FormatVersion
 	HeaderPaddingBlock   bool             // Extra padding block for testing
+	DeletedCutoff        header.Timestamp // Older deleted entries are considered stale
 
 	current int
 	started bool
@@ -88,13 +91,24 @@ func (it *NativeIterator) Merge(oldval []byte) (val []byte, err error) {
 	//logrus.Debug("key = %s | old = %s | new = %s",
 	//	string(entry.Key), string(oldval), string(entryVal))
 	if len(oldval) == 0 {
-		// Not in destination db, add with header
+		// Not in destination db
+
+		// Sweeper: check if it is a stale deletion record to not re-add a
+		// record that may just have been swept.
+		entryFlags := entry.MaskedFlags()
+		if entryFlags.IsDeleted() && header.Timestamp(entry.TimestampNano) < it.DeletedCutoff {
+			// Remove (effectively 'do not add', because it does not exist)
+			return nil, nil
+		}
+
+		// Add with header
 		return it.addHeader(
 			entryVal,
 			header.Timestamp(entry.TimestampNano),
 			entry.MaskedFlags(),
 			false)
 	}
+
 	h, appVal, err := header.Parse(oldval)
 	if err != nil {
 		// Should never happen
