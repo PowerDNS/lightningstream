@@ -210,10 +210,10 @@ type LMDB struct {
 // When picking a value, also take into account development, testing and
 // migration systems that only occasionally come online.
 //
-// TODO: Consider if we want to write a marker to keep track of the last
-//       sync, and reject sync once we have passed this interval.
-//       This would be the first instance of retained LS state. Up until now
-//       LS operates in a stateless way.
+//	     TODO: Consider if we want to write a marker to keep track of the last
+//			   sync, and reject sync once we have passed this interval.
+//			   This would be the first instance of retained LS state. Up until
+//			   now LS operates in a stateless way.
 type Sweeper struct {
 	// Enabled controls if the sweeper is enabled.
 	// It is DISABLED by default, because of the important consistency
