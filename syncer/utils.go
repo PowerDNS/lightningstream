@@ -286,3 +286,19 @@ func (s *Syncer) registerCollector(env *lmdb.Env) {
 	lmdbCollector.EnableSmaps(s.c.LMDBScrapeSmaps)
 	lmdbCollector.AddTarget(s.name, nil, env)
 }
+
+// deletedCutoff is the cutoff for stale deleted markers to not re-add them
+// after the Sweeper has cleaned them.
+// If the sweeper is disabled, this returns 0, which will never filter out
+// records.
+func (s *Syncer) deletedCutoff(now time.Time) header.Timestamp {
+	if !s.c.Sweeper.Enabled {
+		return 0
+	}
+	// The RetentionDuration is decreased to not add new deletion markers
+	// that would go stale very soon, and to correct for the 'now' timestamp
+	// actually being slightly in the past when the whole operation was started.
+	retention := s.c.Sweeper.RetentionDurationMinusCutoff()
+	cutoff := now.Add(-retention)
+	return header.TimestampFromTime(cutoff)
+}

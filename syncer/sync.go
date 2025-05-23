@@ -14,6 +14,7 @@ import (
 	"github.com/PowerDNS/lightningstream/status"
 	"github.com/PowerDNS/lightningstream/syncer/events"
 	"github.com/PowerDNS/lightningstream/syncer/receiver"
+	"github.com/PowerDNS/lightningstream/syncer/sweeper"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/sirupsen/logrus"
@@ -71,6 +72,15 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		err := s.cleaner.Run(ctx)
 		s.l.WithError(err).Info("Cleaner exited")
 	}()
+
+	// Run the tombsweeper to remove state deleted records, if enabled.
+	if s.c.Sweeper.Enabled {
+		sw := sweeper.New(s.name, s.c.Sweeper, s.env, s.l, s.lc.SchemaTracksChanges)
+		go func() {
+			err := sw.Run(ctx)
+			s.l.WithError(err).Info("Sweeper exited")
+		}()
+	}
 
 	// Wait for an initial snapshot listing
 	for {
@@ -467,6 +477,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				dbiMsg,
 				0, // no default timestamp
 				header.TxnID(txn.ID()),
+				s.deletedCutoff(t0),
 			)
 			if err != nil {
 				return fmt.Errorf("create native iterator: %w", err)
