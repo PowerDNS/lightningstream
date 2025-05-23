@@ -257,10 +257,37 @@ type Sweeper struct {
 	// to get it over with in a short total sweep time.
 	// Default: 50ms
 	ReleaseDuration time.Duration `yaml:"release_duration"`
+
+	// RetentionLoadCutoffDuration is the time interval close to the RetentionDays
+	// limit where we will not load deletion markers from remote snapshots,
+	// because they would soon be eligible for removal by the sweeper anyway.
+	// Only set this if you understand the implications.
+	// Default: 1% of the duration corresponding to the RetentionDays setting.
+	RetentionLoadCutoffDuration time.Duration `yaml:"retention_load_cutoff_duration"`
 }
 
 func (sw Sweeper) RetentionDuration() time.Duration {
 	return time.Duration(sw.RetentionDays * float32(24*time.Hour))
+}
+
+func (sw Sweeper) RetentionDurationMinusCutoff() time.Duration {
+	// The RetentionDuration is decreased by 1% (by default) to not add new
+	// deletion markers that would go stale very soon, and to correct for the 'now'
+	// timestamp actually being slightly in the past when the whole operation was
+	// started.
+	retention := sw.RetentionDuration()
+	if sw.RetentionLoadCutoffDuration > 0 {
+		buffer := sw.RetentionLoadCutoffDuration
+		// Safeguard: never more than 75% of the retention duration
+		maxBuffer := retention * 3 / 4
+		if buffer > maxBuffer {
+			buffer = maxBuffer
+		}
+		retention -= sw.RetentionLoadCutoffDuration // override in config
+	} else {
+		retention -= retention / 100 // subtract default 1%
+	}
+	return retention
 }
 
 type DBIOptions struct {

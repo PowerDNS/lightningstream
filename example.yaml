@@ -219,6 +219,13 @@ sweeper:
   # Default: 50ms
   #release_duration: 50ms
 
+  # RetentionLoadCutoffDuration is the time interval close to the RetentionDays
+  # limit where we will not load deletion markers from remote snapshots,
+  # because they would soon be eligible for removal by the sweeper anyway.
+  # Only set this if you understand the implications.
+  # Default: 1% of the duration corresponding to the retention_days setting.
+  #retention_load_cutoff_duration: 0
+
 
 # Storage configures where LS stores its snapshots
 storage:

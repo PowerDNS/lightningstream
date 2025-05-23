@@ -265,11 +265,10 @@ func (s *Syncer) deletedCutoff(now time.Time) header.Timestamp {
 	if !s.c.Sweeper.Enabled {
 		return 0
 	}
-	// The RetentionDuration is decreased by 1% to not add new deletion markers
+	// The RetentionDuration is decreased to not add new deletion markers
 	// that would go stale very soon, and to correct for the 'now' timestamp
 	// actually being slightly in the past when the whole operation was started.
-	retention := s.c.Sweeper.RetentionDuration()
-	retention -= retention / 100 // subtract 1%
+	retention := s.c.Sweeper.RetentionDurationMinusCutoff()
 	cutoff := now.Add(-retention)
 	return header.TimestampFromTime(cutoff)
 }
