@@ -31,7 +31,7 @@ func SetGlobal(st simpleblob.Interface) {
 	storage = st
 }
 
-// GetGlobal retrieves the global storage ste by SetGlobal.
+// GetGlobal retrieves the global storage set by SetGlobal.
 // It blocks until one is available.
 func GetGlobal() simpleblob.Interface {
 	mu.RLock()
