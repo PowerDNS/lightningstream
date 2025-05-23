@@ -13,6 +13,7 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
 	"github.com/PowerDNS/lightningstream/lmdbenv/stats"
 	"github.com/PowerDNS/lightningstream/snapshot"
+	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/pkg/errors"
@@ -77,9 +78,12 @@ func (s *Syncer) instanceID() string {
 	return n
 }
 
-// instanceID returns a safe instance name
+// generationID returns the generation ID.
+// This concept is currently not used, but it is a required part of the
+// filenames, so we just return the minimum requirement (start with 'G',
+// followed by a value 'X').
 func (s *Syncer) generationID() string {
-	return fmt.Sprintf("G-%016x", s.generation)
+	return "GX"
 }
 
 // readDBI reads a DBI into a snapshot DBI.
@@ -166,6 +170,9 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 	}
 	defer c.Close()
 
+	filterReadDBI := s.hooks.FilterReadDBI
+	filtered := false
+
 	var prev []byte
 	var flag uint = lmdb.First
 	for {
@@ -187,6 +194,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 		prev = key
 
 		var ts header.Timestamp
+		var txnID header.TxnID
 		var flags header.Flags
 		if !rawValues {
 			h, appVal, err := header.Parse(val)
@@ -198,11 +206,25 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 				}
 			}
 			ts = h.Timestamp
+			txnID = h.TxnID
 			flags = h.Flags
 			val = appVal
 		}
 
 		flag = lmdb.Next
+
+		// Filter and append
+		if filterReadDBI != nil {
+			include := filterReadDBI(hooks.FilterReadDBIParams{
+				Timestamp: ts,
+				TxnID:     txnID,
+				Flags:     flags,
+			})
+			if !include {
+				filtered = true
+				continue
+			}
+		}
 		dbiMsg.Append(snapshot.KV{
 			Key:           key,
 			Value:         val,
@@ -217,10 +239,18 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 	if sizeHint > 0 {
 		efficiency = math.Round(100*float64(actualSize)/sizeHint) / 100
 	}
+	var writtenPercent float64 = 100
+	if stat.Entries > 0 {
+		writtenPercent = float64(dbiMsg.NumWrittenEntries) / float64(stat.Entries) * 100
+		writtenPercent = math.Round(writtenPercent*100) / 100 // two percentage digits
+	}
 	s.l.WithFields(logrus.Fields{
-		"size_hint_used":   int(sizeHint),
-		"actual_data_size": actualSize,
-		"hint_efficiency":  efficiency,
+		"written_entries":     dbiMsg.NumWrittenEntries,
+		"written_entries_pct": writtenPercent,
+		"size_hint_used":      int(sizeHint),
+		"actual_data_size":    actualSize,
+		"hint_efficiency":     efficiency,
+		"filtered":            filtered, // if filtered, the estimate is not accurate
 	}).Debug("Check our pre-alloc size estimate (<1 is OK)")
 
 	return dbiMsg, nil

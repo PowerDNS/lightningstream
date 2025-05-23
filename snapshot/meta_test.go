@@ -15,6 +15,7 @@ func makeTestMeta() Meta {
 		LmdbTxnID:     123,
 		TimestampNano: ts,
 		DatabaseName:  "db",
+		FromLmdbTxnID: 42,
 	}
 }
 

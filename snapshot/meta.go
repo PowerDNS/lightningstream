@@ -14,6 +14,7 @@ const (
 	FieldMetaLMDBTxnID     = 4
 	FieldMetaTimestampNano = 5
 	FieldMetaDatabaseName  = 7
+	FieldMetaFromLMDBTxnID = 8
 )
 
 type Meta struct {
@@ -23,6 +24,7 @@ type Meta struct {
 	LmdbTxnID     int64
 	TimestampNano uint64
 	DatabaseName  string
+	FromLmdbTxnID int64
 }
 
 func (m *Meta) Marshal() []byte {
@@ -61,6 +63,10 @@ func (m *Meta) Marshal() []byte {
 		offset += csproto.EncodeTag(b[offset:], FieldMetaTimestampNano, csproto.WireTypeFixed64)
 		binary.LittleEndian.PutUint64(b[offset:offset+8], m.TimestampNano)
 		offset += 8
+	}
+	if m.FromLmdbTxnID > 0 {
+		offset += csproto.EncodeTag(b[offset:], FieldMetaFromLMDBTxnID, csproto.WireTypeVarint)
+		offset += csproto.EncodeVarint(b[offset:], uint64(m.FromLmdbTxnID))
 	}
 
 	return b[:offset]
@@ -102,6 +108,11 @@ func (m *Meta) Unmarshal(data []byte) error {
 			}
 		case FieldMetaDatabaseName:
 			m.DatabaseName, err = getString(d, tag, wireType)
+			if err != nil {
+				return err
+			}
+		case FieldMetaFromLMDBTxnID:
+			m.FromLmdbTxnID, err = getInt64(d, tag, wireType)
 			if err != nil {
 				return err
 			}

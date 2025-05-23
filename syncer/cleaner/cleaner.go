@@ -111,6 +111,9 @@ func (w *Worker) RunOnce(ctx context.Context, now time.Time) error {
 			w.ignoredFilenames[name] = true
 			continue
 		}
+		if ni.Kind != snapshot.KindSnapshot {
+			continue
+		}
 
 		removalCandidates = append(removalCandidates, ni)
 		seen[name] = true
