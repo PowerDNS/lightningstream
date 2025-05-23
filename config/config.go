@@ -283,7 +283,7 @@ func (sw Sweeper) RetentionDurationMinusCutoff() time.Duration {
 		if buffer > maxBuffer {
 			buffer = maxBuffer
 		}
-		retention -= sw.RetentionLoadCutoffDuration // override in config
+		retention -= buffer // override in config
 	} else {
 		retention -= retention / 100 // subtract default 1%
 	}
