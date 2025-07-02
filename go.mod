@@ -19,7 +19,7 @@ require (
 	github.com/wojas/go-healthz v0.2.0
 	go.uber.org/atomic v1.10.0
 	golang.org/x/exp v0.0.0-20230111222715-75897c7a292a
-	golang.org/x/sync v0.8.0
+	golang.org/x/sync v0.15.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -58,11 +58,11 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.0 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/term v0.25.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/crypto v0.39.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
 	google.golang.org/grpc v1.43.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
