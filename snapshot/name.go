@@ -66,6 +66,7 @@ func ParseName(name string) (NameInfo, error) {
 		return empty, fmt.Errorf("invalid name: no dot: %s", name)
 	}
 	ni.FullName = name
+	ni.BaseName = basename
 	kind, known := registeredExtensions[ext]
 	if !known {
 		return empty, fmt.Errorf("unknown extension: %s", name)
