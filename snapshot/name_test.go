@@ -20,6 +20,7 @@ func TestParseName(t *testing.T) {
 			Name("db1", "inst1", "G1", ts),
 			NameInfo{
 				FullName:        "db1__inst1__20220102-030405-012345678__G1.pb.gz",
+				BaseName:        "db1__inst1__20220102-030405-012345678__G1",
 				Extension:       "pb.gz",
 				Kind:            "snapshot",
 				SyncerName:      "db1",
@@ -35,6 +36,7 @@ func TestParseName(t *testing.T) {
 			"db1__inst1__20220102-030405-012345678__G1__X123__Y456.pb.gz",
 			NameInfo{
 				FullName:        "db1__inst1__20220102-030405-012345678__G1__X123__Y456.pb.gz",
+				BaseName:        "db1__inst1__20220102-030405-012345678__G1__X123__Y456",
 				Extension:       "pb.gz",
 				Kind:            "snapshot",
 				SyncerName:      "db1",
