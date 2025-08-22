@@ -131,7 +131,7 @@ var LoadConfig = func(configFile string) (config.Config, error) {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "lightningstream.yaml", "Config file")
-	rootCmd.PersistentFlags().BoolVar(&logConfig, "log-config", false, "Log the evaluated configuration on startup")
+	rootCmd.PersistentFlags().BoolVar(&logConfig, "log-config", false, "Log the evaluated configuration on startup (always logged in run mode)")
 	rootCmd.PersistentFlags().StringVarP(&instanceName, "instance", "i", "", "Instance name, defaults to hostname. MUST be unique for each instance")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().IntVar(&minimumPID, "minimum-pid", 0, fmt.Sprintf(

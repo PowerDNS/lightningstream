@@ -38,6 +38,13 @@ func runSync(receiveOnly bool) error {
 		conf.OnlyOnce = true
 	}
 
+	// If it has not been logged yet in PersistentPreRun, log it now for
+	// the sync command to ensure we always have a configuration dump
+	// when debugging.
+	if !logConfig {
+		logrus.Infof("Effective configuration:\n%s\n", conf.String())
+	}
+
 	st, err := simpleblob.GetBackend(ctx, conf.Storage.Type, conf.Storage.Options)
 	if err != nil {
 		return err
