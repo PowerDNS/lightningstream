@@ -3,7 +3,6 @@ package receiver
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/PowerDNS/lightningstream/syncer/events"
@@ -19,6 +18,7 @@ import (
 )
 
 func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.FieldLogger, inst string, ev *events.Events, h *hooks.Hooks) *Receiver {
+	l = l.WithField("component", "receiver")
 	r := &Receiver{
 		events:                 ev,
 		hooks:                  h,
@@ -26,7 +26,7 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 		c:                      c,
 		lmdbname:               dbname,
 		prefix:                 dbname + "__", // snapshot filename prefix
-		l:                      l.WithField("component", "receiver"),
+		l:                      l,
 		ownInstance:            inst,
 		lastNotifiedByInstance: make(map[string]snapshot.NameInfo),
 		ignoredFilenames:       make(map[string]bool),
@@ -36,6 +36,11 @@ func New(st simpleblob.Interface, c config.Config, dbname string, l logrus.Field
 		corruptSnapshots:       make(map[string]error),
 		storageListHealth:      healthtracker.New(c.Health.StorageList, fmt.Sprintf("%s_storage_list", dbname), "list snapshots on storage backend"),
 		storageLoadHealth:      healthtracker.New(c.Health.StorageLoad, fmt.Sprintf("%s_storage_load", dbname), "load a snapshot from storage backend"),
+
+		mu: utils.MonitoredMutex{
+			Logger: l,
+			Name:   "Receiver for db " + dbname,
+		},
 
 		decompressedSnapshotLimit: climit.New(
 			dbname,
@@ -81,7 +86,7 @@ type Receiver struct {
 
 	// The following fields are protected by this mutex, because they
 	// are accessed by multiple goroutines.
-	mu                    sync.Mutex
+	mu                    utils.MonitoredMutex
 	snapshotsByInstance   map[string]snapshot.Update
 	lastSeenByInstance    map[string]snapshot.NameInfo
 	downloadersByInstance map[string]*Downloader

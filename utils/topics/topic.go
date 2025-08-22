@@ -2,13 +2,19 @@ package topics
 
 import (
 	"context"
-	"sync"
+	"fmt"
+
+	"github.com/PowerDNS/lightningstream/utils"
 )
 
 // New returns a new Topic
 func New[T any]() *Topic[T] {
+	var zero T
 	return &Topic[T]{
 		subscribers: make(map[subscriptionID]chan<- T),
+		mu: utils.MonitoredMutex{
+			Name: fmt.Sprintf("Topic with type %T", zero),
+		},
 	}
 }
 
@@ -18,12 +24,15 @@ func NewWithInitial[T any](v T) *Topic[T] {
 		subscribers: make(map[subscriptionID]chan<- T),
 		last:        v,
 		hasLast:     true,
+		mu: utils.MonitoredMutex{
+			Name: fmt.Sprintf("Topic with type %T", v),
+		},
 	}
 }
 
 // Topic is a single topic that subscribers can Subscribe() to
 type Topic[T any] struct {
-	mu          sync.Mutex
+	mu          utils.MonitoredMutex
 	subscribers map[subscriptionID]chan<- T
 	lastID      subscriptionID
 	last        T

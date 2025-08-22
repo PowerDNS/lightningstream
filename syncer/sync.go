@@ -29,6 +29,8 @@ const (
 
 // Sync opens the env and starts the two-way sync loop.
 func (s *Syncer) Sync(ctx context.Context) error {
+	s.l.Info("Starting Sync")
+
 	env := s.env
 	status.AddLMDBEnv(s.name, env)
 	defer status.RemoveLMDBEnv(s.name)
@@ -83,6 +85,8 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	}
 
 	// Wait for an initial snapshot listing
+	tWaitReceiver := time.Now()
+	s.l.Info("Waiting for initial receiver listing")
 	for {
 		err := r.RunOnce(ctx, true) // including own snapshots, only during startup
 		if err == nil {
@@ -91,6 +95,8 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		s.l.WithError(err).Info("Waiting for initial receiver listing")
 		time.Sleep(time.Second)
 	}
+	s.l.WithField("time_taken", time.Since(tWaitReceiver).Round(time.Millisecond)).
+		Info("Initial receiver listing complete")
 
 	// Start tracker: Initial storage snapshots listed
 	s.startTracker.SetPassedInitialListing()
@@ -183,6 +189,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	// The update loop will not cause any issues, even if a snapshot is generated.
 
 	// Keep checking for new remote snapshots and uploading on local changes
+	s.l.Info("Entering main sync loop")
 	for {
 		// Load all new snapshots that are ready (downloaded and unpacked).
 		// To not starve the syncer from sending local changes, we break for
@@ -193,8 +200,10 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		nLoads := 0
 	loadReadySnapshotsLoop:
 		for {
+			s.l.Debug("Getting next update (non-blocking)")
 			instance, update := r.Next()
 			if instance == "" {
+				s.l.Debug("All ready updates processed")
 				break loadReadySnapshotsLoop // no more ready remote snapshots
 			}
 
@@ -226,7 +235,9 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			})
 
 			if update.NameInfo.Kind == snapshot.KindSnapshot {
+				s.l.Debug("GC after snapshot load starting")
 				utils.GC()
+				s.l.Debug("GC after snapshot load done")
 			}
 			if !localChanged {
 				// Prevent triggering a local snapshot if there were no local
@@ -237,6 +248,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				lastSyncedTxnID = actualTxnID
 			}
 			if localChanged && nLoads > MaxConsecutiveSnapshotLoads {
+				s.l.Debug("Exceeding MaxConsecutiveSnapshotLoads, breaking out of loop")
 				break loadReadySnapshotsLoop // allow a local snapshot before proceeding
 			}
 		}
