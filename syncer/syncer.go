@@ -46,6 +46,7 @@ func New(name string, env *lmdb.Env, st simpleblob.Interface, c config.Config, l
 		lc:                 lc,
 		opt:                opt,
 		shadow:             true,
+		generation:         uint64(time.Now().UnixNano()), // Generate unique ID based on current time
 		env:                env,
 		events:             ev,
 		hooks:              h,
@@ -70,17 +71,17 @@ func New(name string, env *lmdb.Env, st simpleblob.Interface, c config.Config, l
 }
 
 type Syncer struct {
-	name   string // database name
-	st     simpleblob.Interface
-	c      config.Config
-	lc     config.LMDB
-	opt    Options
-	l      logrus.FieldLogger
-	shadow bool // use shadow database for timestamps?
-	env    *lmdb.Env
-	events *events.Events
-	hooks  *hooks.Hooks
-
+	name       string // database name
+	st         simpleblob.Interface
+	c          config.Config
+	lc         config.LMDB
+	opt        Options
+	l          logrus.FieldLogger
+	shadow     bool // use shadow database for timestamps?
+	env        *lmdb.Env
+	events     *events.Events
+	hooks      *hooks.Hooks
+	generation uint64
 	// lastByInstance tracks the last snapshot loaded by instance, so that the
 	// cleaner can make safe decisions about when to remove stale snapshots.
 	lastByInstance map[string]time.Time

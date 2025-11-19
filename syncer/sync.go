@@ -46,6 +46,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		s.hooks,
 	)
 
+	s.l.Debug("Starting sync loop")
 	return s.syncLoop(ctx, env, r)
 }
 
