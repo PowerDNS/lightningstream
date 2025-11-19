@@ -83,7 +83,13 @@ func (s *Syncer) instanceID() string {
 // filenames, so we just return the minimum requirement (start with 'G',
 // followed by a value 'X').
 func (s *Syncer) generationID() string {
-	return "GX"
+	out := fmt.Sprintf("G-%016x", s.generation)
+	return out
+}
+
+func (s *Syncer) generationIDWithID(id uint64) string {
+	out := fmt.Sprintf("G-%016x", id)
+	return out
 }
 
 // readDBI reads a DBI into a snapshot DBI.

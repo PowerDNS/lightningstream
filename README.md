@@ -112,7 +112,66 @@ To view a dump of the LMDB contents:
 You can browse the snapshots in MinIO at <http://localhost:4731/buckets/lightningstream/browse>
 (login with minioadmin / minioadmin).
 
+## Using Azure Blob storage
 
+Lightning Stream supports Azure Blob Storage as a backend for storing snapshots. You can configure it to use either static credentials (account name and key) or Azure service principal authentication.
+
+### Basic configuration with static credentials
+
+```yaml
+storage:
+  type: azure
+  options:
+    account_name: myaccountname
+    account_key: myaccountkey
+    container: lightningstream
+    create_container: true
+```
+
+### Configuration with Azure service principal (recommended for production)
+
+When using service principal authentication, set `use_env_creds: true` and ensure the following environment variables are set:
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_CLIENT_SECRET`
+
+```yaml
+storage:
+  type: azure
+  options:
+    use_env_creds: true
+    container: lightningstream
+    endpoint_url: https://myaccount.blob.core.windows.net/
+    create_container: true
+```
+
+### Available options
+
+| Option | Type | Summary |
+|--------|------|---------|
+| account_name | string | Azure storage account name (required if not using `use_env_creds`) |
+| account_key | string | Azure storage account key (required if not using `use_env_creds`) |
+| use_env_creds | bool | Use Azure service principal authentication via environment variables |
+| container | string | Azure blob container name (required) |
+| create_container | bool | Create container if it does not exist |
+| endpoint_url | string | Custom endpoint URL (defaults to `https://<account_name>.blob.core.windows.net/`) |
+| global_prefix | string | Transparently apply a global prefix to all blob names |
+| disable_send_content_md5 | bool | Disable sending the Content-MD5 header |
+| tls | [tlsconfig.Config](https://github.com/PowerDNS/go-tlsconfig) | TLS configuration |
+| init_timeout | duration | Time allowed for initialisation (default: "20s") |
+| use_update_marker | bool | Reduce LIST commands by using an update marker (see below) |
+| update_marker_force_list_interval | duration | Force full LIST sync at this interval (default: "5m") |
+| concurrency | int | Max number of concurrent uploads (default: 1) |
+
+The `use_update_marker` option can reduce Azure costs by replacing LIST operations (which are more expensive) with GET operations. However, it cannot be used if the container itself is replicated in an active-active fashion between data centers.
+
+You can see a working example in the docker-compose setup, which uses [Azurite](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite) (Azure Storage Emulator):
+
+```bash
+docker-compose up
+```
+
+For all available Azure backend options with full descriptions, see [Simpleblob's Azure backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/azure/azure.go).
 
 ## Open Source
 
@@ -122,6 +181,4 @@ For more information on how we provide support for Open Source products, please 
 
 PowerDNS also offers an Enterprise edition of Lightning Stream that includes professional support, advanced features, deployment
 tooling for large deployments, Kubernetes integration, and more.
-
-
 

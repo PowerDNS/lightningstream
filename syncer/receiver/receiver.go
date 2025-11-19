@@ -176,7 +176,7 @@ func (r *Receiver) Run(ctx context.Context) error {
 }
 
 func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
-	//r.l.Debug("RunOnce")
+	r.l.Debug("RunOnce called")
 	st := r.st
 	prefix := r.prefix
 
@@ -270,10 +270,16 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 			"timestamp":         ni.TimestampString,
 			"generation":        ni.GenerationID,
 			"age":               age.Round(10 * time.Millisecond),
-		}).Debug("New snapshot detected")
+		}).Info("New snapshot detected")
 
 		metricSnapshotsLastReceivedTimestamp.WithLabelValues(r.lmdbname, inst).
 			Set(float64(ni.Timestamp.UnixNano()) / 1e9)
+
+		// Emit seconds since last snapshot was received as a metric.
+		// Datadog doesn't work well with UNIX timestamps, so we use seconds
+		snapshotAge := time.Since(ni.Timestamp).Seconds()
+		metricSnapshotsLastReceivedSeconds.WithLabelValues(r.lmdbname, inst).Set(snapshotAge)
+
 		metricSnapshotsLastReceivedAge.WithLabelValues(r.lmdbname, inst).
 			Observe(float64(age) / float64(time.Second))
 

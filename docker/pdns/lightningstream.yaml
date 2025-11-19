@@ -40,6 +40,19 @@ storage:
     interval: 15m
     must_keep_interval: 24h
     remove_old_instances_interval: 168h
+  # type: azure
+  # options:
+  #   account_name: devstoreaccount1
+  #   account_key: key1
+  #   container: lightningstreamcontainer
+  #   endpoint_url: http://azurite:10000/devstoreaccount1
+  #   create_container: true
+  #   use_update_marker: false
+  # cleanup:
+  #   enabled: true
+  #   interval: 2m
+  #   must_keep_interval: 24h
+  #   remove_old_instances_interval: 168h
 
 http:
   address: ":8500"

@@ -22,6 +22,13 @@ var (
 		},
 		[]string{"lmdb"},
 	)
+	metricSnapshotsLastAge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_syncer_last_snapshot_age_in_seconds",
+			Help: "Age of last generated snapshot in seconds",
+		},
+		[]string{"lmdb"},
+	)
 	metricSnapshotsLastSize = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "lightningstream_syncer_snapshots_generated_last_size_bytes",
@@ -55,6 +62,20 @@ var (
 			Help: "Number of bytes stored successfully",
 		},
 	)
+	metricSnapshotsTimeStamp = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_syncer_snapshots_timestamp",
+			Help: "Snapshot timestamp, used to identify it",
+		},
+		[]string{"lmdb", "syncer_instance", "timestamp_string"},
+	)
+	metricSnapshotsSyncerGenerationID = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_syncer_snapshots_generation_id",
+			Help: "Snapshot generation ID, used to identify it",
+		},
+		[]string{"lmdb", "syncer_instance", "generation_id"},
+	)
 )
 
 func init() {
@@ -63,9 +84,12 @@ func init() {
 
 	prometheus.MustRegister(metricSnapshotsLoaded)
 	prometheus.MustRegister(metricSnapshotsLastTimestamp)
+	prometheus.MustRegister(metricSnapshotsLastAge)
 	prometheus.MustRegister(metricSnapshotsLastSize)
 	prometheus.MustRegister(metricSnapshotsStoreFailed)
 	prometheus.MustRegister(metricSnapshotsStoreFailedPermanently)
 	prometheus.MustRegister(metricSnapshotsStoreCalls)
 	prometheus.MustRegister(metricSnapshotsStoreBytes)
+	prometheus.MustRegister(metricSnapshotsTimeStamp)
+	prometheus.MustRegister(metricSnapshotsSyncerGenerationID)
 }

@@ -102,6 +102,14 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 		return err
 	}
 
+	// Store the size of the snapshot in bytes
+	metricSnapshotsStorageBytes.WithLabelValues(d.r.lmdbname).Set(float64(len(data)))
+
+	metricSnapshotsTimestampString.WithLabelValues(d.r.lmdbname, d.instance, ni.TimestampString).Set(1)
+
+	metricSnapshotsReceiverGenerationID.WithLabelValues(d.r.lmdbname, d.instance, ni.GenerationID).Set(1)
+	d.l.Debugf("GenerationID of downloaded snapshot: %s", ni.GenerationID)
+
 	// Signal success to health tracker
 	d.r.storageLoadHealth.AddSuccess()
 
@@ -162,12 +170,27 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 
 	t2 := time.Now()
 	d.l.WithFields(logrus.Fields{
-		"timestamp": ni.TimestampString,
-		//"generation":        ni.GenerationID,
+		"timestamp":         ni.TimestampString,
+		"generation":        ni.GenerationID,
 		"shorthash":         ni.ShortHash(),
 		"time_load_storage": utils.TimeDiff(t1, t0),
 		"time_load_total":   utils.TimeDiff(t2, t0),
 	}).Info("Snapshot downloaded")
+
+	// Emit seconds since last snapshot was received as a metric.
+	// Datadog doesn't work well with UNIX timestamps, so we use seconds
+	snapshotAge := time.Since(ni.Timestamp).Seconds()
+	metricSnapshotsLastDownloadedSeconds.WithLabelValues(d.r.lmdbname, d.instance).Set(snapshotAge)
+
+	// Log short hash of the snapshot
+	// metricSnapshotsShortHash.WithLabelValues(d.r.lmdbname, d.instance, ni.ShortHash()).Set(1)
+
+	// Log time taken to download the snapshot from storage
+	metricSnapshotsTimeToDownloadFromStorage.WithLabelValues(d.r.lmdbname, d.instance).
+		Set(utils.TimeDiff(t1, t0).Seconds())
+
+	metricSnapshotsTimeToDownloadTotal.WithLabelValues(d.r.lmdbname, d.instance).
+		Set(utils.TimeDiff(t2, t0).Seconds())
 
 	return nil
 }
