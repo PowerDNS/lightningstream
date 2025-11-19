@@ -11,6 +11,40 @@ const (
 )
 
 var (
+	// called when we receive a new snapshot and download it to the instance
+	metricSnapshotsLastReceivedSeconds = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_receiver_snapshots_last_received_seconds_diff",
+			Help: "Seconds since last received snapshot by instance",
+		},
+		[]string{"lmdb", "syncer_instance"},
+	)
+
+	// Called when download a snapshot from storage. This is called all the time, since it's in the syncLoop
+	metricSnapshotsLastDownloadedSeconds = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_receiver_snapshots_last_downloaded_seconds_diff",
+			Help: "Seconds since last downloaded snapshot by instance",
+		},
+		[]string{"lmdb", "syncer_instance"},
+	)
+
+	metricSnapshotsTimeToDownloadFromStorage = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_receiver_snapshots_time_to_download_from_storage_seconds",
+			Help: "Time taken to download snapshot from storage by instance",
+		},
+		[]string{"lmdb", "syncer_instance"},
+	)
+
+	metricSnapshotsTimeToDownloadTotal = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_receiver_snapshots_time_to_download_total_seconds",
+			Help: "Total time taken to download snapshots by instance",
+		},
+		[]string{"lmdb", "syncer_instance"},
+	)
+
 	metricSnapshotsLastReceivedTimestamp = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "lightningstream_receiver_snapshots_last_received_seconds",
@@ -77,10 +111,30 @@ var (
 		},
 		[]string{"lmdb"},
 	)
+
+	metricSnapshotsTimestampString = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_receiver_snapshots_timestamp_string",
+			Help: "String representation of the snapshot timestamp",
+		},
+		[]string{"lmdb", "syncer_instance", "timestamp_string"},
+	)
+
+	metricSnapshotsReceiverGenerationID = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "lightningstream_receiver_snapshots_generation_id",
+			Help: "ID of the snapshot generation, used to identify it",
+		},
+		[]string{"lmdb", "syncer_instance", "generation_id"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(metricSnapshotsLastReceivedTimestamp)
+	prometheus.MustRegister(metricSnapshotsLastReceivedSeconds)
+	prometheus.MustRegister(metricSnapshotsLastDownloadedSeconds)
+	prometheus.MustRegister(metricSnapshotsTimeToDownloadFromStorage)
+	prometheus.MustRegister(metricSnapshotsTimeToDownloadTotal)
 	prometheus.MustRegister(metricSnapshotsLastReceivedAge)
 	prometheus.MustRegister(metricSnapshotsLoadCalls)
 	prometheus.MustRegister(metricSnapshotsListCalls)
@@ -89,4 +143,6 @@ func init() {
 	prometheus.MustRegister(metricSnapshotsLoadBytes)
 	prometheus.MustRegister(metricSnapshotsStorageCount)
 	prometheus.MustRegister(metricSnapshotsStorageBytes)
+	prometheus.MustRegister(metricSnapshotsTimestampString)
+	prometheus.MustRegister(metricSnapshotsReceiverGenerationID)
 }

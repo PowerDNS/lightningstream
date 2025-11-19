@@ -4,6 +4,7 @@ import (
 	"github.com/PowerDNS/lightningstream/cmd/lightningstream/commands"
 
 	// Register storage backends
+	_ "github.com/PowerDNS/simpleblob/backends/azure"
 	_ "github.com/PowerDNS/simpleblob/backends/fs"
 	_ "github.com/PowerDNS/simpleblob/backends/memory"
 	_ "github.com/PowerDNS/simpleblob/backends/s3"

@@ -6,6 +6,7 @@ version: '2.4'
 volumes:
     lmdb:
         driver: local
+    azurite_data:
     minio:
         driver: local
     #snapshots:
@@ -21,7 +22,22 @@ services:
         command: server /data --console-address :9001
         volumes:
             - "minio:/data" 
-
+    # https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite
+    azurite:
+        image: mcr.microsoft.com/azure-storage/azurite
+        container_name: azurite
+        hostname: azurite
+        restart: always
+        ports:
+            - "10000:10000"
+            - "10001:10001"
+            - "10002:10002" 
+        command: azurite --blobHost 0.0.0.0  --queueHost 0.0.0.0 --tableHost 0.0.0.0
+        volumes:    
+        - azurite_data:/data
+        - ./azure/certs:/certs
+        environment:
+         - AZURITE_ACCOUNTS=devstoreaccount1:key1
     auth1:
         image: powerdns/pdns-auth-49
         environment:
@@ -78,7 +94,7 @@ services:
             dockerfile: Dockerfile
             context: .
         environment:
-            instance: 1  # used in config file
+            - instance=1  # used in config file
         ports:
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}91:8500"
         volumes:
@@ -94,7 +110,7 @@ services:
             dockerfile: Dockerfile
             context: .
         environment:
-            instance: 2  # used in config file
+            - instance=2  # used in config file
         ports:
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}92:8500"
         volumes:
@@ -110,13 +126,12 @@ services:
             dockerfile: Dockerfile
             context: .
         environment:
-            instance: 3  # used in config file
+            - instance=3  # used in config file
         ports:
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}93:8500"
         volumes:
             - "lmdb:/lmdb" 
             - "./docker/pdns/lightningstream.yaml:/lightningstream.yaml:ro"
-            #- "snapshots:/snapshots" 
         working_dir: /
         user: "953"  # pdns
         command: --minimum-pid 50 receive
