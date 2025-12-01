@@ -296,21 +296,31 @@ var snapshotsPutCmd = &cobra.Command{
 }
 
 func sortByTime(list simpleblob.BlobList) {
-	slices.SortFunc(list, func(a, b simpleblob.Blob) bool {
+	slices.SortFunc(list, func(a, b simpleblob.Blob) int {
 		na, errA := snapshot.ParseName(a.Name)
 		nb, errB := snapshot.ParseName(b.Name)
 		// Invalid names are sorted by name
 		if errA != nil && errB != nil {
-			return a.Name < b.Name
+			if a.Name < b.Name {
+				return -1
+			} else if a.Name > b.Name {
+				return 1
+			}
+			return 0
 		}
 		// Invalid names come before valid names
 		if errA != nil {
-			return true
+			return -1
 		}
 		if errB != nil {
-			return false
+			return 1
 		}
 		// Valid names are sorted by timestamp
-		return na.Timestamp.Before(nb.Timestamp)
+		if na.Timestamp.Before(nb.Timestamp) {
+			return -1
+		} else if na.Timestamp.After(nb.Timestamp) {
+			return 1
+		}
+		return 0
 	})
 }

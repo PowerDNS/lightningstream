@@ -139,8 +139,13 @@ func (w *Worker) RunOnce(ctx context.Context, now time.Time) error {
 
 	// Sort from newest to oldest, so that the first snapshot we see for an
 	// instance is its most recent one.
-	slices.SortFunc(removalCandidates, func(a, b snapshot.NameInfo) bool {
-		return a.Timestamp.After(b.Timestamp) // 'less' in sort order if newer
+	slices.SortFunc(removalCandidates, func(a, b snapshot.NameInfo) int {
+		if a.Timestamp.After(b.Timestamp) { // 'less' in sort order if newer
+			return -1
+		} else if a.Timestamp.Before(b.Timestamp) {
+			return 1
+		}
+		return 0
 	})
 
 	// Protect the newest snapshots, in case an instance is still downloading it.
