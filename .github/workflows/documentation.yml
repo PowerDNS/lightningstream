@@ -3,7 +3,7 @@ name: 'Documentation'
 on:
   push:
     # docs is the branch on which we are developing this, can be removed later
-    branches: [ "main", "docs" ]
+    branches: [ "main"]
   pull_request:
     branches: [ "main" ]
 
@@ -11,52 +11,39 @@ permissions:
   contents: read
 
 jobs:
-
-  build-upload-docs:
-    name: Build and upload docs
+  upload_docs:
+    # on a ubuntu VM
     runs-on: ubuntu-22.04
-
+    env:
+      # Github.refname is wrong for pull requests - have to use head ref for them
+      MYREF: ${{ github.event.pull_request && github.head_ref || github.ref_name }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_S3_BUCKET_DOCS: ${{ vars.AWS_S3_BUCKET_DOCS }}
+      AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID_DOCS }}
+      BUILD_PATH: ${{ github.workspace }}
+      MKDOCS_IMAGE: ${{ vars.MKDOCS_IMAGE }}
+      HARBOR_HOST: ${{ vars.HARBOR_HOST }}
+      HARBOR_USER: ${{ vars.HARBOR_USER }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
-
-      - id: get-version
-        run: echo "ls_version=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
-      - id: setup-ssh
-        run: |-
-          mkdir -m 700 -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_ed25519
-          echo "$HOST_KEY" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/*
-          echo "have_ssh_key=yes" >> $GITHUB_OUTPUT
-        env:
-          SSH_KEY: ${{secrets.WEB1_DOCS_SECRET}}
-          HOST_KEY: ${{vars.WEB1_HOSTKEY}}
-        if: ${{ (github.ref_name == 'main' || github.ref_name == 'docs') && env.SSH_KEY != '' }}
-
-      - run: python3 -m venv .venv
-      - run: .venv/bin/pip3 install -r docs/requirements.txt
-      - run: .venv/bin/mkdocs build
-      - run: mv site lightningstream-html-docs
-      - run: tar cf lightningstream-html-docs.tar lightningstream-html-docs
-      
-      - uses: actions/upload-artifact@v4
+          fetch-depth: 0
+          submodules: recursive
+        # We need to login to the OX registry because we use an image to build the docs
+      - name: Login to OX Registry
+        uses: docker/login-action@v3
         with:
-          name: lightningstream-html-docs-${{steps.get-version.outputs.ls_version}}
-          path: ./lightningstream-html-docs.tar
-
-      - run: bzip2 lightningstream-html-docs.tar
-        if: ${{ (github.ref_name == 'main' || github.ref_name == 'docs') }}
-
-      - run: |-
-           rsync -crv --delete --no-p --chmod=g=rwX --exclude '*~' ./lightningstream-html-docs/ "$LS_USERNAME@$DOCS_HOST:$LS_DOCS_DIR"
-           rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./lightningstream-html-docs.tar.bz2 "$LS_USERNAME@$DOCS_HOST:$LS_DOCS_DIR/html-docs.tar.bz2"
-        env:
-          DOCS_HOST: ${{vars.DOCS_HOST}}
-          LS_DOCS_DIR: ${{vars.LS_DOCS_DIR}}
-          LS_USERNAME: ${{vars.LS_USERNAME}}
-        if: ${{ (github.ref_name == 'main' || github.ref_name == 'docs') && steps.setup-ssh.outputs.have_ssh_key != '' }}
-
+          registry: ${{ env.HARBOR_HOST }}
+          username: ${{ env.HARBOR_USER }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+      - name: Check for release tag
+        id: release_check
+        run: |
+          if [[ ${{ github.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "release=YES" >> $GITHUB_OUTPUT
+          fi
+      - if: ${{ steps.release_check.outputs.release == 'YES' }}
+        run: |
+          ${{ env.BUILD_PATH }}/.github/scripts/mkdocs.sh ${{ env.BUILD_PATH }}/mkdocs.yml ${{ env.MYREF }} ${{ env.MKDOCS_IMAGE }}
