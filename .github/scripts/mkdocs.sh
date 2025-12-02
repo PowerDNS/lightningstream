@@ -12,19 +12,20 @@
 # - BUILD_PATH: The root of the lightningstream directory
 #
 # Usage:
-# ./mkdocs.sh <MKDOCS_YAML> <VERSION> <MKDOCS_IMAGE>
+# ./mkdocs.sh <MKDOCS_YAML> <VERSION> <MKDOCS_IMAGE> <BUCKET_SUBDIR>
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
 # Main script execution
-if [ "$#" -lt 1 ] || [ "$#" -gt 3 ]; then
-    echo "Usage: $0 <MKDOCS_YAML> <VERSION> <MKDOCS_IMAGE>"
+if [ "$#" -lt 1 ] || [ "$#" -gt 4 ]; then
+    echo "Usage: $0 <MKDOCS_YAML> <VERSION> <MKDOCS_IMAGE> <BUCKET_SUBDIR>"
     exit 1
 fi
 
 mkdocs_file="$1"
 version="$2"
 image="$3"
+subdir="$4"
 
 publish_script="${BUILD_PATH}/.github/scripts/publish_to_s3.sh"
 
@@ -33,7 +34,7 @@ mkdir -p ${PWD}/output/"${version}"
 
 docker run -v "${PWD}:${PWD}" $image sh -c "pip install mkdocs-swagger-ui-tag && mkdocs  build -f $mkdocs_file -d ${PWD}/output/${version}"
 
-latestVersion=`aws s3 ls s3://"${AWS_S3_BUCKET_DOCS}"/docs.powerdns.com/lightningstream/ | awk '{print $2}' | grep -v latest | awk -F '/' '/\// {print $1}' | sort -V | tail -1`
+latestVersion=`aws s3 ls s3://"${AWS_S3_BUCKET_DOCS}"/docs.powerdns.com/$subdir/ | awk '{print $2}' | grep -v latest | awk -F '/' '/\// {print $1}' | sort -V | tail -1`
 
 if [ "$latestVersion" == "" ]; then
   latestVersion="0"
@@ -41,11 +42,11 @@ fi
 
 echo "Publishing version $version. Latest version already in S3 is $latestVersion"
 
-$publish_script ${PWD}/output/${version} lightningstream/${version}
+$publish_script ${PWD}/output/${version} $subdir/${version}
 
 if (( $(echo "$latestVersion" "$version" | awk '{if ($1 < $2) print 1;}') )); then
   echo "This version is newer than the latest version in S3, publishing this version to latest"
-  $publish_script ${PWD}/output/${version} lightningstream/latest
+  $publish_script ${PWD}/output/${version} $subdir/latest
   latestVersion="$version"
 fi
 
@@ -60,12 +61,12 @@ while read -r docsVersion; do
       versionsData=$(echo $versionsData | jq ". += [{\"title\": \"${docsVersion}\", \"version\": \"${docsVersion}\", \"aliases\": []}]")
     fi
   fi
-done < <(aws s3 ls s3://"${AWS_S3_BUCKET_DOCS}"/docs.powerdns.com/lightningstream/ | awk '{print $2}' | awk -F '/' '/\// {print $1}')
+done < <(aws s3 ls s3://"${AWS_S3_BUCKET_DOCS}"/docs.powerdns.com/$subdir/ | awk '{print $2}' | awk -F '/' '/\// {print $1}')
 
 echo ${versionsData} > ${PWD}/output/versions.json
 
-$publish_script ${PWD}/output/versions.json lightningstream
+$publish_script ${PWD}/output/versions.json $subdir
 
-$publish_script ${PWD}/doc/html/index.html lightningstream
+$publish_script ${PWD}/doc/html/index.html $subdir
 
 exit 0

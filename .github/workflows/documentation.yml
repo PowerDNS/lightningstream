@@ -46,4 +46,4 @@ jobs:
           fi
       - if: ${{ steps.release_check.outputs.release == 'YES' }}
         run: |
-          ${{ env.BUILD_PATH }}/.github/scripts/mkdocs.sh ${{ env.BUILD_PATH }}/mkdocs.yml ${{ env.MYREF }} ${{ env.MKDOCS_IMAGE }}
+          ${{ env.BUILD_PATH }}/.github/scripts/mkdocs.sh ${{ env.BUILD_PATH }}/mkdocs.yml ${{ env.MYREF }} ${{ env.MKDOCS_IMAGE }} lightningstream
