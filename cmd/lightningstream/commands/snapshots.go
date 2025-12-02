@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"slices"
+
 	"github.com/PowerDNS/lightningstream/lmdbenv/dbiflags"
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
 	"github.com/PowerDNS/lightningstream/snapshot"
@@ -18,7 +20,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 )
 
 func init() {

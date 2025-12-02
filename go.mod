@@ -18,7 +18,6 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/wojas/go-healthz v0.2.0
 	go.uber.org/atomic v1.11.0
-	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39
 	golang.org/x/sync v0.18.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -123,6 +122,7 @@ require (
 	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39 // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
