@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Dstore Documentation Building Script
+# Documentation Building Script
 #
 # This script makes the lightningstream HTML documentation ready for copying to S3
 #
