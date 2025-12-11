@@ -1,6 +1,6 @@
 # Builder
 # Note: Not using Alpine, because of CGo deps
-FROM golang:1.24-bookworm AS builder
+FROM golang:1.25-bookworm AS builder
 ENV GOBIN=/usr/local/bin
 ARG GOPROXY=
 
