@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.10'
 
@@ -43,7 +43,7 @@ jobs:
       - run: mv site lightningstream-html-docs
       - run: tar cf lightningstream-html-docs.tar lightningstream-html-docs
       
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: lightningstream-html-docs-${{steps.get-version.outputs.ls_version}}
           path: ./lightningstream-html-docs.tar
