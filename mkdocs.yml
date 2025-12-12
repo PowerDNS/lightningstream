@@ -9,7 +9,31 @@ markdown_extensions:
  - admonition    # Use sparingly, not compatible with GitHub
  # Consider for compatibility with GitHub rendering: - nl2br
 theme:
-  name: readthedocs
+  name: material
+  logo: assets/logo/powerdns_logo_white_orange_rgb.png
+  favicon: assets/logo/icon.png
+  palette:
+    primary: custom
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - navigation.sections
+    - navigation.footer
+    - toc.integrate
+    - toc.follow
+    - search.highlight
+    - search.share
+    - search.suggest
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  version:
+    alias: true
+    provider: mike
 
 nav:
   - 'Lightning Stream Introduction': index.md
