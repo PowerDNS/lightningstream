@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-22.04
     name: Go build (Linux)
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: '1.24'
         check-latest: true
@@ -28,7 +28,7 @@ jobs:
     - name: Build (amd64)
       run: GOOS=linux GOARCH=amd64 CGO_ENABLED=1 ./build.sh
     - name: Upload binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: lightningstream_linux_amd64.bin
         path: bin/lightningstream
@@ -38,9 +38,9 @@ jobs:
     runs-on: macos-15
     name: Go build (macOS)
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: '1.24'
         check-latest: true
@@ -48,7 +48,7 @@ jobs:
     - name: Build (amd64)
       run: GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 ./build.sh
     - name: Upload binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: lightningstream_darwin_amd64.bin
         path: bin/lightningstream
@@ -56,7 +56,7 @@ jobs:
     - name: Build (arm64)
       run: GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 ./build.sh
     - name: Upload binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: lightningstream_darwin_arm64.bin
         path: bin/lightningstream
