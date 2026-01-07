@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/CrowdStrike/csproto"
+	"github.com/c2h5oh/datasize"
 )
 
 // Protobuf field numbers
@@ -17,8 +18,7 @@ const (
 // MaxFieldLength overrides the default 2GB limit on variable length protobuf
 // fields to allow larger dumps with our current schema.
 const (
-	GB             = 1024 * 1024 * 1024
-	MaxFieldLength = 100 * GB
+	MaxFieldLength = 100 * uint64(datasize.GB)
 )
 
 // Snapshot is the root object in a snapshot protobuf
