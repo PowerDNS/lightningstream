@@ -129,7 +129,11 @@ require (
 	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	pluginrpc.com/pluginrpc v0.5.0 // indirect
 )
+
+// See https://github.com/PowerDNS/lightningstream/issues/112
+// Can be removed once https://github.com/CrowdStrike/csproto/pull/208 is merged and released
+replace github.com/CrowdStrike/csproto => github.com/wojas/csproto v0.0.0-20260107092112-0e013c7984a2

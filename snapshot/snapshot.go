@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/CrowdStrike/csproto"
+	"github.com/c2h5oh/datasize"
 )
 
 // Protobuf field numbers
@@ -12,6 +13,12 @@ const (
 	FieldSnapshotMeta          = 2
 	FieldSnapshotDBI           = 3
 	FieldSnapshotCompatVersion = 4
+)
+
+// MaxFieldLength overrides the default 2GB limit on variable length protobuf
+// fields to allow larger dumps with our current schema.
+const (
+	MaxFieldLength = 100 * uint64(datasize.GB)
 )
 
 // Snapshot is the root object in a snapshot protobuf
@@ -25,6 +32,7 @@ type Snapshot struct {
 func (s *Snapshot) Unmarshal(data []byte) error {
 	d := csproto.NewDecoder(data)
 	d.SetMode(csproto.DecoderModeFast)
+	d.SetMaxFieldLength(MaxFieldLength) // allow DBI dumps larger than 2GB
 	for d.More() {
 		tag, wireType, err := d.DecodeTag()
 		if err != nil {
