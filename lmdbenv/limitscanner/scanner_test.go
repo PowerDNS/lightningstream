@@ -1,7 +1,6 @@
 package limitscanner
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -40,7 +39,8 @@ func TestLimitScanner(t *testing.T) {
 					DBI:          dbi,
 					LimitRecords: 100,
 				})
-				require.NoError(t, err)
+				assert.NoError(t, err)
+				defer ls.Close()
 
 				count := 0
 				for ls.Scan() {
@@ -54,7 +54,8 @@ func TestLimitScanner(t *testing.T) {
 
 				return ls.Err()
 			})
-			require.True(t, errors.Is(err, ErrLimitReached), "expected ErrLimitReached")
+			require.NoError(t, err)
+			require.False(t, last.IsZero(), "expected a limited scan")
 		})
 
 		t.Run("limited-scan-continued", func(t *testing.T) {
@@ -66,7 +67,8 @@ func TestLimitScanner(t *testing.T) {
 					LimitRecords: 100,
 					Last:         last, // Note this added cursor
 				})
-				require.NoError(t, err)
+				assert.NoError(t, err)
+				defer ls.Close()
 
 				count := 0
 				for ls.Scan() {
@@ -80,7 +82,7 @@ func TestLimitScanner(t *testing.T) {
 
 				return ls.Err()
 			})
-			require.True(t, errors.Is(err, ErrLimitReached), "expected ErrLimitReached")
+			require.False(t, last.IsZero(), "expected a limited scan")
 		})
 
 		t.Run("limited-scan-continued-deleted", func(t *testing.T) {
@@ -96,7 +98,8 @@ func TestLimitScanner(t *testing.T) {
 					LimitRecords: 10,
 					Last:         last,
 				})
-				require.NoError(t, err)
+				assert.NoError(t, err)
+				defer ls.Close()
 
 				count := 0
 				for ls.Scan() {
@@ -110,7 +113,8 @@ func TestLimitScanner(t *testing.T) {
 
 				return ls.Err()
 			})
-			require.True(t, errors.Is(err, ErrLimitReached), "expected ErrLimitReached")
+			require.NoError(t, err)
+			require.False(t, last.IsZero(), "expected a limited scan")
 		})
 
 		t.Run("limited-scan-final", func(t *testing.T) {
@@ -122,7 +126,8 @@ func TestLimitScanner(t *testing.T) {
 					LimitRecords: 100,
 					Last:         last,
 				})
-				require.NoError(t, err)
+				assert.NoError(t, err)
+				defer ls.Close()
 
 				count := 0
 				for ls.Scan() {
@@ -137,6 +142,7 @@ func TestLimitScanner(t *testing.T) {
 				return ls.Err()
 			})
 			require.NoError(t, err)
+			require.True(t, last.IsZero(), "unexpected limited scan")
 		})
 
 		t.Run("limited-by-time", func(t *testing.T) {
@@ -148,7 +154,8 @@ func TestLimitScanner(t *testing.T) {
 					LimitDuration:           time.Nanosecond, // very short
 					LimitDurationCheckEvery: 50,              // check time every 50 records
 				})
-				require.NoError(t, err)
+				assert.NoError(t, err)
+				defer ls.Close()
 
 				count := 0
 				for ls.Scan() {
@@ -164,7 +171,8 @@ func TestLimitScanner(t *testing.T) {
 
 				return ls.Err()
 			})
-			require.True(t, errors.Is(err, ErrLimitReached), "expected ErrLimitReached")
+			require.NoError(t, err)
+			require.False(t, last.IsZero(), "expected a limited scan")
 		})
 
 		t.Run("limited-by-plenty-of-time", func(t *testing.T) {
@@ -176,7 +184,8 @@ func TestLimitScanner(t *testing.T) {
 					LimitDuration:           time.Second, // an eternity
 					LimitDurationCheckEvery: 50,          // check time every 50 records
 				})
-				require.NoError(t, err)
+				assert.NoError(t, err)
+				defer ls.Close()
 
 				count := 0
 				for ls.Scan() {
@@ -193,10 +202,10 @@ func TestLimitScanner(t *testing.T) {
 				return ls.Err()
 			})
 			require.NoError(t, err)
+			require.True(t, last.IsZero(), "unexpected limited scan")
 		})
 
 		return nil
 	})
 	require.NoError(t, err)
-
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -49,7 +50,7 @@ type Sweeper struct {
 }
 
 // Run runs the sweeper according to the configured schedule.
-// It only runs when an error occurs or the context is closed.
+// It only runs until an error occurs or the context is closed.
 func (s *Sweeper) Run(ctx context.Context) error {
 	wait := s.conf.FirstInterval
 	for {
@@ -72,6 +73,8 @@ func (s *Sweeper) Run(ctx context.Context) error {
 
 // sweep performs a single full database sweep.
 func (s *Sweeper) sweep(ctx context.Context) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	t0 := time.Now()
 
 	retention := s.conf.RetentionDuration()
@@ -127,6 +130,7 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 				if err != nil {
 					return err // configuration error
 				}
+				defer ls.Close()
 
 				// Actual cleaning
 				for ls.Scan() {
@@ -159,7 +163,7 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 				last = ls.Last()
 				return ls.Err()
 			})
-			if errors.Is(err, limitscanner.ErrLimitReached) {
+			if !last.IsZero() {
 				l.Debug("Sweep limit reached, continuing after pause")
 				// Give the app some room to get a write lock before continuing
 				if err := utils.SleepContext(ctx, s.conf.ReleaseDuration); err != nil {

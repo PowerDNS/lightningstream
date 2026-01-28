@@ -9,15 +9,12 @@ import (
 	"github.com/PowerDNS/lmdb-go/lmdbscan"
 )
 
-// ErrLimitReached is returned when the LimitScanner reaches the configured limit
-var ErrLimitReached = errors.New("limit reached")
-
 func NewLimitScanner(opt Options) (*LimitScanner, error) {
 	if opt.Txn == nil {
-		panic("limit scanner requires Options.Txn")
+		return nil, errors.New("limit scanner requires Options.Txn")
 	}
 	if opt.DBI == 0 {
-		panic("limit scanner requires Options.DBI")
+		return nil, errors.New("limit scanner requires Options.DBI")
 	}
 	if opt.LimitDurationCheckEvery <= 0 {
 		opt.LimitDurationCheckEvery = LimitDurationCheckEveryDefault
@@ -64,15 +61,15 @@ func (c LimitCursor) IsZero() bool {
 // LimitScanner allows iteration over chunks of the LMDB for processing.
 // The chunk size can either be given as a number or as a time limit.
 type LimitScanner struct {
-	opt      Options
-	sc       *lmdbscan.Scanner
-	count    int
-	deadline time.Time
-	err      error
+	opt          Options
+	sc           *lmdbscan.Scanner
+	count        int
+	deadline     time.Time
+	limitReached bool
 }
 
 func (s *LimitScanner) Scan() bool {
-	if s.err != nil {
+	if s.limitReached {
 		return false
 	}
 
@@ -81,7 +78,7 @@ func (s *LimitScanner) Scan() bool {
 		// If the entry still exists, it will be the first one (basically
 		// rescanning the last entry). If it is gone, we will start from the
 		// next one after that.
-		//s.sc.SetNext(s.opt.Last.key, s.opt.Last.val, lmdb.SetRange, lmdb.Next)
+		// s.sc.SetNext(s.opt.Last.key, s.opt.Last.val, lmdb.SetRange, lmdb.Next)
 		s.sc.Set(s.opt.Last.key, s.opt.Last.val, lmdb.SetRange)
 		if bytes.Equal(s.Key(), s.opt.Last.key) && bytes.Equal(s.Val(), s.opt.Last.val) {
 			// Advance one
@@ -91,7 +88,7 @@ func (s *LimitScanner) Scan() bool {
 
 	// Check number-of-records limit
 	if s.opt.LimitRecords > 0 && s.count >= s.opt.LimitRecords {
-		s.err = ErrLimitReached
+		s.limitReached = true
 		return false
 	}
 
@@ -99,7 +96,7 @@ func (s *LimitScanner) Scan() bool {
 	checkEvery := s.opt.LimitDurationCheckEvery
 	if checkEvery > 0 && s.count > 0 && s.count%checkEvery == 0 && !s.deadline.IsZero() {
 		if time.Now().After(s.deadline) {
-			s.err = ErrLimitReached
+			s.limitReached = true
 			return false
 		}
 	}
@@ -108,15 +105,17 @@ func (s *LimitScanner) Scan() bool {
 	return s.sc.Scan()
 }
 
+// Last returns the LimitCursor for the next LimitScanner to use in
+// (Options).Last. If this scanner didn't run into any limits Last will return a
+// zero LimitCursor.
 func (s *LimitScanner) Last() LimitCursor {
+	if !s.limitReached {
+		return LimitCursor{}
+	}
 	return LimitCursor{
 		key: s.Key(),
 		val: s.Val(),
 	}
-}
-
-func (s *LimitScanner) Cursor() *lmdb.Cursor {
-	return s.sc.Cursor()
 }
 
 func (s *LimitScanner) Key() []byte {
@@ -128,9 +127,6 @@ func (s *LimitScanner) Val() []byte {
 }
 
 func (s *LimitScanner) Err() error {
-	if s.err != nil {
-		return s.err
-	}
 	return s.sc.Err()
 }
 
