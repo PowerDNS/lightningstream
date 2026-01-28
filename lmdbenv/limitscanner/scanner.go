@@ -105,17 +105,14 @@ func (s *LimitScanner) Scan() bool {
 	return s.sc.Scan()
 }
 
-// Last returns the LimitCursor for the next LimitScanner to use in
-// (Options).Last. If this scanner didn't run into any limits Last will return a
-// zero LimitCursor.
-func (s *LimitScanner) Last() LimitCursor {
-	if !s.limitReached {
-		return LimitCursor{}
-	}
+// Cursor returns the LimitCursor for the next LimitScanner to use in
+// (Options).Cursor, and whether the limit was reached by this LimitScanner
+// (meaning this cursor is actually useful).
+func (s *LimitScanner) Cursor() (c LimitCursor, limitReached bool) {
 	return LimitCursor{
 		key: s.Key(),
 		val: s.Val(),
-	}
+	}, s.limitReached
 }
 
 func (s *LimitScanner) Key() []byte {

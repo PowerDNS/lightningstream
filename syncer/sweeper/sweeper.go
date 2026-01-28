@@ -111,6 +111,7 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 		l.Debug("Sweep DBI")
 
 		var last limitscanner.LimitCursor
+		var limitReached bool
 		for {
 			err := s.env.Update(func(txn *lmdb.Txn) error {
 				st.nTxn++
@@ -160,10 +161,10 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 					}
 				}
 
-				last = ls.Last()
+				last, limitReached = ls.Cursor()
 				return ls.Err()
 			})
-			if !last.IsZero() {
+			if limitReached {
 				l.Debug("Sweep limit reached, continuing after pause")
 				// Give the app some room to get a write lock before continuing
 				if err := utils.SleepContext(ctx, s.conf.ReleaseDuration); err != nil {

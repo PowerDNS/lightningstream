@@ -32,6 +32,7 @@ func TestLimitScanner(t *testing.T) {
 		require.NoError(t, err)
 
 		var last LimitCursor
+		var limitReached bool
 		t.Run("limited-scan", func(t *testing.T) {
 			err = env.View(func(txn *lmdb.Txn) error {
 				ls, err := NewLimitScanner(Options{
@@ -48,14 +49,14 @@ func TestLimitScanner(t *testing.T) {
 				}
 				assert.Equal(t, 100, count)
 
-				last = ls.Last()
+				last, limitReached = ls.Cursor()
 				assert.Equal(t, "key-00100", string(last.key))
 				assert.Equal(t, "val-00100", string(last.val))
 
 				return ls.Err()
 			})
 			require.NoError(t, err)
-			require.False(t, last.IsZero(), "expected a limited scan")
+			require.True(t, limitReached, "expected a limited scan")
 		})
 
 		t.Run("limited-scan-continued", func(t *testing.T) {
@@ -76,13 +77,13 @@ func TestLimitScanner(t *testing.T) {
 				}
 				assert.Equal(t, 100, count)
 
-				last = ls.Last()
+				last, limitReached = ls.Cursor()
 				assert.Equal(t, "key-00200", string(last.key))
 				assert.Equal(t, "val-00200", string(last.val))
 
 				return ls.Err()
 			})
-			require.False(t, last.IsZero(), "expected a limited scan")
+			require.True(t, limitReached, "expected a limited scan")
 		})
 
 		t.Run("limited-scan-continued-deleted", func(t *testing.T) {
@@ -107,14 +108,14 @@ func TestLimitScanner(t *testing.T) {
 				}
 				assert.Equal(t, 10, count)
 
-				last = ls.Last()
+				last, limitReached = ls.Cursor()
 				assert.Equal(t, "key-00210", string(last.key))
 				assert.Equal(t, "val-00210", string(last.val))
 
 				return ls.Err()
 			})
 			require.NoError(t, err)
-			require.False(t, last.IsZero(), "expected a limited scan")
+			require.True(t, limitReached, "expected a limited scan")
 		})
 
 		t.Run("limited-scan-final", func(t *testing.T) {
@@ -135,14 +136,14 @@ func TestLimitScanner(t *testing.T) {
 				}
 				assert.Equal(t, 40, count)
 
-				last = ls.Last()
+				last, limitReached = ls.Cursor()
 				assert.Nil(t, last.key)
 				assert.Nil(t, last.val)
 
 				return ls.Err()
 			})
 			require.NoError(t, err)
-			require.True(t, last.IsZero(), "unexpected limited scan")
+			require.False(t, limitReached, "unexpected limited scan")
 		})
 
 		t.Run("limited-by-time", func(t *testing.T) {
@@ -165,14 +166,14 @@ func TestLimitScanner(t *testing.T) {
 				// before we realize we passed the short deadline.
 				assert.Equal(t, 50, count)
 
-				last = ls.Last()
+				last, limitReached = ls.Cursor()
 				assert.Equal(t, "key-00050", string(last.key))
 				assert.Equal(t, "val-00050", string(last.val))
 
 				return ls.Err()
 			})
 			require.NoError(t, err)
-			require.False(t, last.IsZero(), "expected a limited scan")
+			require.True(t, limitReached, "expected a limited scan")
 		})
 
 		t.Run("limited-by-plenty-of-time", func(t *testing.T) {
@@ -195,14 +196,14 @@ func TestLimitScanner(t *testing.T) {
 				// (note that we deleted one before)
 				assert.Equal(t, 249, count)
 
-				last = ls.Last()
+				last, limitReached = ls.Cursor()
 				assert.Nil(t, last.key)
 				assert.Nil(t, last.val)
 
 				return ls.Err()
 			})
 			require.NoError(t, err)
-			require.True(t, last.IsZero(), "unexpected limited scan")
+			require.False(t, limitReached, "unexpected limited scan")
 		})
 
 		return nil
