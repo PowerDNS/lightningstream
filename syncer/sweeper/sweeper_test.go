@@ -103,7 +103,7 @@ func BenchmarkSweeper(b *testing.B) {
 		RetentionDays:   2,
 		Interval:        time.Second,
 		FirstInterval:   0,
-		LockDuration:    100 * time.Millisecond, // Forces split operation
+		LockDuration:    10 * time.Millisecond, // Forces split operation
 		ReleaseDuration: 0,
 	}
 
@@ -116,7 +116,7 @@ func BenchmarkSweeper(b *testing.B) {
 			var dbi lmdb.DBI
 			err := env.Update(func(txn *lmdb.Txn) error {
 				var err error
-				dbi, err = txn.CreateDBI("test1")
+				dbi, err = txn.CreateDBI(name)
 				return err
 			})
 			assert.NoError(b, err)
@@ -124,7 +124,7 @@ func BenchmarkSweeper(b *testing.B) {
 		}
 
 		now := time.Now()
-		past := now.Add(-50 * time.Hour) // longer than RetentionDays=2
+		past := now.Add(-3 * 24 * time.Hour) // longer than RetentionDays=2
 		nowTS := header.TimestampFromTime(now)
 		pastTS := header.TimestampFromTime(past)
 
@@ -155,6 +155,18 @@ func BenchmarkSweeper(b *testing.B) {
 		b.ResetTimer()
 		err := sweeper.sweep(b.Context())
 		b.StopTimer()
+
+		if b.N > 2 {
+			assert.NoError(b, env.Update(func(txn *lmdb.Txn) error {
+				stat, err := txn.Stat(mix)
+				if err != nil {
+					return err
+				}
+				assert.Greater(b, b.N-int(stat.Entries), b.N/4, "less than a 1/4 entries were cleaned")
+				return nil
+			}))
+		}
+
 		// This is the most interesting metric
 		b.ReportMetric(float64(b.N)/b.Elapsed().Seconds(), "entries/s")
 
