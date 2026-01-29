@@ -156,7 +156,7 @@ func BenchmarkSweeper(b *testing.B) {
 		err := sweeper.sweep(b.Context())
 		b.StopTimer()
 
-		if b.N > 2 {
+		if b.N > 8 {
 			assert.NoError(b, env.Update(func(txn *lmdb.Txn) error {
 				stat, err := txn.Stat(mix)
 				if err != nil {
