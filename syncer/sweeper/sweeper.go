@@ -49,7 +49,7 @@ type Sweeper struct {
 }
 
 // Run runs the sweeper according to the configured schedule.
-// It only runs when an error occurs or the context is closed.
+// It only runs until an error occurs or the context is closed.
 func (s *Sweeper) Run(ctx context.Context) error {
 	wait := s.conf.FirstInterval
 	for {
@@ -108,6 +108,7 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 		l.Debug("Sweep DBI")
 
 		var last limitscanner.LimitCursor
+		var limitReached bool
 		for {
 			err := s.env.Update(func(txn *lmdb.Txn) error {
 				st.nTxn++
@@ -127,6 +128,7 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 				if err != nil {
 					return err // configuration error
 				}
+				defer ls.Close()
 
 				// Actual cleaning
 				for ls.Scan() {
@@ -156,10 +158,10 @@ func (s *Sweeper) sweep(ctx context.Context) error {
 					}
 				}
 
-				last = ls.Last()
+				last, limitReached = ls.Cursor()
 				return ls.Err()
 			})
-			if errors.Is(err, limitscanner.ErrLimitReached) {
+			if limitReached {
 				l.Debug("Sweep limit reached, continuing after pause")
 				// Give the app some room to get a write lock before continuing
 				if err := utils.SleepContext(ctx, s.conf.ReleaseDuration); err != nil {
