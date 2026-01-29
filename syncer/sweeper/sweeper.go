@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
@@ -73,8 +72,6 @@ func (s *Sweeper) Run(ctx context.Context) error {
 
 // sweep performs a single full database sweep.
 func (s *Sweeper) sweep(ctx context.Context) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
 	t0 := time.Now()
 
 	retention := s.conf.RetentionDuration()
