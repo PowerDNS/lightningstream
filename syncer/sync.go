@@ -169,7 +169,7 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 	// To force periodic snapshots
 	s.lastSnapshotTime = time.Now() // first not due to interval
 	forceSnapshotInterval := s.c.StorageForceSnapshotInterval
-	forceSnapshotEnabled := forceSnapshotInterval > 0
+	forceSnapshotEnabled := !s.opt.ReceiveOnly && forceSnapshotInterval > 0
 
 	// Run receiver in background to get newer snapshot after loading the
 	// initial batch of snapshots.
