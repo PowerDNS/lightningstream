@@ -20,7 +20,7 @@ jobs:
             echo "release=YES" >> $GITHUB_OUTPUT
             echo "version_string=${{ github.ref_name }}" | sed -r 's/(=)v/\1/' >> $GITHUB_OUTPUT
           fi
-      - uses: PowerDNS/pdns-publish-docs-action@v1.1.0
+      - uses: PowerDNS/pdns-publish-docs-action@v1.1.1
         if: ${{ steps.release_check.outputs.release == 'YES' }} # Only build and push docs for releases
         with:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
