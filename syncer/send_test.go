@@ -9,11 +9,71 @@ import (
 	"github.com/PowerDNS/lightningstream/config"
 	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lightningstream/lmdbenv/header"
+	"github.com/PowerDNS/lightningstream/snapshot"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/simpleblob/backends/memory"
 	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TestSyncer_SendOnce_GenerationIDStable verifies that the GenerationID embedded
+// in snapshot filenames does not change across multiple SendOnce calls on the
+// same Syncer instance. It must stay stable for the lifetime of the process so
+// that peers can identify which syncer produced each snapshot.
+func TestSyncer_SendOnce_GenerationIDStable(t *testing.T) {
+	l, _ := test.NewNullLogger()
+	lc := config.LMDB{SchemaTracksChanges: true}
+	now := time.Now()
+
+	val := make([]byte, header.MinHeaderSize, 50)
+	header.PutBasic(val, header.TimestampFromTime(now), 42, header.NoFlags)
+	val = append(val, "test-value"...)
+
+	st := memory.New()
+
+	err := lmdbenv.TestEnv(func(env *lmdb.Env) error {
+		s, err := New("test", env, st, config.Config{StorageRetryCount: 1}, lc, Options{})
+		require.NoError(t, err)
+		s.l = l
+
+		ctx := context.Background()
+
+		// Write distinct data between sends so each SendOnce produces a new snapshot.
+		for i := 0; i < 3; i++ {
+			err = env.Update(func(txn *lmdb.Txn) error {
+				dbi, err := txn.OpenDBI("foo", lmdb.Create)
+				require.NoError(t, err)
+				return txn.Put(dbi, []byte(fmt.Sprintf("key-%d", i)), val, 0)
+			})
+			require.NoError(t, err)
+
+			_, err = s.SendOnce(ctx, env)
+			require.NoError(t, err)
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	blobs, err := st.List(context.Background(), "")
+	require.NoError(t, err)
+
+	var generationIDs []string
+	for _, name := range blobs.Names() {
+		ni, err := snapshot.ParseName(name)
+		if err != nil {
+			continue // skip non-snapshot files
+		}
+		generationIDs = append(generationIDs, string(ni.GenerationID))
+	}
+
+	require.NotEmpty(t, generationIDs, "expected at least one snapshot to be stored")
+
+	first := generationIDs[0]
+	for i, gid := range generationIDs[1:] {
+		assert.Equal(t, first, gid, "snapshot %d has a different GenerationID", i+1)
+	}
+}
 
 func BenchmarkSyncer_SendOnce_native_100k(b *testing.B) {
 	doBenchmarkSyncerSendOnce(b, true, false)

@@ -180,9 +180,6 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	snapshotAge := time.Since(ni.Timestamp).Seconds()
 	metricSnapshotsLastDownloadedSeconds.WithLabelValues(d.r.lmdbname, d.instance).Set(snapshotAge)
 
-	// Log short hash of the snapshot
-	// metricSnapshotsShortHash.WithLabelValues(d.r.lmdbname, d.instance, ni.ShortHash()).Set(1)
-
 	// Log time taken to download the snapshot from storage
 	metricSnapshotsTimeToDownloadFromStorage.WithLabelValues(d.r.lmdbname, d.instance).
 		Set(utils.TimeDiff(t1, t0).Seconds())
