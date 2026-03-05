@@ -2,8 +2,6 @@ package syncer
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -26,7 +24,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	msg.Meta.DatabaseName = s.name
 	msg.Meta.Hostname = hostname
 	msg.Meta.InstanceID = s.instanceID()
-	msg.Meta.GenerationID = s.generationIDWithID(uint64(time.Now().UnixNano()))
+	msg.Meta.GenerationID = s.generationID()
 
 	t0 := time.Now() // for performance measurements
 
@@ -200,12 +198,6 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	metricSnapshotsLastAge.WithLabelValues(s.name).Set(time.Since(ts).Seconds())
 	metricSnapshotsLastSize.WithLabelValues(s.name).Set(float64(len(out)))
 
-	// Calculate SHA-256 hash of the compressed snapshot
-	// TODO: Revisit if we need this
-	hash := sha256.Sum256(out)
-	hashStr := hex.EncodeToString(hash[:])
-	hashPrefix := hashStr[:8] // Use first 8 chars for brevity
-
 	// Send it to storage
 	for i := 0; i < s.c.StorageRetryCount || s.c.StorageRetryForever; i++ {
 		metricSnapshotsStoreCalls.Inc()
@@ -223,11 +215,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 			continue
 		}
 
-		// Send timestamp string used in the snapshot filename
-		metricSnapshotsTimeStamp.WithLabelValues(s.name, s.instanceID(), nameTimeStamp).Set(1)
-
-		// Send generation ID used in the snapshot filename
-		metricSnapshotsSyncerGenerationID.WithLabelValues(s.name, s.instanceID(), generationID).Set(1)
+		metricSnapshotsTimeStamp.WithLabelValues(s.name, s.instanceID()).Set(unixTimestamp)
 
 		s.l.Debugf("Store succeeded with GenerationID %s", generationID)
 		metricSnapshotsStoreBytes.Add(float64(len(out)))
@@ -264,24 +252,23 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 	}
 
 	s.l.WithFields(logrus.Fields{
-		"time_copy_shadow":   tShadow.Sub(tTxnAcquire).Round(time.Millisecond),
-		"time_dump":          tDumped.Sub(tShadow).Round(time.Millisecond),
-		"time_compress":      dds.TCompressed.Round(time.Millisecond),
-		"time_store":         tStored.Sub(tDumpedData).Round(time.Millisecond),
-		"time_gc":            timeGC,
-		"time_total":         tStored.Sub(t0).Round(time.Millisecond),
-		"uncompressed_size":  dds.ProtobufSize.HumanReadable(),
-		"compression_ratio":  compressionRatio,
-		"snapshot_size":      datasize.ByteSize(len(out)).HumanReadable(),
-		"snapshot_name":      name,
-		"txnID":              txnID,
-		"timeStampHash":      hashStr,
-		"timeStampShortHash": hashPrefix,
-		"timeStamp":          nameTimeStamp,
-		"generationID":       generationID,
-		"instanceID":         s.instanceID(),
-		"unix_timestamp":     unixTimestamp,
-		"time_acquire":       utils.TimeDiff(tTxnAcquire, t0),
+		"time_copy_shadow":  tShadow.Sub(tTxnAcquire).Round(time.Millisecond),
+		"time_dump":         tDumped.Sub(tShadow).Round(time.Millisecond),
+		"time_compress":     dds.TCompressed.Round(time.Millisecond),
+		"time_store":        tStored.Sub(tDumpedData).Round(time.Millisecond),
+		"time_gc":           timeGC,
+		"time_total":        tStored.Sub(t0).Round(time.Millisecond),
+		"uncompressed_size": dds.ProtobufSize.HumanReadable(),
+		"compression_ratio": compressionRatio,
+		"snapshot_size":     datasize.ByteSize(len(out)).HumanReadable(),
+		"snapshot_name":     name,
+		"snapshot_kind":     ni.Kind,
+		"txnID":             txnID,
+		"timeStamp":         nameTimeStamp,
+		"generationID":      generationID,
+		"instanceID":        s.instanceID(),
+		"unix_timestamp":    unixTimestamp,
+		"time_acquire":      utils.TimeDiff(tTxnAcquire, t0),
 	}).Info("Stored snapshot")
 
 	if ni.Kind == snapshot.KindSnapshot {

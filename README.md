@@ -124,13 +124,14 @@ storage:
   options:
     account_name: myaccountname
     account_key: myaccountkey
+    use_shared_key: true
     container: lightningstream
     create_container: true
 ```
 
 ### Configuration with Azure service principal (recommended for production)
 
-When using service principal authentication, set `use_env_creds: true` and ensure the following environment variables are set:
+When `account_key` is not set, the backend uses [`DefaultAzureCredential`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#DefaultAzureCredential), which automatically picks up service principal credentials from environment variables:
 - `AZURE_CLIENT_ID`
 - `AZURE_TENANT_ID`
 - `AZURE_CLIENT_SECRET`
@@ -139,7 +140,6 @@ When using service principal authentication, set `use_env_creds: true` and ensur
 storage:
   type: azure
   options:
-    use_env_creds: true
     container: lightningstream
     endpoint_url: https://myaccount.blob.core.windows.net/
     create_container: true
@@ -149,9 +149,9 @@ storage:
 
 | Option | Type | Summary |
 |--------|------|---------|
-| account_name | string | Azure storage account name (required if not using `use_env_creds`) |
-| account_key | string | Azure storage account key (required if not using `use_env_creds`) |
-| use_env_creds | bool | Use Azure service principal authentication via environment variables |
+| account_name | string | Azure storage account name (required for shared key auth) |
+| account_key | string | Azure storage account key |
+| use_shared_key | bool | Use shared key (account name + key) authentication; if false, `DefaultAzureCredential` is used |
 | container | string | Azure blob container name (required) |
 | create_container | bool | Create container if it does not exist |
 | endpoint_url | string | Custom endpoint URL (defaults to `https://<account_name>.blob.core.windows.net/`) |

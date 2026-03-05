@@ -114,18 +114,10 @@ var (
 
 	metricSnapshotsTimestampString = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "lightningstream_receiver_snapshots_timestamp_string",
-			Help: "String representation of the snapshot timestamp",
+			Name: "lightningstream_receiver_snapshots_last_downloaded_unix_seconds",
+			Help: "UNIX timestamp of the last downloaded snapshot by instance",
 		},
-		[]string{"lmdb", "syncer_instance", "timestamp_string"},
-	)
-
-	metricSnapshotsReceiverGenerationID = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "lightningstream_receiver_snapshots_generation_id",
-			Help: "ID of the snapshot generation, used to identify it",
-		},
-		[]string{"lmdb", "syncer_instance", "generation_id"},
+		[]string{"lmdb", "syncer_instance"},
 	)
 )
 
@@ -144,5 +136,4 @@ func init() {
 	prometheus.MustRegister(metricSnapshotsStorageCount)
 	prometheus.MustRegister(metricSnapshotsStorageBytes)
 	prometheus.MustRegister(metricSnapshotsTimestampString)
-	prometheus.MustRegister(metricSnapshotsReceiverGenerationID)
 }

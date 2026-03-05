@@ -26,33 +26,31 @@ sweeper:
 
 storage:
   #type: fs
-  type: s3
-  options:
-    #root_path: /snapshots
-    access_key: minioadmin
-    secret_key: minioadmin
-    region: us-east-1
-    bucket: lightningstream
-    endpoint_url: http://minio:9000
-    create_bucket: true
+  # type: s3
+  # options:
+  #   #root_path: /snapshots
+  #   access_key: minioadmin
+  #   secret_key: minioadmin
+  #   region: us-east-1
+  #   bucket: lightningstream
+  #   endpoint_url: http://minio:9000
+  #   create_bucket: true
   cleanup:
     enabled: true
     interval: 15m
     must_keep_interval: 24h
     remove_old_instances_interval: 168h
-  # type: azure
-  # options:
-  #   account_name: devstoreaccount1
-  #   account_key: key1
-  #   container: lightningstreamcontainer
-  #   endpoint_url: http://azurite:10000/devstoreaccount1
-  #   create_container: true
-  #   use_update_marker: false
-  # cleanup:
-  #   enabled: true
-  #   interval: 2m
-  #   must_keep_interval: 24h
-  #   remove_old_instances_interval: 168h
+  type: azure
+  options:
+    account_name: devstoreaccount1
+    account_key: key1
+    container: lightningstreamcontainer
+    endpoint_url: http://azurite:10000/devstoreaccount1
+    create_container: true
+    use_update_marker: false
+    use_shared_key: true
+
+storage_poll_interval: 5s
 
 http:
   address: ":8500"

@@ -105,9 +105,7 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 	// Store the size of the snapshot in bytes
 	metricSnapshotsStorageBytes.WithLabelValues(d.r.lmdbname).Set(float64(len(data)))
 
-	metricSnapshotsTimestampString.WithLabelValues(d.r.lmdbname, d.instance, ni.TimestampString).Set(1)
-
-	metricSnapshotsReceiverGenerationID.WithLabelValues(d.r.lmdbname, d.instance, ni.GenerationID).Set(1)
+	metricSnapshotsTimestampString.WithLabelValues(d.r.lmdbname, d.instance).Set(float64(ni.Timestamp.UnixNano()) / 1e9)
 	d.l.Debugf("GenerationID of downloaded snapshot: %s", ni.GenerationID)
 
 	// Signal success to health tracker

@@ -87,11 +87,6 @@ func (s *Syncer) generationID() string {
 	return out
 }
 
-func (s *Syncer) generationIDWithID(id uint64) string {
-	out := fmt.Sprintf("G-%016x", id)
-	return out
-}
-
 // readDBI reads a DBI into a snapshot DBI.
 // By default, the headers of values will be split out to the corresponding snapshot fields.
 // If rawValues is true, the value will be stored as is and the headers will

@@ -270,7 +270,7 @@ func (r *Receiver) RunOnce(ctx context.Context, includingOwn bool) error {
 			"timestamp":         ni.TimestampString,
 			"generation":        ni.GenerationID,
 			"age":               age.Round(10 * time.Millisecond),
-		}).Info("New snapshot detected")
+		}).Debug("New snapshot detected")
 
 		metricSnapshotsLastReceivedTimestamp.WithLabelValues(r.lmdbname, inst).
 			Set(float64(ni.Timestamp.UnixNano()) / 1e9)

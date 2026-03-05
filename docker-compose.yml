@@ -29,10 +29,10 @@ services:
         hostname: azurite
         restart: always
         ports:
-            - "10000:10000"
-            - "10001:10001"
-            - "10002:10002" 
-        command: azurite --blobHost 0.0.0.0  --queueHost 0.0.0.0 --tableHost 0.0.0.0
+            - "${DEVENV_BIND_IP:-127.0.0.1}:10000:10000"
+            - "${DEVENV_BIND_IP:-127.0.0.1}:10001:10001"
+            - "${DEVENV_BIND_IP:-127.0.0.1}:10002:10002"
+        command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --silent
         volumes:    
         - azurite_data:/data
         - ./azure/certs:/certs
@@ -41,9 +41,9 @@ services:
     auth1:
         image: powerdns/pdns-auth-49
         environment:
-            instance: 1
-            port: 53
-            webserver_port: 8081
+            - instance=1
+            - port=53
+            - webserver_port=8081
         ports:
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}51:53/tcp"
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}51:53/udp"
@@ -58,9 +58,9 @@ services:
     auth2:
         image: powerdns/pdns-auth-49
         environment:
-            instance: 2
-            port: 53
-            webserver_port: 8081
+            - instance=2
+            - port=53
+            - webserver_port=8081
         ports:
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}52:53/tcp"
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}52:53/udp"
@@ -75,9 +75,9 @@ services:
     auth3:
         image: powerdns/pdns-auth-49
         environment:
-            instance: 3
-            port: 53
-            webserver_port: 8081
+            - instance=3
+            - port=53
+            - webserver_port=8081
         ports:
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}53:53/tcp"
             - "${DEVENV_BIND_IP:-127.0.0.1}:${PORT_PREFIX:-47}53:53/udp"
