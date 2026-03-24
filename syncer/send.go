@@ -206,6 +206,7 @@ func (s *Syncer) SendOnce(ctx context.Context, env *lmdb.Env) (txnID header.TxnI
 			}
 			continue
 		}
+
 		s.l.Debug("Store succeeded")
 		metricSnapshotsStoreBytes.Add(float64(len(out)))
 
