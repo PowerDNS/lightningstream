@@ -56,8 +56,8 @@ in a hostname is safe.
 ## Storage
 
 Lightning Stream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support
-different storage backends. At the moment of writing, it supports S3 and local filesystem
-backends.
+different storage backends. At the moment of writing, it supports S3, Azure Blob Storage, and local
+filesystem backends.
 
 
 ### S3 backend
@@ -102,6 +102,104 @@ mechanism to keep multiple buckets in sync.
 
 You can find all the available S3 options with full descriptions in
 [Simpleblob's S3 backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/s3/s3.go#:~:text=Options%20struct).
+
+
+### Azure Blob Storage backend
+
+Lightning Stream supports Azure Blob Storage as a production-ready backend.
+
+#### Authentication
+
+The backend supports two authentication methods:
+
+**Shared key** (static credentials): set `use_shared_key: true` and provide `account_name` and
+`account_key`. This is appropriate for Azurite (local emulator) and simple deployments.
+
+```yaml
+storage:
+  type: azure
+  options:
+    account_name: myaccount
+    account_key: myaccountkey==
+    use_shared_key: true
+    container: lightningstream
+    create_container: true
+```
+
+**DefaultAzureCredential** (recommended for production): omit `use_shared_key` (or set it to
+`false`) and do not set `account_key`. The Azure SDK will automatically try, in order: environment
+variables, workload identity, managed identity, Azure CLI, and other ambient credentials.
+
+To use a service principal, set these environment variables before starting Lightning Stream:
+
+```
+AZURE_CLIENT_ID=<your-client-id>
+AZURE_TENANT_ID=<your-tenant-id>
+AZURE_CLIENT_SECRET=<your-client-secret>
+```
+
+```yaml
+storage:
+  type: azure
+  options:
+    container: lightningstream
+    endpoint_url: https://myaccount.blob.core.windows.net/
+    create_container: true
+```
+
+!!! warning
+
+    `DefaultAzureCredential` requires an HTTPS endpoint. It will refuse to authenticate over plain
+    HTTP. Use `use_shared_key: true` whenever your endpoint is HTTP (e.g. Azurite without TLS).
+
+#### Local testing with Azurite
+
+[Azurite](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite) is
+Microsoft's open-source Azure Storage emulator. A working example is included in the
+`docker-compose.yml` in this repository.
+
+```yaml
+storage:
+  type: azure
+  options:
+    account_name: devstoreaccount1
+    account_key: <base64-key-matching-AZURITE_ACCOUNTS>
+    use_shared_key: true
+    container: lightningstream
+    endpoint_url: http://azurite:10000/devstoreaccount1
+    create_container: true
+```
+
+#### Available options
+
+| Option | Type | Summary |
+|--------|------|---------|
+| account_name | string | Azure storage account name (required for shared key auth) |
+| account_key | string | Azure storage account key (required for shared key auth) |
+| use_shared_key | bool | Use shared key authentication; if false, `DefaultAzureCredential` is used |
+| container | string | Azure blob container name (required) |
+| create_container | bool | Create the container if it does not exist |
+| endpoint_url | string | Custom endpoint URL (defaults to `https://<account_name>.blob.core.windows.net`) |
+| global_prefix | string | Transparently apply a global prefix to all blob names |
+| disable_send_content_md5 | bool | Disable sending the Content-MD5 header |
+| tls | [tlsconfig.Config](https://github.com/PowerDNS/go-tlsconfig) | TLS configuration |
+| init_timeout | duration | Time allowed for initialisation (default: "20s") |
+| use_update_marker | bool | Reduce LIST operations using an update marker blob (see below) |
+| update_marker_force_list_interval | duration | Force a full LIST after this interval (default: "5m") |
+| concurrency | int | Max concurrent block uploads per Store call (default: 1) |
+
+The `use_update_marker` option can significantly reduce Azure Storage costs. GET operations are
+approximately 12x cheaper than LIST on Azure. When enabled, Lightning Stream writes a small marker
+blob on every store or delete, and uses it to skip LIST calls when nothing has changed.
+
+!!! warning
+
+    `use_update_marker` must be enabled or disabled consistently across **all** instances sharing
+    the same container. It also cannot be used reliably when the container itself is replicated
+    in an active-active fashion between data centres.
+
+You can find all available options with full descriptions in
+[Simpleblob's Azure backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/azure/azure.go).
 
 
 ### Filesystem backend

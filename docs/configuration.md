@@ -61,14 +61,13 @@ in a hostname is safe.
 ## Storage
 
 Lightning Stream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support
-different storage backends. At the moment of writing, it supports S3 and local filesystem
-backends.
+different storage backends. At the moment of writing, it supports S3, Azure Blob Storage, and local
+filesystem backends.
 
 
 ### S3 backend
 
-This is currently the only backend that makes sense for a production environment. It stores
-snapshots in an S3 or compatible storage. We have tested it against Amazon AWS S3 and MinIO servers.
+This is one option for a production environment. It stores snapshots in an S3 or compatible storage. We have tested it against Amazon AWS S3 and MinIO servers.
 
 MinIO example for testing without TLS:
 
@@ -107,6 +106,104 @@ mechanism to keep multiple buckets in sync.
 
 You can find all the available S3 options with full descriptions in
 [Simpleblob's S3 backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/s3/s3.go#:~:text=Options%20struct).
+
+
+### Azure Blob Storage backend
+
+Lightning Stream supports Azure Blob Storage as another production-ready backend.
+
+#### Authentication
+
+The backend supports two authentication methods:
+
+**Shared key** (static credentials): set `use_shared_key: true` and provide `account_name` and
+`account_key`. This is appropriate for Azurite (local emulator) and simple deployments.
+
+```yaml
+storage:
+  type: azure
+  options:
+    account_name: myaccount
+    account_key: myaccountkey==
+    use_shared_key: true
+    container: lightningstream
+    create_container: true
+```
+
+**DefaultAzureCredential** (recommended for production): omit `use_shared_key` (or set it to
+`false`) and do not set `account_key`. The Azure SDK will automatically try, in order: environment
+variables, workload identity, managed identity, Azure CLI, and other ambient credentials.
+
+To use a service principal, set these environment variables before starting Lightning Stream:
+
+```
+AZURE_CLIENT_ID=<your-client-id>
+AZURE_TENANT_ID=<your-tenant-id>
+AZURE_CLIENT_SECRET=<your-client-secret>
+```
+
+```yaml
+storage:
+  type: azure
+  options:
+    container: lightningstream
+    endpoint_url: https://myaccount.blob.core.windows.net/
+    create_container: true
+```
+
+!!! warning
+
+    `DefaultAzureCredential` requires an HTTPS endpoint. It will refuse to authenticate over plain
+    HTTP. Use `use_shared_key: true` whenever your endpoint is HTTP (e.g. Azurite without TLS).
+
+#### Local testing with Azurite
+
+[Azurite](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite) is
+Microsoft's open-source Azure Storage emulator. A working example is included in the
+`docker-compose.yml` in this repository.
+
+```yaml
+storage:
+  type: azure
+  options:
+    account_name: devstoreaccount1
+    account_key: <base64-key-matching-AZURITE_ACCOUNTS>
+    use_shared_key: true
+    container: lightningstream
+    endpoint_url: http://azurite:10000/devstoreaccount1
+    create_container: true
+```
+
+#### Available options
+
+| Option | Type | Summary |
+|--------|------|---------|
+| account_name | string | Azure storage account name (required for shared key auth) |
+| account_key | string | Azure storage account key (required for shared key auth) |
+| use_shared_key | bool | Use shared key authentication; if false, `DefaultAzureCredential` is used |
+| container | string | Azure blob container name (required) |
+| create_container | bool | Create the container if it does not exist |
+| endpoint_url | string | Custom endpoint URL (defaults to `https://<account_name>.blob.core.windows.net`) |
+| global_prefix | string | Transparently apply a global prefix to all blob names |
+| disable_send_content_md5 | bool | Disable sending the Content-MD5 header |
+| tls | [tlsconfig.Config](https://github.com/PowerDNS/go-tlsconfig) | TLS configuration |
+| init_timeout | duration | Time allowed for initialisation (default: "20s") |
+| use_update_marker | bool | Reduce LIST operations using an update marker blob (see below) |
+| update_marker_force_list_interval | duration | Force a full LIST after this interval (default: "5m") |
+| concurrency | int | Max concurrent block uploads per Store call (default: 1) |
+
+The `use_update_marker` option can significantly reduce Azure Storage costs. GET operations are
+approximately 12x cheaper than LIST on Azure. When enabled, Lightning Stream writes a small marker
+blob on every store or delete, and uses it to skip LIST calls when nothing has changed.
+
+!!! warning
+
+    `use_update_marker` must be enabled or disabled consistently across **all** instances sharing
+    the same container. It also cannot be used reliably when the container itself is replicated
+    in an active-active fashion between data centres.
+
+You can find all available options with full descriptions in
+[Simpleblob's Azure backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/azure/azure.go).
 
 
 ### Filesystem backend
@@ -374,6 +471,72 @@ lmdbs:
     #dbi_options:
     #  records:
     #    override_create_flags: 0
+
+
+# Sweeper settings for the LMDB sweeper that removed deleted entries after
+# a while, also known as the "tomb sweeper".
+#
+# The key consideration for these settings is how long instance can be
+# expected to be disconnected from the storage (out of sync) before
+# rejoining. If the retention interval is set too low, old records that
+# have been removed during the downtime can reappear, which can cause
+# major issues.
+#
+# When picking a value, also take into account development, testing and
+# migration systems that only occasionally come online.
+#
+sweeper:
+  # Enabled controls if the sweeper is enabled.
+  # It is DISABLED by default, because of the important consistency
+  # considerations that depend on the kind of deployment.
+  # When disabled, the deleted entries will never actually be removed.
+  # Stats are only available when the sweeper is enabled.
+  #enabled: false
+  
+  # RetentionDays is the number of DAYS of retention. Unlike in most
+  # other places, this is specified in number of days instead of Duration
+  # because of the expected length of this.
+  # This is a float, so it is possible to use periods shorter than one day,
+  # but this is rarely a good idea. Best to set this as high as possible.
+  # Default: 370 (days, intentionally on the safe side)
+  #retention_days: 370
+  
+  # Interval is the interval between sweeps of the whole database to enforce
+  # RetentionDays.
+  # As a guideline, on a fast server sweeping 1 million records takes
+  # about 1 second.
+  # Default: 6h
+  #interval: 6h
+  
+  # FirstInterval is the first Interval immediately after
+  # startup, to allow one soon after extended downtime.
+  # Default: 10m
+  #first_interval: 10m
+  
+  # LockDuration limits how long the sweeper may hold the exclusive write
+  # lock at one time. This effectively controls the maximum latency spike
+  # due to the sweeper for API calls that update the LMDB.
+  # This is not a hard quota, the sweeper may overrun it slightly.
+  # Default: 50ms
+  #lock_duration: 50ms
+  
+  # ReleaseDuration determines how long the sweeper must sleep before it
+  # is allowed to reacquire the exclusive write lock.
+  # If this is equal to LockDuration, it means that the sweeper can hold the
+  # LMDB at most half the time.
+  # Do not set this too high, as every sweep cycle will record a write
+  # transaction that can trigger a snapshot generation scan. It is best
+  # to get it over with in a short total sweep time.
+  # Default: 50ms
+  #release_duration: 50ms
+
+  # RetentionLoadCutoffDuration is the time interval close to the RetentionDays
+  # limit where we will not load deletion markers from remote snapshots,
+  # because they would soon be eligible for removal by the sweeper anyway.
+  # Only set this if you understand the implications.
+  # Default: 1% of the duration corresponding to the retention_days setting.
+  #retention_load_cutoff_duration: 0
+
 
 # Storage configures where LS stores its snapshots
 storage:
