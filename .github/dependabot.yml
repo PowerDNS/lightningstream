@@ -3,12 +3,6 @@
 
 version: 2
 updates:
-  - package-ecosystem: "gomod"
-    directory: "/" # Location of package manifests
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-      time: "16:00"
   - package-ecosystem: "docker"
     directories:
       - "/"
@@ -24,4 +18,4 @@ updates:
       time: "16:00"
     groups:
       all-actions:
-        patterns: [ "*" ]
+        patterns: ["*"]

@@ -1,0 +1,28 @@
+name: govulncheck
+
+on:
+  schedule:
+    # Mondays & Thursdays at 07:00.
+    - cron: "0 7 * * 1,4"
+      timezone: "Europe/Amsterdam"
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    name: Run govulncheck
+    strategy:
+      matrix:
+        go:
+          - "1.25"
+          - "1.26"
+    steps:
+      - id: govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: ${{ matrix.go }}
