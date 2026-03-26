@@ -40,6 +40,11 @@ type Hooks struct {
 
 	// Returns a channel that can inject other updates into the sync loop
 	OtherUpdateSource func() <-chan snapshot.Update
+
+	// InstanceReady is called to check whether an instance for which a snapshot
+	// or update from OtherUpdateSource can be considered "ready". This will
+	// signal the health check to become ready or the OnlyOnce sync to be done.
+	InstanceReady func(instance string) bool
 }
 
 type SnapshotInfo struct {

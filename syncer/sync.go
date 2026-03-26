@@ -200,24 +200,38 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 
 			// New update to load
 			if instance == ownInstanceID {
-				s.l.WithField("kind", update.NameInfo.Kind).Info("Loading update for own instance")
+				s.l.WithFields(logrus.Fields{
+					"kind": update.NameInfo.Kind,
+					"file": update.NameInfo.FullName,
+				}).Info("Loading update for own instance")
+			} else {
+				s.l.WithFields(logrus.Fields{
+					"kind": update.NameInfo.Kind,
+					"file": update.NameInfo.FullName,
+				}).Debug("Loading update")
 			}
+
+			actualTxnID, localChanged, err := s.LoadOnce(
+				ctx, env, instance, update, lastSyncedTxnID)
+			update.Close() // releases the DecompressedSnapshotToken
+			if err != nil {
+				return err
+			}
+
 			if update.NameInfo.Kind == snapshot.KindSnapshot {
 				nLoads++
 				if waitingForInstances.Contains(instance) {
+					if s.hooks.InstanceReady == nil {
+						s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
+						waitingForInstances.Remove(instance)
+					}
+				}
+			}
+			if waitingForInstances.Contains(instance) && s.hooks.InstanceReady != nil {
+				if s.hooks.InstanceReady(instance) {
 					s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
 					waitingForInstances.Remove(instance)
 				}
-			}
-			s.l.WithFields(logrus.Fields{
-				"kind": update.NameInfo.Kind,
-				"file": update.NameInfo.FullName,
-			}).Debug("Loading update")
-			actualTxnID, localChanged, err := s.LoadOnce(
-				ctx, env, instance, update, lastSyncedTxnID)
-			update.Close() // returns the DecompressedSnapshotToken
-			if err != nil {
-				return err
 			}
 
 			// Publish a successful load
@@ -329,16 +343,14 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		}
 
 		// Sleep before next check for snapshots and local changes
-		//s.l.Debug("Waiting for a new transaction")
+		// s.l.Debug("Waiting for a new transaction")
 		if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
 			return err
 		}
 	}
-
 }
 
 func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, update snapshot.Update, lastTxnID header.TxnID) (txnID header.TxnID, localChanged bool, err error) {
-
 	t0 := time.Now() // for performance measurements
 	snap := update.Snapshot
 
@@ -427,7 +439,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 							dbiName, snap.FormatVersion)
 					}
 
-					var flags = dbiflags.Flags(dbiMsg.Flags())
+					flags := dbiflags.Flags(dbiMsg.Flags())
 					if dbiOpt.OverrideCreateFlags != nil {
 						flags = *dbiOpt.OverrideCreateFlags
 					}
@@ -448,7 +460,7 @@ func (s *Syncer) LoadOnce(ctx context.Context, env *lmdb.Env, instance string, u
 				// The formatVersion does not matter here, because the DBI flags
 				// stored in earlier versions will be the correct ones for the
 				// DBI that we are creating here (shadow or native).
-				var flags = dbiflags.Flags(dbiMsg.Flags())
+				flags := dbiflags.Flags(dbiMsg.Flags())
 				if dbiOpt.OverrideCreateFlags != nil {
 					flags = *dbiOpt.OverrideCreateFlags
 				}
