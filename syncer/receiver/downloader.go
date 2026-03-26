@@ -116,7 +116,7 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 
 	msg, err := snapshot.LoadData(data)
 	if err != nil {
-		d.l.Debug("Returning DecompressedSnapshotToken")
+		d.l.Debug("Releasing DecompressedSnapshotToken")
 		token.Release()
 		// This snapshot is considered corrupt, we will ignore it from now on
 		d.r.MarkCorrupt(ni.FullName, err)
@@ -144,7 +144,7 @@ func (d *Downloader) LoadOnce(ctx context.Context, ni snapshot.NameInfo) error {
 			if u.Snapshot == nil {
 				return // already called?
 			}
-			d.l.Debug("Returning DecompressedSnapshotToken")
+			d.l.Debug("Releasing DecompressedSnapshotToken")
 			// Clear it before returning the token
 			u.Snapshot = nil
 			utils.GC()

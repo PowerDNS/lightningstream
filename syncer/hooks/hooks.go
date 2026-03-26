@@ -40,6 +40,8 @@ type Hooks struct {
 
 	// Returns a channel that can inject other updates into the sync loop
 	OtherUpdateSource func() <-chan snapshot.Update
+
+	InstanceReady func(instance string) bool
 }
 
 type SnapshotInfo struct {
