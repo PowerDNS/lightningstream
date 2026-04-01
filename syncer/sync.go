@@ -228,9 +228,11 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				}
 			}
 			if waitingForInstances.Contains(instance) && s.hooks.InstanceReady != nil {
-				if s.hooks.InstanceReady(instance) {
+				if s.hooks.InstanceReady(&update.NameInfo) {
 					s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
 					waitingForInstances.Remove(instance)
+				} else {
+					s.l.WithField("other_instance", instance).Info("Waiting for additional updates for instance")
 				}
 			}
 
