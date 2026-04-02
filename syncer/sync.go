@@ -199,31 +199,30 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 			}
 
 			// New update to load
+			l := s.l.WithFields(logrus.Fields{
+				"kind": update.NameInfo.Kind,
+				"file": update.NameInfo.FullName,
+			})
 			if instance == ownInstanceID {
-				s.l.WithFields(logrus.Fields{
-					"kind": update.NameInfo.Kind,
-					"file": update.NameInfo.FullName,
-				}).Info("Loading update for own instance")
+				l.Info("Loading update for own instance")
 			} else {
-				s.l.WithFields(logrus.Fields{
-					"kind": update.NameInfo.Kind,
-					"file": update.NameInfo.FullName,
-				}).Debug("Loading update")
+				l.Debug("Loading update")
 			}
+			l = s.l.WithField("other_instance", instance)
 
 			if update.NameInfo.Kind == snapshot.KindSnapshot {
 				nLoads++
 				if waitingForInstances.Contains(instance) && s.hooks.InstanceReady == nil {
-					s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
+					l.Info("No longer waiting for instance")
 					waitingForInstances.Remove(instance)
 				}
 			}
 			if waitingForInstances.Contains(instance) && s.hooks.InstanceReady != nil {
 				if s.hooks.InstanceReady(&update.NameInfo) {
-					s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
+					l.Info("No longer waiting for instance")
 					waitingForInstances.Remove(instance)
 				} else {
-					s.l.WithField("other_instance", instance).Info("Waiting for additional updates for instance")
+					l.Info("Waiting for additional updates for instance")
 				}
 			}
 
