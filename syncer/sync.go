@@ -211,20 +211,11 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				}).Debug("Loading update")
 			}
 
-			actualTxnID, localChanged, err := s.LoadOnce(
-				ctx, env, instance, update, lastSyncedTxnID)
-			update.Close() // releases the DecompressedSnapshotToken
-			if err != nil {
-				return err
-			}
-
 			if update.NameInfo.Kind == snapshot.KindSnapshot {
 				nLoads++
-				if waitingForInstances.Contains(instance) {
-					if s.hooks.InstanceReady == nil {
-						s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
-						waitingForInstances.Remove(instance)
-					}
+				if waitingForInstances.Contains(instance) && s.hooks.InstanceReady == nil {
+					s.l.WithField("other_instance", instance).Info("No longer waiting for instance")
+					waitingForInstances.Remove(instance)
 				}
 			}
 			if waitingForInstances.Contains(instance) && s.hooks.InstanceReady != nil {
@@ -234,6 +225,13 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				} else {
 					s.l.WithField("other_instance", instance).Info("Waiting for additional updates for instance")
 				}
+			}
+
+			actualTxnID, localChanged, err := s.LoadOnce(
+				ctx, env, instance, update, lastSyncedTxnID)
+			update.Close() // releases the DecompressedSnapshotToken
+			if err != nil {
+				return err
 			}
 
 			// Publish a successful load
@@ -345,7 +343,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 		}
 
 		// Sleep before next check for snapshots and local changes
-		// s.l.Debug("Waiting for a new transaction")
 		if err := utils.SleepContext(ctx, s.c.LMDBPollInterval); err != nil {
 			return err
 		}
