@@ -238,9 +238,6 @@ func (s *Syncer) syncLoop(ctx context.Context, env *lmdb.Env, r *receiver.Receiv
 				NameInfo: update.NameInfo,
 			})
 
-			if update.NameInfo.Kind == snapshot.KindSnapshot {
-				utils.GC()
-			}
 			if !localChanged {
 				// Prevent triggering a local snapshot if there were no local
 				// changes by bumping the transaction ID we consider synced
