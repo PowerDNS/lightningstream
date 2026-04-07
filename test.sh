@@ -1,12 +1,12 @@
 #!/bin/sh
 
-if [ ! -z "$SIMPLEBLOB_TEST_S3_CONFIG" ]; then
-    echo "* Using existing SIMPLEBLOB_TEST_S3_CONFIG=$SIMPLEBLOB_TEST_S3_CONFIG"
-elif curl -v --connect-timeout 2 http://localhost:4730/ 2>&1 | grep --silent MinIO ; then
-    echo "* Using MinIO on localhost for tests"
-    export SIMPLEBLOB_TEST_S3_CONFIG="$PWD/docker/test-minio.json"
+# S3 and Azure backend tests in simpleblob use testcontainers-go to spin up
+# MinIO and Azurite automatically. They require a reachable Docker socket and
+# will self-skip via testcontainers.SkipIfProviderIsNotHealthy if one is not available.
+if [ -S /var/run/docker.sock ] || docker info > /dev/null 2>&1; then
+    echo "* Docker socket available, S3 (MinIO) and Azure (Azurite) backend tests will run via testcontainers"
 else
-    echo "* MinIO not running on localhost, skipping S3 tests"
+    echo "* Docker socket not available, S3 and Azure backend tests will be skipped"
 fi
 
 set -ex

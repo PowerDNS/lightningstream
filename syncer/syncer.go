@@ -80,7 +80,6 @@ type Syncer struct {
 	env    *lmdb.Env
 	events *events.Events
 	hooks  *hooks.Hooks
-
 	// lastByInstance tracks the last snapshot loaded by instance, so that the
 	// cleaner can make safe decisions about when to remove stale snapshots.
 	lastByInstance map[string]time.Time
