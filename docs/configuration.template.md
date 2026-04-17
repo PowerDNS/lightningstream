@@ -205,6 +205,8 @@ health:
 
 This example configuration assumes a PowerDNS Authoritative server setup with native schemas, but it
 explains every available option.
+See [Lightning Stream with PowerDNS Authoritative server](pdns-auth-installation.md) for details on
+Lightning Stream integration with PowerDNS Authoritative server.
 
 ```yaml
 __CONFIG__
