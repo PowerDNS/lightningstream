@@ -361,6 +361,7 @@ lightningstream sync [flags]
 
 ```
   -h, --help                          help for sync
+      --only-db stringArray           Only sync this named db (can be repeated)
       --only-once                     Only do a single run and exit
       --wait-for-marker-file string   Marker file to wait for in storage before starting syncers
 ```

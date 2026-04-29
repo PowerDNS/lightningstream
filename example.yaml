@@ -181,7 +181,7 @@ sweeper:
   # When disabled, the deleted entries will never actually be removed.
   # Stats are only available when the sweeper is enabled.
   #enabled: false
-  
+
   # RetentionDays is the number of DAYS of retention. Unlike in most
   # other places, this is specified in number of days instead of Duration
   # because of the expected length of this.
@@ -189,26 +189,26 @@ sweeper:
   # but this is rarely a good idea. Best to set this as high as possible.
   # Default: 370 (days, intentionally on the safe side)
   #retention_days: 370
-  
+
   # Interval is the interval between sweeps of the whole database to enforce
   # RetentionDays.
   # As a guideline, on a fast server sweeping 1 million records takes
   # about 1 second.
   # Default: 6h
   #interval: 6h
-  
+
   # FirstInterval is the first Interval immediately after
   # startup, to allow one soon after extended downtime.
   # Default: 10m
   #first_interval: 10m
-  
+
   # LockDuration limits how long the sweeper may hold the exclusive write
   # lock at one time. This effectively controls the maximum latency spike
   # due to the sweeper for API calls that update the LMDB.
   # This is not a hard quota, the sweeper may overrun it slightly.
   # Default: 50ms
   #lock_duration: 50ms
-  
+
   # ReleaseDuration determines how long the sweeper must sleep before it
   # is allowed to reacquire the exclusive write lock.
   # If this is equal to LockDuration, it means that the sweeper can hold the
