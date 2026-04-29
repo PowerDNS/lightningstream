@@ -17,9 +17,8 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        go:
-          - '1.24'
-        
+        go: [ "1.24" ]
+
     name: Go ${{ matrix.go }} tests
     steps:
     - uses: actions/checkout@v4
@@ -29,12 +28,10 @@ jobs:
         go-version: ${{ matrix.go }}
     - name: Build
       run: go build -v ./...
-    - name: Start MinIO (emulates S3)
-      run: |
-        wget -q https://dl.min.io/server/minio/release/linux-amd64/minio
-        chmod +x minio
-        export MINIO_ROOT_USER=minioadmin
-        export MINIO_ROOT_PASSWORD=minioadmin
-        ./minio server /tmp/minio --address 127.0.0.1:4730 --quiet &
     - name: Test
       run: ./test.sh
+    - name: Make sure ./update-docs.sh was run
+      run: |
+        ./update-docs.sh
+        git status --porcelain
+        test -z "$(git status --porcelain)"
