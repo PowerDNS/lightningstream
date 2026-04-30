@@ -210,6 +210,8 @@ health:
 
 This example configuration assumes a PowerDNS Authoritative server setup with native schemas, but it
 explains every available option.
+See [Lightning Stream with PowerDNS Authoritative server](pdns-auth-installation.md) for details on
+Lightning Stream integration with PowerDNS Authoritative server.
 
 ```yaml
 # This is a Lightning Stream (LS) example configuration for use with the
@@ -308,7 +310,7 @@ lmdbs:
       # that can be used for LMDB data pages and limits the file size of an
       # LMDB. Keep in mind that an LMDB file can eventually grow to its mapsize.
       # A value of 0 means 1GB when creating a new LMDB.
-      #map_size: 1GB
+      map_size: 1000MB # Match the 1000MB used in PowerDNS auth integration docs
 
       # The maximum number of named DBIs within the LMDB. 0 means default.
       #max_dbs: 64
@@ -367,6 +369,8 @@ lmdbs:
     options:
       no_subdir: true
       create: true
+      map_size: 1000MB
+    schema_tracks_changes: true
 
     # Example use to create new LMDBs from old snapshots of older PDNS Auth
     # 4.7 LMDBs. This is not be needed for any new deployment with PDNS Auth
