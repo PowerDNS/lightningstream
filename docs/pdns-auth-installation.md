@@ -48,11 +48,8 @@ lmdb-filename=/path/to/lmdb
 # Note that this cannot safely be changed later!
 lmdb-shards=1
 
-# This MUST be enabled to safely handle multiple writers
-lmdb-random-ids=yes
-
-# This MUST be enabled to track and propagate deletes
-lmdb-flag-deleted=yes
+# Ensure Lightning Stream compatible LMDB parameters
+lmdb-lightning-stream=yes
 
 # You may want a lower number than 16000 MB, which is the default on 64 bit systems.
 lmdb-map-size=1000
