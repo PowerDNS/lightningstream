@@ -1,6 +1,6 @@
 package strategy
 
-import "github.com/pkg/errors"
+import "errors"
 
 // ErrSkip is an error returned by an Iterator to skip a Merge or Clean for an item.
 var ErrSkip = errors.New("skip")

@@ -2,11 +2,11 @@
 package stats
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,17 +23,17 @@ func Log(env *lmdb.Env, dbnames []string, withSmaps bool, log logrus.FieldLogger
 		// Collect env info
 		info, err := env.Info()
 		if err != nil {
-			return errors.Wrap(err, "env info")
+			return fmt.Errorf("env info: %w", err)
 		}
 
 		// Collect file size
 		path, err := env.Path()
 		if err != nil {
-			return errors.Wrap(err, "env path")
+			return fmt.Errorf("env path: %w", err)
 		}
 		filesize, err := lmdbFileSize(path)
 		if err != nil {
-			return errors.Wrap(err, "file size")
+			return fmt.Errorf("file size: %w", err)
 		}
 
 		log.WithFields(logrus.Fields{
@@ -56,12 +56,12 @@ func Log(env *lmdb.Env, dbnames []string, withSmaps bool, log logrus.FieldLogger
 			for _, dbname := range dbnames {
 				dbi, err := txn.OpenDBI(dbname, 0)
 				if err != nil {
-					return errors.Wrap(err, "opendbi "+dbname)
+					return fmt.Errorf("opendbi %s: %w", dbname, err)
 				}
 
 				stat, err := txn.Stat(dbi)
 				if err != nil {
-					return errors.Wrap(err, "stat "+dbname)
+					return fmt.Errorf("stat %s: %w", dbname, err)
 				}
 
 				log.WithFields(logrus.Fields{
@@ -76,20 +76,20 @@ func Log(env *lmdb.Env, dbnames []string, withSmaps bool, log logrus.FieldLogger
 			return nil
 		})
 		if err != nil {
-			return errors.Wrap(err, "open view")
+			return fmt.Errorf("open view: %w", err)
 		}
 
 		// Collect memory info from smaps (only available on Linux)
 		if withSmaps {
 			fullpath, err := lmdbFullPath(path)
 			if err != nil {
-				return errors.Wrap(err, "full path")
+				return fmt.Errorf("full path: %w", err)
 			}
 
 			data, err := os.ReadFile("/proc/self/smaps")
 			if err != nil {
 				if !os.IsNotExist(err) {
-					return errors.Wrap(err, "read smaps")
+					return fmt.Errorf("read smaps: %w", err)
 				}
 			} else {
 				m := getMemoryStats(string(data), fullpath)

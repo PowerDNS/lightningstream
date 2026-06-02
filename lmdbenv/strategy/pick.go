@@ -6,8 +6,9 @@
 package strategy
 
 import (
+	"errors"
+
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 )
 
 // ErrNotSorted is returned when keys are found to be not sorted and the
@@ -32,5 +33,5 @@ func Pick(f Facts) (Func, error) {
 	// Snapshot load after uuid change or broken delta chain
 	return IterPut, nil // Should cause minimal increases in file size
 	// Unreachable
-	//return nil, ErrNoStrategy
+	// return nil, ErrNoStrategy
 }

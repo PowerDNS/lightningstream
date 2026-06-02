@@ -10,7 +10,6 @@ import (
 	"github.com/PowerDNS/lightningstream/syncer"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -48,12 +47,12 @@ func dumpLMDB(name string, lc config.LMDB) error {
 
 			dbi, err := txn.OpenDBI(dbiName, 0)
 			if err != nil {
-				return errors.Wrap(err, "dbi "+dbiName)
+				return fmt.Errorf("dbi %s: %w", dbiName, err)
 			}
 
 			items, err := lmdbenv.ReadDBI(txn, dbi)
 			if err != nil {
-				return errors.Wrap(err, "read dbi "+dbiName)
+				return fmt.Errorf("read dbi %s: %w", dbiName, err)
 			}
 
 			for _, item := range items {

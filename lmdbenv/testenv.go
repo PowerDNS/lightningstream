@@ -1,10 +1,11 @@
 package lmdbenv
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 )
 
 type TestEnvFunc func(env *lmdb.Env) error
@@ -15,7 +16,7 @@ type TestEnvFunc func(env *lmdb.Env) error
 func TestEnv(f TestEnvFunc) error {
 	tmpdir, err := os.MkdirTemp("", "lmdbtest_")
 	if err != nil {
-		return errors.Wrap(err, "create tempdir")
+		return fmt.Errorf("create tempdir: %w", err)
 	}
 	if tmpdir == "" {
 		panic("Empty tmpdir")
@@ -24,7 +25,7 @@ func TestEnv(f TestEnvFunc) error {
 
 	env, err := New(tmpdir, lmdb.Create)
 	if err != nil {
-		return errors.Wrap(err, "new lmdb env")
+		return fmt.Errorf("new lmdb env: %w", err)
 	}
 
 	if err := f(env); err != nil {
@@ -45,7 +46,7 @@ func TestTxn(f TestTxnFunc) error {
 		err := env.Update(func(txn *lmdb.Txn) error {
 			dbi, err := txn.OpenDBI("tempdbi", lmdb.Create)
 			if err != nil {
-				return errors.Wrap(err, "create dbi")
+				return fmt.Errorf("create dbi: %w", err)
 			}
 			if err := f(txn, dbi); err != nil {
 				return err
