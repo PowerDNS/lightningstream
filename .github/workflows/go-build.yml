@@ -27,7 +27,7 @@ jobs:
       - name: Build (amd64)
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=1 ./build.sh
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lightningstream_linux_amd64.bin
           path: bin/lightningstream
@@ -47,7 +47,7 @@ jobs:
       - name: Build (amd64)
         run: GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 ./build.sh
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lightningstream_darwin_amd64.bin
           path: bin/lightningstream
@@ -55,7 +55,7 @@ jobs:
       - name: Build (arm64)
         run: GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 ./build.sh
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lightningstream_darwin_arm64.bin
           path: bin/lightningstream
