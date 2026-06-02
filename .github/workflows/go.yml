@@ -12,26 +12,27 @@ on:
       - main
 
 jobs:
-
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        go: [ "1.24" ]
+        go:
+          - "1.25"
+          - "1.26"
 
     name: Go ${{ matrix.go }} tests
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go }}
-    - name: Build
-      run: go build -v ./...
-    - name: Test
-      run: ./test.sh
-    - name: Make sure ./update-docs.sh was run
-      run: |
-        ./update-docs.sh
-        git status --porcelain
-        test -z "$(git status --porcelain)"
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Build
+        run: go build -v ./...
+      - name: Test
+        run: ./test.sh
+      - name: Make sure ./update-docs.sh was run
+        run: |
+          ./update-docs.sh
+          git status --porcelain
+          test -z "$(git status --porcelain)"
