@@ -302,8 +302,8 @@ type DBIOptions struct {
 }
 
 type Storage struct {
-	Type    string                 `yaml:"type"`    // "fs", "s3", "memory"
-	Options map[string]interface{} `yaml:"options"` // backend specific
+	Type    string         `yaml:"type"`    // "fs", "s3", "memory"
+	Options map[string]any `yaml:"options"` // backend specific
 
 	// FIXME: Configure per LMDB instead, since we run a cleaner per LMDB?
 	Cleanup Cleanup `yaml:"cleanup"`

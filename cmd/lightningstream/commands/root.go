@@ -179,7 +179,7 @@ func ensureMinimumPID() {
 	// Spawn processes to increase the last PID before we restart
 	n := minimumPID - pid
 	l.WithField("n", n).Info("Spawning processes to increase PID")
-	for i := 0; i < n; i++ {
+	for range n {
 		cmd := exec.Command("/nonexistent")
 		_ = cmd.Run()
 	}

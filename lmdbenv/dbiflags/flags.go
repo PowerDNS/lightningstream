@@ -69,8 +69,8 @@ func (f *Flags) UnmarshalText(text []byte) error {
 	s = strings.ReplaceAll(s, ",", "|")
 	s = strings.ReplaceAll(s, "+", "|")
 	s = strings.ReplaceAll(s, " ", "|")
-	parts := strings.Split(s, "|")
-	for _, p := range parts {
+	parts := strings.SplitSeq(s, "|")
+	for p := range parts {
 		p = strings.TrimSpace(p)
 		p = strings.ToUpper(p)
 		if len(p) == 0 {

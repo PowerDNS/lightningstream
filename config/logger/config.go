@@ -3,6 +3,7 @@ package logger
 import (
 	"flag"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -58,11 +59,11 @@ func (c Config) Check() error {
 	if _, err := logrus.ParseLevel(c.Level); err != nil {
 		return fmt.Errorf("log.level: must be one of: %s", strings.Join(LogLevels, ", "))
 	}
-	if !inList(LogFormats, c.Format) {
+	if !slices.Contains(LogFormats, c.Format) {
 		return fmt.Errorf("log.format: must be one of: %s", strings.Join(LogFormats, ", "))
 	}
 	if c.Timestamp != "" {
-		if !inList(LogTimestamps, c.Timestamp) {
+		if !slices.Contains(LogTimestamps, c.Timestamp) {
 			return fmt.Errorf("log.timestamp: must be one of: %s", strings.Join(LogTimestamps, ", "))
 		}
 	}
@@ -121,13 +122,4 @@ func Configure(c Config) {
 
 func addDefaults(def string, options []string) string {
 	return fmt.Sprintf("(default: %s; options: %s)", def, strings.Join(options, ", "))
-}
-
-func inList(list []string, item string) bool {
-	for _, v := range list {
-		if item == v {
-			return true
-		}
-	}
-	return false
 }

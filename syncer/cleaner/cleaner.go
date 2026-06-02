@@ -2,6 +2,7 @@ package cleaner
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"sync"
 	"time"
@@ -52,9 +53,7 @@ type Worker struct {
 func (w *Worker) SetCommitted(last map[string]time.Time) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	for instance, t := range last {
-		w.lastByInstance[instance] = t
-	}
+	maps.Copy(w.lastByInstance, last)
 }
 
 // GetCommitted retrieves the snapshot time of the last snapshot loaded

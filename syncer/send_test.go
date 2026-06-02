@@ -64,8 +64,8 @@ func doBenchmarkSyncerSendOnce(b *testing.B, native, dupsort bool) {
 			// First insert the initial data into the main database
 			dbi, err := txn.OpenDBI("foo", lmdb.Create|extraDBIFlags)
 			require.NoError(t, err)
-			for i := 0; i < nRecords; i++ {
-				key := []byte(fmt.Sprintf("key-%020d", i))
+			for i := range nRecords {
+				key := fmt.Appendf(nil, "key-%020d", i)
 				err := txn.Put(dbi, key, val, 0)
 				if err != nil {
 					return err
