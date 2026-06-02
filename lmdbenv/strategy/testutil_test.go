@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 
 	"github.com/PowerDNS/lightningstream/lmdbenv"
 )
@@ -57,8 +56,8 @@ func (it *TestIterator) Merge(oldval []byte) (ret []byte, err error) {
 	}
 	m[it.ns] = make(map[byte]bool)
 	val := it.kvs[it.idx].Val
-	//log.Printf("oldval is '%s'\n", oldval)
-	//log.Printf("val is '%s'\n", val)
+	// log.Printf("oldval is '%s'\n", oldval)
+	// log.Printf("val is '%s'\n", val)
 	for i := 0; i < len(val); i++ {
 		m[it.ns][val[i]] = true
 	}
@@ -74,7 +73,7 @@ func (it *TestIterator) Merge(oldval []byte) (ret []byte, err error) {
 			}
 		}
 	}
-	//log.Printf("ret is %s '%s'\n", it.kvs[it.idx].Key, ret)
+	// log.Printf("ret is %s '%s'\n", it.kvs[it.idx].Key, ret)
 	return ret, nil
 }
 
@@ -111,7 +110,7 @@ func (it *TestIterator) Clean(oldval []byte) (ret []byte, err error) {
 			}
 		}
 	}
-	//log.Printf("ret is %s '%s'\n", it.kvs[it.idx].Key, ret)
+	// log.Printf("ret is %s '%s'\n", it.kvs[it.idx].Key, ret)
 	return ret, nil
 }
 
@@ -119,12 +118,12 @@ func prefillDBI(txn *lmdb.Txn, dbi lmdb.DBI, items []lmdbenv.KVString) error {
 	it := NewTestIterator(items, 0)
 	err := Put(txn, dbi, it)
 	if err != nil {
-		return errors.Wrap(err, "prefill: Put")
+		return fmt.Errorf("prefill: Put: %w", err)
 	}
 
 	dbItems, err := lmdbenv.ReadDBIString(txn, dbi)
 	if err != nil {
-		return errors.Wrap(err, "prefill: ReadDBIString")
+		return fmt.Errorf("prefill: ReadDBIString: %w", err)
 	}
 
 	if len(dbItems) == 0 {

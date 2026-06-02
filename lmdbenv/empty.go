@@ -1,15 +1,16 @@
 package lmdbenv
 
 import (
+	"fmt"
+
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 )
 
 // IsEmpty checks if a database is empty
 func IsEmpty(txn *lmdb.Txn, dbi lmdb.DBI) (bool, error) {
 	c, err := txn.OpenCursor(dbi)
 	if err != nil {
-		return false, errors.Wrap(err, "open cursor")
+		return false, fmt.Errorf("open cursor: %w", err)
 	}
 	defer c.Close()
 
@@ -18,7 +19,7 @@ func IsEmpty(txn *lmdb.Txn, dbi lmdb.DBI) (bool, error) {
 		return false, nil
 	}
 	if !lmdb.IsNotFound(err) {
-		return false, errors.Wrap(err, "get")
+		return false, fmt.Errorf("get: %w", err)
 	}
 	return true, nil
 }

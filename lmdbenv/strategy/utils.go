@@ -2,11 +2,11 @@ package strategy
 
 import (
 	"bytes"
-	encoding_binary "encoding/binary"
+	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 )
 
 const LMDBMaxKeySize = 511
@@ -46,17 +46,17 @@ func iterBoth(it Iterator, c *lmdb.Cursor, integerKey bool, f iterBothFunc) erro
 					itKey = nil
 					itEOF = true
 				} else {
-					return errors.Wrap(err, "iterator next")
+					return fmt.Errorf("iterator next: %w", err)
 				}
 			} else {
 				// Check to ensure the keys are in insert order
 				if cmpFunc(prevKey, itKey) >= 0 {
-					return errors.Wrap(ErrNotSorted, string(itKey))
+					return fmt.Errorf("%s: %w", string(itKey), ErrNotSorted)
 				}
 				prevKey = prevKey[:len(itKey)]
 				copy(prevKey, itKey)
 			}
-			//log.Printf("@@@ < IT %s", string(itKey))
+			// log.Printf("@@@ < IT %s", string(itKey))
 		}
 
 		// Next LMDB key if needed
@@ -66,11 +66,11 @@ func iterBoth(it Iterator, c *lmdb.Cursor, integerKey bool, f iterBothFunc) erro
 				if lmdb.IsNotFound(err) {
 					dbEOF = true
 				} else {
-					return errors.Wrap(err, "cursor next")
+					return fmt.Errorf("cursor next: %w", err)
 				}
 			}
 			flag = lmdb.Next
-			//log.Printf("@@@ < DB %s (val: %s)", string(dbKey), string(dbVal))
+			// log.Printf("@@@ < DB %s (val: %s)", string(dbKey), string(dbVal))
 		}
 
 		// No need for compare if we reached the end of one
@@ -81,7 +81,7 @@ func iterBoth(it Iterator, c *lmdb.Cursor, integerKey bool, f iterBothFunc) erro
 			err = f(nil, dbKey, dbVal, true, false)
 			dbKey = nil
 			if err != nil {
-				return errors.Wrap(err, "callback it eof")
+				return fmt.Errorf("callback it eof: %w", err)
 			}
 			continue
 		}
@@ -89,7 +89,7 @@ func iterBoth(it Iterator, c *lmdb.Cursor, integerKey bool, f iterBothFunc) erro
 			err = f(itKey, nil, nil, false, true)
 			itKey = nil
 			if err != nil {
-				return errors.Wrap(err, "callback db eof")
+				return fmt.Errorf("callback db eof: %w", err)
 			}
 			continue
 		}
@@ -111,7 +111,7 @@ func iterBoth(it Iterator, c *lmdb.Cursor, integerKey bool, f iterBothFunc) erro
 			itKey = nil
 		}
 		if err != nil {
-			return errors.Wrap(err, "callback")
+			return fmt.Errorf("callback: %w", err)
 		}
 	}
 }
@@ -135,11 +135,11 @@ func bytesToInt(b []byte) uint64 {
 	switch len(b) {
 	case 4:
 		// Only one I have seen in the wild
-		return uint64(encoding_binary.LittleEndian.Uint32(b))
+		return uint64(binary.LittleEndian.Uint32(b))
 	case 8:
-		return encoding_binary.LittleEndian.Uint64(b)
+		return binary.LittleEndian.Uint64(b)
 	case 2:
-		return uint64(encoding_binary.LittleEndian.Uint16(b))
+		return uint64(binary.LittleEndian.Uint16(b))
 	default:
 		return 0 // TODO: better way?
 	}
@@ -151,7 +151,7 @@ func setNewVal(txn *lmdb.Txn, dbi lmdb.DBI, key, oldVal, newVal []byte) error {
 	if len(newVal) == 0 {
 		err := txn.Del(dbi, key, nil)
 		if err != nil && !lmdb.IsNotFound(err) {
-			return errors.Wrap(err, "del")
+			return fmt.Errorf("del: %w", err)
 		}
 		return nil
 	}
@@ -160,7 +160,7 @@ func setNewVal(txn *lmdb.Txn, dbi lmdb.DBI, key, oldVal, newVal []byte) error {
 	}
 	err := txn.Put(dbi, key, newVal, 0)
 	if err != nil {
-		return errors.Wrap(err, "put")
+		return fmt.Errorf("put: %w", err)
 	}
 	return nil
 }

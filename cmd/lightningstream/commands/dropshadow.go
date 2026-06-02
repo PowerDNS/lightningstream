@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv"
 	"github.com/PowerDNS/lightningstream/syncer"
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -37,13 +37,13 @@ func dropshadowForLMDB(name string, lc config.LMDB) error {
 
 			dbi, err := txn.OpenDBI(dbiName, 0)
 			if err != nil {
-				return errors.Wrap(err, "dbi "+dbiName)
+				return fmt.Errorf("dbi %s: %w", dbiName, err)
 			}
 
 			logrus.WithField("db", dbiName).Info("Dropping")
 			err = txn.Drop(dbi, true)
 			if err != nil {
-				return errors.Wrap(err, "dbi drop "+dbiName)
+				return fmt.Errorf("dbi drop %s: %w", dbiName, err)
 			}
 		}
 		return nil

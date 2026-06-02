@@ -3,6 +3,7 @@ package syncer
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -16,7 +17,6 @@ import (
 	"github.com/PowerDNS/lightningstream/syncer/hooks"
 	"github.com/PowerDNS/lightningstream/utils"
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,9 +52,7 @@ func (e ErrEntry) Unwrap() error {
 	return e.Err
 }
 
-var (
-	ErrNoTxnID = errors.New("no TxnID set on iterator")
-)
+var ErrNoTxnID = errors.New("no TxnID set on iterator")
 
 var hostname string
 
@@ -166,7 +164,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 	// Read all entries
 	c, err := txn.OpenCursor(dbi)
 	if err != nil {
-		return nil, errors.Wrap(err, "open cursor")
+		return nil, fmt.Errorf("open cursor: %w", err)
 	}
 	defer c.Close()
 
@@ -181,7 +179,7 @@ func (s *Syncer) readDBI(txn *lmdb.Txn, dbiName, origDBIName string, rawValues b
 			if lmdb.IsNotFound(err) {
 				break
 			} else {
-				return nil, errors.Wrap(err, "cursor next")
+				return nil, fmt.Errorf("cursor next: %w", err)
 			}
 		}
 
@@ -279,7 +277,6 @@ func (s *Syncer) startStatsLogger(ctx context.Context, env *lmdb.Env) {
 			}
 		}
 	}()
-
 }
 
 func (s *Syncer) registerCollector(env *lmdb.Env) {
