@@ -48,7 +48,7 @@ func Test_roundtrip_compat_manual(t *testing.T) {
 			},
 		},
 	}
-	for i := 0; i < 10_000; i++ {
+	for i := range 10_000 {
 		key := []byte("key-****-test")
 		binary.BigEndian.PutUint32(key[4:8], uint32(i))
 		val := []byte("val-****-testing-testing")

@@ -27,8 +27,7 @@ func emptySnapshot() []byte {
 func TestReceiver(t *testing.T) {
 	ts := time.Now()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	st := memory.New()
 	r := New(st, config.Config{
@@ -56,7 +55,7 @@ func TestReceiver(t *testing.T) {
 	// Add a snapshot
 	err := st.Store(ctx, snapshot.Name("test", "other", "G-0", ts), emptySnapshot())
 	assert.NoError(t, err)
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		time.Sleep(20 * time.Millisecond)
 		inst, _ = r.Next()
 		if inst != "" {
@@ -72,7 +71,7 @@ func TestReceiver(t *testing.T) {
 	// Add another snapshot for the same instance
 	err = st.Store(ctx, snapshot.Name("test", "other", "G-0", ts.Add(time.Second)), emptySnapshot())
 	assert.NoError(t, err)
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		time.Sleep(20 * time.Millisecond)
 		inst, _ = r.Next()
 		if inst != "" {

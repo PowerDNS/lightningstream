@@ -64,9 +64,9 @@ func (it *TestIterator) Merge(oldval []byte) (ret []byte, err error) {
 	}
 	// We want to keep things in a specific order so the randomized range map does not hurt us.
 	// This is a bit of a stupid loop, but it's only test code.
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		if len(m[i]) > 0 {
-			for j := 0; j < 256; j++ {
+			for j := range 256 {
 				if m[i][byte(j)] {
 					ret = append(ret, byte(i))
 					ret = append(ret, byte(j))
@@ -101,9 +101,9 @@ func (it *TestIterator) Clean(oldval []byte) (ret []byte, err error) {
 	m[it.ns] = nil
 	// We want to keep things in a specific order so the randomized range map does not hurt us.
 	// This is a bit of a stupid loop, but it's only test code.
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		if len(m[i]) > 0 {
-			for j := 0; j < 256; j++ {
+			for j := range 256 {
 				if m[i][byte(j)] {
 					ret = append(ret, byte(i))
 					ret = append(ret, byte(j))

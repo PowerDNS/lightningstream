@@ -18,7 +18,7 @@ func makeTestDBI(n int) *DBI {
 	d.SetTransform("test-transform")
 	d.SetFlags(42)
 	extra := []byte("TEST1234567890ABCDEF") // 20 extra bytes
-	for i := 0; i < n; i++ {
+	for i := range n {
 		key := append([]byte{'k', 0, 0, 0, 0}, extra...)
 		binary.BigEndian.PutUint32(key[1:5], uint32(i))
 		val := append([]byte{'v', byte(i)}, extra...)
@@ -54,7 +54,7 @@ func TestDBI(t *testing.T) {
 	})
 
 	d.ResetCursor()
-	for i := 0; i < 1_000; i++ {
+	for i := range 1_000 {
 		kv, err := d.Next()
 		assert.NoError(t, err)
 		assert.Equal(t, byte(i), kv.Key[4])
