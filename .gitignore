@@ -1,5 +1,3 @@
-/bin/*
-!/bin/.placeholder
 /lightningstream.yaml
 *.mdb
 *-lock
