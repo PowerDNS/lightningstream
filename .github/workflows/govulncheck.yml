@@ -19,8 +19,8 @@ jobs:
     strategy:
       matrix:
         go:
-          - "1.25"
-          - "1.26"
+          - "1.25.11"
+          - "1.26.4"
     steps:
       - id: govulncheck
         uses: golang/govulncheck-action@v1
