@@ -59,8 +59,8 @@ func TestSweeper(t *testing.T) {
 			mix := createDBI("mix")
 
 			assert.NoError(t, env.Update(func(txn *lmdb.Txn) error {
-				for i := 0; i < 3000; i++ {
-					key := []byte(fmt.Sprintf("key-%08d", i))
+				for i := range 3000 {
+					key := fmt.Appendf(nil, "key-%08d", i)
 					val := make([]byte, header.MinHeaderSize)
 					switch i % 3 {
 					case 0:
@@ -132,7 +132,7 @@ func BenchmarkSweeper(b *testing.B) {
 
 		assert.NoError(b, env.Update(func(txn *lmdb.Txn) error {
 			for i := 0; i < b.N; i++ {
-				key := []byte(fmt.Sprintf("key-%08d", i))
+				key := fmt.Appendf(nil, "key-%08d", i)
 				val := make([]byte, header.MinHeaderSize)
 				switch i % 3 {
 				case 0:

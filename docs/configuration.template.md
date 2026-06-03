@@ -55,15 +55,15 @@ in a hostname is safe.
 
 ## Storage
 
-Lightning Stream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support
-different storage backends. At the moment of writing, it supports S3, Azure Blob Storage, and local
-filesystem backends.
+Lightning Stream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support different storage
+backends. It supports S3, local filesystem and in-memory backends. The local filesystem backend would require something
+like NFS to be considered useful for production.
 
 
 ### S3 backend
 
-This is currently the only backend that makes sense for a production environment. It stores
-snapshots in an S3 or compatible storage. We have tested it against Amazon AWS S3 and MinIO servers.
+This backend stores snapshots in S3 (or S3 API compatible) storage. We have tested it against Amazon AWS S3 and MinIO
+servers.
 
 MinIO example for testing without TLS:
 
@@ -84,14 +84,27 @@ Currently available options:
 |--------|------|---------|
 | access_key | string | S3 access key |
 | secret_key | string | S3 secret key |
+| access_key_file | string | File location to read S3 access key from |
+| secret_key_file | string | File location to read S3 secret key from |
+| secrets_refresh_interval | duration | Time between secrets retrieval from file (default: "15s", minimum "1s") |
 | region | string | S3 region (default: "us-east-1") |
 | bucket | string | Name of S3 bucket |
+| storage_class | string | S3 Storage Class |
 | create_bucket | bool | Create bucket if it does not exist |
 | global_prefix | string | Transparently apply a global prefix to all names before storage |
-| prefix_folders | bool | Show folders in list instead of recursively listing them |
+| prefix_folders | bool | Show folders in list instead of recursively listing them (deprecated) |
+| hide_folders | string | Hide all keys that end in `/` |
 | endpoint_url | string | Use a custom endpoint URL, e.g. for Minio |
+| disable_send_content_md5 | bool | Disable sending the Content-MD5 header |
+| num_minio_threads | string | Number of threads Minio uses for its workers |
 | tls | [tlsconfig.Config](https://github.com/PowerDNS/go-tlsconfig) | TLS configuration |
 | init_timeout | duration | Time allowed for initialisation (default: "20s") |
+| idle_conn_timeout | duration | Time before closing an idle connection (default: "90s") |
+| max_idle_conns | integer | Maximum number of idle connections (default: 100) |
+| dial_timeout | duration | Time allowed for connection setup (default: "10s") |
+| dial_keep_alive | duration | Interval between keep-alive probes (default: "10s") |
+| tls_handshake_timeout | duration | Time allowed for TLS handshake (default: "10s") |
+| client_timeout | duration | Time allowed for any full request (default: "15m") |
 | use_update_marker | bool | Reduce LIST commands, see link below |
 | update_marker_force_list_interval | duration | See link below for details |
 
@@ -100,13 +113,13 @@ deployments without compromises on update latency, as GET operations are 10 time
 than LIST operations, but it cannot reliably be used when you are using a bucket mirror
 mechanism to keep multiple buckets in sync.
 
-You can find all the available S3 options with full descriptions in
-[Simpleblob's S3 backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/s3/s3.go#:~:text=Options%20struct).
+You can find all the available S3 options with full descriptions in Simpleblob's S3 backend [Options
+struct](https://pkg.go.dev/github.com/PowerDNS/simpleblob/backends/s3#Options).
 
 
 ### Azure Blob Storage backend
 
-Lightning Stream supports Azure Blob Storage as a production-ready backend.
+Lightning Stream supports Azure Blob Storage as another production-ready backend.
 
 #### Authentication
 
@@ -176,16 +189,23 @@ storage:
 |--------|------|---------|
 | account_name | string | Azure storage account name (required for shared key auth) |
 | account_key | string | Azure storage account key (required for shared key auth) |
+| account_key_file | string | File location to read Azure storage account key from |
+| secrets_refresh_interval | duration | Time between secrets retrieval from file (default: "15s", minimum "1s") |
 | use_shared_key | bool | Use shared key authentication; if false, `DefaultAzureCredential` is used |
 | container | string | Azure blob container name (required) |
 | create_container | bool | Create the container if it does not exist |
 | endpoint_url | string | Custom endpoint URL (defaults to `https://<account_name>.blob.core.windows.net`) |
 | global_prefix | string | Transparently apply a global prefix to all blob names |
-| disable_send_content_md5 | bool | Disable sending the Content-MD5 header |
 | tls | [tlsconfig.Config](https://github.com/PowerDNS/go-tlsconfig) | TLS configuration |
 | init_timeout | duration | Time allowed for initialisation (default: "20s") |
-| use_update_marker | bool | Reduce LIST operations using an update marker blob (see below) |
-| update_marker_force_list_interval | duration | Force a full LIST after this interval (default: "5m") |
+| idle_conn_timeout | duration | Time before closing an idle connection (default: "90s") |
+| max_idle_conns | integer | Maximum number of idle connections (default: 100) |
+| dial_timeout | duration | Time allowed for connection setup (default: "10s") |
+| dial_keep_alive | duration | Interval between keep-alive probes (default: "10s") |
+| tls_handshake_timeout | duration | Time allowed for TLS handshake (default: "10s") |
+| client_timeout | duration | Time allowed for any full request (default: "15m") |
+| use_update_marker | bool | Reduce LIST commands, see link below |
+| update_marker_force_list_interval | duration | See link below for details |
 | concurrency | int | Max concurrent block uploads per Store call (default: 1) |
 
 The `use_update_marker` option can significantly reduce Azure Storage costs. GET operations are
@@ -198,8 +218,8 @@ blob on every store or delete, and uses it to skip LIST calls when nothing has c
     the same container. It also cannot be used reliably when the container itself is replicated
     in an active-active fashion between data centres.
 
-You can find all available options with full descriptions in
-[Simpleblob's Azure backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/azure/azure.go).
+You can find all available options with full descriptions in Simpleblob's Azure backend [Options
+struct](https://pkg.go.dev/github.com/PowerDNS/simpleblob/backends/azure#Options).
 
 
 ### Filesystem backend
@@ -213,6 +233,7 @@ storage:
   options:
     root_path: /tmp/snapshots
 ```
+
 
 ## LMDBs
 
@@ -303,8 +324,9 @@ health:
 
 This example configuration assumes a PowerDNS Authoritative server setup with native schemas, but it
 explains every available option.
+See [Lightning Stream with PowerDNS Authoritative server](pdns-auth-installation.md) for details on
+Lightning Stream integration with PowerDNS Authoritative server.
 
 ```yaml
 __CONFIG__
 ```
-

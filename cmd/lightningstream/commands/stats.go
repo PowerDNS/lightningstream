@@ -9,7 +9,6 @@ import (
 	"github.com/PowerDNS/lightningstream/lmdbenv/stats"
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/c2h5oh/datasize"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -41,11 +40,11 @@ func statsForLMDB(name string, lc config.LMDB) error {
 		for _, dbiName := range names {
 			dbi, err := txn.OpenDBI(dbiName, 0)
 			if err != nil {
-				return errors.Wrap(err, "dbi "+dbiName)
+				return fmt.Errorf("dbi %s: %w", dbiName, err)
 			}
 			stat, err := txn.Stat(dbi)
 			if err != nil {
-				return errors.Wrap(err, "dbi "+dbiName)
+				return fmt.Errorf("dbi %s: %w", dbiName, err)
 			}
 			used := stats.PageUsageBytes(stat)
 			usedBytes += used

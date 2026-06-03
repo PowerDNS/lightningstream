@@ -2,10 +2,10 @@ package strategy
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 )
 
 // Append implements the Append-strategy.
@@ -28,7 +28,7 @@ func Append(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 			if err == io.EOF {
 				return nil // done
 			}
-			return errors.Wrap(err, "next")
+			return fmt.Errorf("next: %w", err)
 		}
 
 		// Check to ensure the keys are in insert order
@@ -41,7 +41,7 @@ func Append(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 		// Get val
 		val, err := it.Merge(nil)
 		if err != nil {
-			return errors.Wrap(err, "merge")
+			return fmt.Errorf("merge: %w", err)
 		}
 		if len(val) == 0 {
 			continue
@@ -50,7 +50,7 @@ func Append(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 		// Append
 		err = txn.Put(dbi, key, val, lmdb.Append)
 		if err != nil {
-			return errors.Wrap(err, "append")
+			return fmt.Errorf("append: %w", err)
 		}
 	}
 }

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,7 +11,6 @@ import (
 	"github.com/PowerDNS/lightningstream/config"
 	"github.com/PowerDNS/lightningstream/config/logger"
 	"github.com/PowerDNS/lightningstream/syncer"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -36,9 +36,7 @@ var (
 	rootCancel context.CancelFunc
 )
 
-var (
-	SyncerOptionsCallback func(syncer.Options, logrus.FieldLogger) syncer.Options
-)
+var SyncerOptionsCallback func(syncer.Options, logrus.FieldLogger) syncer.Options
 
 const (
 	TimeoutExitCode = 75 // picked EX_TEMPFAIL from sysexits.h
@@ -179,7 +177,7 @@ func ensureMinimumPID() {
 	// Spawn processes to increase the last PID before we restart
 	n := minimumPID - pid
 	l.WithField("n", n).Info("Spawning processes to increase PID")
-	for i := 0; i < n; i++ {
+	for range n {
 		cmd := exec.Command("/nonexistent")
 		_ = cmd.Run()
 	}

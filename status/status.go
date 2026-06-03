@@ -2,6 +2,7 @@ package status
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/PowerDNS/lightningstream/lmdbenv"
@@ -10,7 +11,6 @@ import (
 	"github.com/PowerDNS/lmdb-go/lmdb"
 	"github.com/PowerDNS/simpleblob"
 	"github.com/c2h5oh/datasize"
-	"github.com/pkg/errors"
 )
 
 type info struct {

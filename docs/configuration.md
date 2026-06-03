@@ -60,14 +60,15 @@ in a hostname is safe.
 
 ## Storage
 
-Lightning Stream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support
-different storage backends. At the moment of writing, it supports S3, Azure Blob Storage, and local
-filesystem backends.
+Lightning Stream uses our [Simpleblob](https://github.com/PowerDNS/simpleblob) library to support different storage
+backends. It supports S3, local filesystem and in-memory backends. The local filesystem backend would require something
+like NFS to be considered useful for production.
 
 
 ### S3 backend
 
-This is one option for a production environment. It stores snapshots in an S3 or compatible storage. We have tested it against Amazon AWS S3 and MinIO servers.
+This backend stores snapshots in S3 (or S3 API compatible) storage. We have tested it against Amazon AWS S3 and MinIO
+servers.
 
 MinIO example for testing without TLS:
 
@@ -88,14 +89,27 @@ Currently available options:
 |--------|------|---------|
 | access_key | string | S3 access key |
 | secret_key | string | S3 secret key |
+| access_key_file | string | File location to read S3 access key from |
+| secret_key_file | string | File location to read S3 secret key from |
+| secrets_refresh_interval | duration | Time between secrets retrieval from file (default: "15s", minimum "1s") |
 | region | string | S3 region (default: "us-east-1") |
 | bucket | string | Name of S3 bucket |
+| storage_class | string | S3 Storage Class |
 | create_bucket | bool | Create bucket if it does not exist |
 | global_prefix | string | Transparently apply a global prefix to all names before storage |
-| prefix_folders | bool | Show folders in list instead of recursively listing them |
+| prefix_folders | bool | Show folders in list instead of recursively listing them (deprecated) |
+| hide_folders | string | Hide all keys that end in `/` |
 | endpoint_url | string | Use a custom endpoint URL, e.g. for Minio |
+| disable_send_content_md5 | bool | Disable sending the Content-MD5 header |
+| num_minio_threads | string | Number of threads Minio uses for its workers |
 | tls | [tlsconfig.Config](https://github.com/PowerDNS/go-tlsconfig) | TLS configuration |
 | init_timeout | duration | Time allowed for initialisation (default: "20s") |
+| idle_conn_timeout | duration | Time before closing an idle connection (default: "90s") |
+| max_idle_conns | integer | Maximum number of idle connections (default: 100) |
+| dial_timeout | duration | Time allowed for connection setup (default: "10s") |
+| dial_keep_alive | duration | Interval between keep-alive probes (default: "10s") |
+| tls_handshake_timeout | duration | Time allowed for TLS handshake (default: "10s") |
+| client_timeout | duration | Time allowed for any full request (default: "15m") |
 | use_update_marker | bool | Reduce LIST commands, see link below |
 | update_marker_force_list_interval | duration | See link below for details |
 
@@ -104,8 +118,8 @@ deployments without compromises on update latency, as GET operations are 10 time
 than LIST operations, but it cannot reliably be used when you are using a bucket mirror
 mechanism to keep multiple buckets in sync.
 
-You can find all the available S3 options with full descriptions in
-[Simpleblob's S3 backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/s3/s3.go#:~:text=Options%20struct).
+You can find all the available S3 options with full descriptions in Simpleblob's S3 backend [Options
+struct](https://pkg.go.dev/github.com/PowerDNS/simpleblob/backends/s3#Options).
 
 
 ### Azure Blob Storage backend
@@ -180,16 +194,23 @@ storage:
 |--------|------|---------|
 | account_name | string | Azure storage account name (required for shared key auth) |
 | account_key | string | Azure storage account key (required for shared key auth) |
+| account_key_file | string | File location to read Azure storage account key from |
+| secrets_refresh_interval | duration | Time between secrets retrieval from file (default: "15s", minimum "1s") |
 | use_shared_key | bool | Use shared key authentication; if false, `DefaultAzureCredential` is used |
 | container | string | Azure blob container name (required) |
 | create_container | bool | Create the container if it does not exist |
 | endpoint_url | string | Custom endpoint URL (defaults to `https://<account_name>.blob.core.windows.net`) |
 | global_prefix | string | Transparently apply a global prefix to all blob names |
-| disable_send_content_md5 | bool | Disable sending the Content-MD5 header |
 | tls | [tlsconfig.Config](https://github.com/PowerDNS/go-tlsconfig) | TLS configuration |
 | init_timeout | duration | Time allowed for initialisation (default: "20s") |
-| use_update_marker | bool | Reduce LIST operations using an update marker blob (see below) |
-| update_marker_force_list_interval | duration | Force a full LIST after this interval (default: "5m") |
+| idle_conn_timeout | duration | Time before closing an idle connection (default: "90s") |
+| max_idle_conns | integer | Maximum number of idle connections (default: 100) |
+| dial_timeout | duration | Time allowed for connection setup (default: "10s") |
+| dial_keep_alive | duration | Interval between keep-alive probes (default: "10s") |
+| tls_handshake_timeout | duration | Time allowed for TLS handshake (default: "10s") |
+| client_timeout | duration | Time allowed for any full request (default: "15m") |
+| use_update_marker | bool | Reduce LIST commands, see link below |
+| update_marker_force_list_interval | duration | See link below for details |
 | concurrency | int | Max concurrent block uploads per Store call (default: 1) |
 
 The `use_update_marker` option can significantly reduce Azure Storage costs. GET operations are
@@ -202,8 +223,8 @@ blob on every store or delete, and uses it to skip LIST calls when nothing has c
     the same container. It also cannot be used reliably when the container itself is replicated
     in an active-active fashion between data centres.
 
-You can find all available options with full descriptions in
-[Simpleblob's Azure backend Options struct](https://github.com/PowerDNS/simpleblob/blob/main/backends/azure/azure.go).
+You can find all available options with full descriptions in Simpleblob's Azure backend [Options
+struct](https://pkg.go.dev/github.com/PowerDNS/simpleblob/backends/azure#Options).
 
 
 ### Filesystem backend
@@ -217,6 +238,7 @@ storage:
   options:
     root_path: /tmp/snapshots
 ```
+
 
 ## LMDBs
 
@@ -307,6 +329,8 @@ health:
 
 This example configuration assumes a PowerDNS Authoritative server setup with native schemas, but it
 explains every available option.
+See [Lightning Stream with PowerDNS Authoritative server](pdns-auth-installation.md) for details on
+Lightning Stream integration with PowerDNS Authoritative server.
 
 ```yaml
 # This is a Lightning Stream (LS) example configuration for use with the
@@ -405,7 +429,7 @@ lmdbs:
       # that can be used for LMDB data pages and limits the file size of an
       # LMDB. Keep in mind that an LMDB file can eventually grow to its mapsize.
       # A value of 0 means 1GB when creating a new LMDB.
-      #map_size: 1GB
+      map_size: 1000MB # Match the 1000MB used in PowerDNS auth integration docs
 
       # The maximum number of named DBIs within the LMDB. 0 means default.
       #max_dbs: 64
@@ -464,6 +488,8 @@ lmdbs:
     options:
       no_subdir: true
       create: true
+      map_size: 1000MB
+    schema_tracks_changes: true
 
     # Example use to create new LMDBs from old snapshots of older PDNS Auth
     # 4.7 LMDBs. This is not be needed for any new deployment with PDNS Auth
@@ -492,7 +518,7 @@ sweeper:
   # When disabled, the deleted entries will never actually be removed.
   # Stats are only available when the sweeper is enabled.
   #enabled: false
-  
+
   # RetentionDays is the number of DAYS of retention. Unlike in most
   # other places, this is specified in number of days instead of Duration
   # because of the expected length of this.
@@ -500,26 +526,26 @@ sweeper:
   # but this is rarely a good idea. Best to set this as high as possible.
   # Default: 370 (days, intentionally on the safe side)
   #retention_days: 370
-  
+
   # Interval is the interval between sweeps of the whole database to enforce
   # RetentionDays.
   # As a guideline, on a fast server sweeping 1 million records takes
   # about 1 second.
   # Default: 6h
   #interval: 6h
-  
+
   # FirstInterval is the first Interval immediately after
   # startup, to allow one soon after extended downtime.
   # Default: 10m
   #first_interval: 10m
-  
+
   # LockDuration limits how long the sweeper may hold the exclusive write
   # lock at one time. This effectively controls the maximum latency spike
   # due to the sweeper for API calls that update the LMDB.
   # This is not a hard quota, the sweeper may overrun it slightly.
   # Default: 50ms
   #lock_duration: 50ms
-  
+
   # ReleaseDuration determines how long the sweeper must sleep before it
   # is allowed to reacquire the exclusive write lock.
   # If this is equal to LockDuration, it means that the sweeper can hold the
@@ -631,7 +657,6 @@ log:
   #  # to report the status of the startup sequence for each db.
   #  report_metadata: true
 ```
-
 
 <!-- ======================================================= -->
 <!-- AUTOMATICALLY GENERATED BY update-docs.sh - DO NOT EDIT -->

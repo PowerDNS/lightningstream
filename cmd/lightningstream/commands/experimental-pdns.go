@@ -197,9 +197,7 @@ var pdnsV5FixDuplicateDomainsCmd = &cobra.Command{
 							return err
 						}
 						// Note that the domain is reversed
-						newDomain := []byte(
-							fmt.Sprintf("invalid\x00dup-%d\x00%s", newest, string(domain)),
-						)
+						newDomain := fmt.Appendf(nil, "invalid\x00dup-%d\x00%s", newest, string(domain))
 						if err := patchDomain(newDomain, newest, header.NoFlags); err != nil {
 							return err
 						}

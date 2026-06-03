@@ -1,8 +1,9 @@
 package lmdbenv
 
 import (
+	"fmt"
+
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 )
 
 type KV struct {
@@ -14,7 +15,7 @@ type KV struct {
 func ReadDBI(txn *lmdb.Txn, dbi lmdb.DBI) ([]KV, error) {
 	c, err := txn.OpenCursor(dbi)
 	if err != nil {
-		return nil, errors.Wrap(err, "open cursor")
+		return nil, fmt.Errorf("open cursor: %w", err)
 	}
 	defer c.Close()
 
@@ -31,7 +32,7 @@ func ReadDBI(txn *lmdb.Txn, dbi lmdb.DBI) ([]KV, error) {
 			if lmdb.IsNotFound(err) {
 				return entries, nil // done
 			} else {
-				return nil, errors.Wrap(err, "cursor next")
+				return nil, fmt.Errorf("cursor next: %w", err)
 			}
 		}
 		flag = lmdb.Next

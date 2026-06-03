@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/PowerDNS/lightningstream/lmdbenv/dbiflags"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
@@ -302,8 +301,8 @@ type DBIOptions struct {
 }
 
 type Storage struct {
-	Type    string                 `yaml:"type"`    // "fs", "s3", "memory", "azure"
-	Options map[string]interface{} `yaml:"options"` // backend specific
+	Type    string         `yaml:"type"`    // "azure", "fs", "memory", "s3"
+	Options map[string]any `yaml:"options"` // backend specific
 
 	// FIXME: Configure per LMDB instead, since we run a cleaner per LMDB?
 	Cleanup Cleanup `yaml:"cleanup"`
@@ -363,11 +362,11 @@ func (c Config) Check() error {
 		if l.Path == "" {
 			return fmt.Errorf("%s: no path configured", prefix)
 		}
-		if l.Options.FileMask > 0777 { // decimal 511
+		if l.Options.FileMask > 0o777 {
 			return fmt.Errorf("lmdb.options.file_mask: too large value, possible use of decimal (%d) instead of octal (%#o)",
 				l.Options.FileMask, l.Options.FileMask)
 		}
-		if l.Options.DirMask > 0777 { // decimal 511
+		if l.Options.DirMask > 0o777 {
 			return fmt.Errorf("lmdb.options.dir_mask: too large value, possible use of decimal (%d) instead of octal (%#o)",
 				l.Options.DirMask, l.Options.DirMask)
 		}
@@ -450,7 +449,7 @@ func (c *Config) LoadYAML(yamlContents []byte, expandEnv bool) error {
 func (c *Config) LoadYAMLFile(fpath string, expandEnv bool) error {
 	contents, err := os.ReadFile(fpath)
 	if err != nil {
-		return errors.Wrap(err, "open yaml file")
+		return fmt.Errorf("open yaml file: %w", err)
 	}
 	return c.LoadYAML(contents, expandEnv)
 }

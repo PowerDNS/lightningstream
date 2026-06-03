@@ -2,9 +2,8 @@ package header
 
 import (
 	"encoding/binary"
+	"errors"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // Timestamp is the number of nanoseconds since the UNIX epoch, which

@@ -2,9 +2,9 @@ package strategy
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 )
 
 // IterUpdate implements the IterUpdate strategy.
@@ -24,42 +24,42 @@ import (
 func IterUpdate(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 	c, err := txn.OpenCursor(dbi)
 	if err != nil {
-		return errors.Wrap(err, "open cursor")
+		return fmt.Errorf("open cursor: %w", err)
 	}
 	defer c.Close()
 
 	integerKey := false
 	flags, err := txn.Flags(dbi)
 	if err != nil {
-		return errors.Wrap(err, "get flags")
+		return fmt.Errorf("get flags: %w", err)
 	}
 	if flags&LMDBIntegerKeyFlag > 0 {
 		integerKey = true
 	}
 
 	err = iterBoth(it, c, integerKey, func(itKey, dbKey, dbVal []byte, itEOF, dbEOF bool) error {
-		//log.Printf("@@@ args: itkey=%s, dbkey=%s, dbVal=%s, itEOF=%v, dbEOF=%v", string(itKey), string(dbKey), string(dbVal), itEOF, dbEOF)
+		// log.Printf("@@@ args: itkey=%s, dbkey=%s, dbVal=%s, itEOF=%v, dbEOF=%v", string(itKey), string(dbKey), string(dbVal), itEOF, dbEOF)
 
 		if itEOF || itKey == nil {
 			val, err := it.Clean(dbVal)
 			if err != nil {
-				return errors.Wrap(err, "clean")
+				return fmt.Errorf("clean: %w", err)
 			}
 			if val == nil {
-				//log.Printf("@@@ Del itKey nil")
+				// log.Printf("@@@ Del itKey nil")
 				err = c.Del(0)
 				if err != nil {
-					return errors.Wrap(err, "del cleaned")
+					return fmt.Errorf("del cleaned: %w", err)
 				}
 				return nil
 			}
 			if bytes.Equal(val, dbVal) {
-				//log.Printf("@@@ Same value")
+				// log.Printf("@@@ Same value")
 				return nil // Already the same, no need to Put
 			}
 			err = txn.Put(dbi, dbKey, val, 0) // Do not touch cursor
 			if err != nil {
-				return errors.Wrap(err, "put cleaned")
+				return fmt.Errorf("put cleaned: %w", err)
 			}
 			return nil
 		}
@@ -67,7 +67,7 @@ func IterUpdate(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 		// We need the value for all the code below
 		val, err := it.Merge(nil)
 		if err != nil {
-			return errors.Wrap(err, "merge")
+			return fmt.Errorf("merge: %w", err)
 		}
 
 		// At end of database, append any new item
@@ -77,9 +77,9 @@ func IterUpdate(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 			}
 			// Append all remaining keys
 			err = c.Put(itKey, val, lmdb.Append) // Safe to use cursor, because at end
-			//log.Printf("@@@ Append %s", string(itKey))
+			// log.Printf("@@@ Append %s", string(itKey))
 			if err != nil {
-				return errors.Wrap(err, "lmdb append")
+				return fmt.Errorf("lmdb append: %w", err)
 			}
 			return nil
 		}
@@ -90,40 +90,40 @@ func IterUpdate(txn *lmdb.Txn, dbi lmdb.DBI, it Iterator) error {
 				return nil
 			}
 			// Insert new key with normal Put
-			//log.Printf("@@@ Put %s", string(itKey))
+			// log.Printf("@@@ Put %s", string(itKey))
 			err = txn.Put(dbi, itKey, val, 0) // Do not touch cursor
 			if err != nil {
-				return errors.Wrap(err, "put")
+				return fmt.Errorf("put: %w", err)
 			}
 			return nil
 		}
 
 		val, err = it.Merge(dbVal)
 		if err != nil {
-			return errors.Wrap(err, "merge")
+			return fmt.Errorf("merge: %w", err)
 		}
 		// Both keys the same, overwrite value if different
 		if len(val) == 0 {
-			//log.Printf("@@@ Del")
+			// log.Printf("@@@ Del")
 			err = c.Del(0)
 			if err != nil {
-				return errors.Wrap(err, "del")
+				return fmt.Errorf("del: %w", err)
 			}
 			return nil
 		}
 		if bytes.Equal(val, dbVal) {
-			//log.Printf("@@@ Same value")
+			// log.Printf("@@@ Same value")
 			return nil // Already the same, no need to Put
 		}
-		//log.Printf("@@@ Put %v", val)
+		// log.Printf("@@@ Put %v", val)
 		err = txn.Put(dbi, itKey, val, 0) // Do not touch cursor
 		if err != nil {
-			return errors.Wrap(err, "put current")
+			return fmt.Errorf("put current: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
-		return errors.Wrap(err, "iterBoth")
+		return fmt.Errorf("iterBoth: %w", err)
 	}
 
 	return nil

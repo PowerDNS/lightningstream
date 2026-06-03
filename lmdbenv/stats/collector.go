@@ -2,12 +2,12 @@
 package stats
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -90,7 +90,7 @@ func (c *Collector) doCollect(ch chan<- prometheus.Metric, t Target) {
 		// Collect env info
 		info, err := t.Env.Info()
 		if err != nil {
-			return errors.Wrap(err, "env info")
+			return fmt.Errorf("env info: %w", err)
 		}
 		ch <- prometheus.MustNewConstMetric(
 			envMapSizeDesc,
@@ -120,11 +120,11 @@ func (c *Collector) doCollect(ch chan<- prometheus.Metric, t Target) {
 		// Collect file size
 		path, err := t.Env.Path()
 		if err != nil {
-			return errors.Wrap(err, "env path")
+			return fmt.Errorf("env path: %w", err)
 		}
 		filesize, err := lmdbFileSize(path)
 		if err != nil {
-			return errors.Wrap(err, "file size")
+			return fmt.Errorf("file size: %w", err)
 		}
 		ch <- prometheus.MustNewConstMetric(
 			envFileSizeDesc,
@@ -147,12 +147,12 @@ func (c *Collector) doCollect(ch chan<- prometheus.Metric, t Target) {
 			for _, dbname := range dbnames {
 				dbi, err := txn.OpenDBI(dbname, 0)
 				if err != nil {
-					return errors.Wrap(err, "opendbi "+dbname)
+					return fmt.Errorf("opendbi %s: %w", dbname, err)
 				}
 
 				stat, err := txn.Stat(dbi)
 				if err != nil {
-					return errors.Wrap(err, "stat "+dbname)
+					return fmt.Errorf("stat %s: %w", dbname, err)
 				}
 
 				usedBytes := PageUsageBytes(stat)
@@ -219,7 +219,7 @@ func (c *Collector) doCollect(ch chan<- prometheus.Metric, t Target) {
 			return nil
 		})
 		if err != nil {
-			return errors.Wrap(err, "open view")
+			return fmt.Errorf("open view: %w", err)
 		}
 
 		// Collect memory info from smaps (only available on Linux)
@@ -229,13 +229,13 @@ func (c *Collector) doCollect(ch chan<- prometheus.Metric, t Target) {
 		if smaps {
 			fullpath, err := lmdbFullPath(path)
 			if err != nil {
-				return errors.Wrap(err, "full path")
+				return fmt.Errorf("full path: %w", err)
 			}
 
 			data, err := os.ReadFile("/proc/self/smaps")
 			if err != nil {
 				if !os.IsNotExist(err) {
-					return errors.Wrap(err, "read smaps")
+					return fmt.Errorf("read smaps: %w", err)
 				}
 			} else {
 				m := getMemoryStats(string(data), fullpath)
@@ -341,7 +341,7 @@ var (
 func lmdbFullPath(path string) (string, error) {
 	st, err := os.Stat(path)
 	if err != nil {
-		return "", errors.Wrap(err, "stat")
+		return "", fmt.Errorf("stat: %w", err)
 	}
 	if st.IsDir() {
 		path = filepath.Join(path, "data.mdb")
@@ -352,11 +352,11 @@ func lmdbFullPath(path string) (string, error) {
 func lmdbFileSize(path string) (int64, error) {
 	path, err := lmdbFullPath(path)
 	if err != nil {
-		return 0, errors.Wrap(err, "full path")
+		return 0, fmt.Errorf("full path: %w", err)
 	}
 	st, err := os.Stat(path)
 	if err != nil {
-		return 0, errors.Wrap(err, "stat")
+		return 0, fmt.Errorf("stat: %w", err)
 	}
 	return st.Size(), nil
 }

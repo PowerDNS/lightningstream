@@ -46,7 +46,7 @@ func TestInstanceSet_List(t *testing.T) {
 	s.Add("y")
 	s.Add("bar")
 	// Deterministic sorted output
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		assert.Equal(t, []string{"bar", "foo", "x", "y", "z"}, s.List())
 	}
 }
@@ -74,7 +74,7 @@ func TestInstanceSet_String(t *testing.T) {
 	s.Add("y")
 	s.Add("bar")
 	// Deterministic sorted output
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		assert.Equal(t, "bar foo x y z", s.String())
 	}
 }
