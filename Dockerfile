@@ -2,7 +2,7 @@
 # locking issues can occur because of differences in file locking primitives implementations.
 
 # Builder
-FROM golang:1.26.3-trixie AS builder
+FROM golang:1.26.4-trixie AS builder
 
 WORKDIR /src
 ADD . ./

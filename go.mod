@@ -1,6 +1,6 @@
 module github.com/PowerDNS/lightningstream
 
-go 1.25.10
+go 1.25.11
 
 require (
 	github.com/CrowdStrike/csproto v0.35.0
