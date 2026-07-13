@@ -81,7 +81,8 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			logrus.Fatalf("Load config file %q: %v", configFile, err)
 		}
-		conf.Version = version
+		conf.Name = mainName
+		conf.Version = mainVersion
 		// Also check at this stage. A config must always be valid, even if you
 		// later override some items.
 		if err := conf.Check(); err != nil {
@@ -103,7 +104,7 @@ var rootCmd = &cobra.Command{
 		}
 		logger.Configure(conf.Log)
 		ensureMinimumPID()
-		logrus.WithField("version", version).Debug("Running")
+		logrus.WithField("version", mainVersion).Debug("Running")
 		if logConfig {
 			logrus.Infof("Effective configuration:\n%s\n", conf.String())
 		}
@@ -112,7 +113,7 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		_ = cmd.Help()
 	},
-	Version: version,
+	Version: mainVersion,
 }
 
 // RootCommand returns the Cobra root Command
@@ -133,7 +134,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&instanceName, "instance", "i", "", "Instance name, defaults to hostname. MUST be unique for each instance")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().IntVar(&minimumPID, "minimum-pid", 0, fmt.Sprintf(
-		"Try to fork processes until we reach a minimum PID to avoid LMDB lock PID clashes when running in a container. The maximum allowed value is %d", MaximumMinPID))
+		"Try to fork processes until we reach a minimum PID to avoid LMDB lock PID clashes when running in a container. The maximum allowed value is %d", MaximumMinPID,
+	))
 	rootCmd.PersistentFlags().DurationVar(&timeout, "timeout", 0,
 		fmt.Sprintf("Timeout for command execution (exit code %d)", TimeoutExitCode))
 	logger.RegisterFlagsWith(rootCmd.PersistentFlags().StringVar)
@@ -171,7 +173,8 @@ func ensureMinimumPID() {
 	}
 	if os.Getenv(SkipPIDCheckEnv) != "" {
 		l.WithField("minimum_pid", minimumPID).Warn(
-			"PID does NOT satisfy minimum, but requested to skip check")
+			"PID does NOT satisfy minimum, but requested to skip check",
+		)
 		return
 	}
 	// Spawn processes to increase the last PID before we restart

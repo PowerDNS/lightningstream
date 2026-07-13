@@ -164,7 +164,8 @@ type Config struct {
 	// e.g. after the initial listing of snapshots have been loaded.
 	OnlyOnce bool `yaml:"only_once"`
 
-	// Set to current version by main
+	// Set to program name and version by rootCmd
+	Name    string `yaml:"-"`
 	Version string `yaml:"-"`
 }
 
