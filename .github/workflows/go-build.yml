@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     name: Go build (Linux)
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Go
@@ -39,7 +39,7 @@ jobs:
     runs-on: macos-15
     name: Go build (macOS)
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Go
