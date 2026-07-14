@@ -117,7 +117,7 @@ func runSync(receiveOnly bool) error {
 	if hostname, err := os.Hostname(); err == nil {
 		healthz.SetMeta("hostname", hostname)
 	}
-	healthz.SetMeta("version", version)
+	healthz.SetMeta("version", mainVersion)
 
 	if !conf.OnlyOnce {
 		status.StartHTTPServer(conf)

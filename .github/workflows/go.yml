@@ -17,8 +17,8 @@ jobs:
     strategy:
       matrix:
         go:
-          - "1.25.11"
-          - "1.26.4"
+          - "1.25"
+          - "1.26"
 
     name: Go ${{ matrix.go }} tests
     steps:
@@ -27,6 +27,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go }}
+          check-latest: true
       - name: Build
         run: go build -v ./...
       - name: Test

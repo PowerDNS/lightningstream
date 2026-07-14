@@ -377,7 +377,9 @@ lightningstream version [flags]
 ### Options
 
 ```
-  -h, --help   help for version
+  -h, --help      help for version
+  -j, --json      Output full build information as a json object
+  -v, --verbose   Output more information than just the version
 ```
 
 

@@ -43,7 +43,7 @@ const statusTemplateString = `<!DOCTYPE html>
 <html>
 <head>
 	<meta charset="UTF-8">
-	<title>Lightning Stream Status</title>
+	<title>{{.Config.Name}} {{.Config.Version}} Status</title>
 	<style>
 		body          { font-family: sans-serif; }
 		table, td, th { border: 1px solid #ccc; border-collapse: collapse; }
@@ -57,7 +57,7 @@ const statusTemplateString = `<!DOCTYPE html>
 	</style>
 </head>
 <body>
-	<h1>⚡ Lightning Stream Status</h1>
+	<h1>{{.Config.Name}} {{.Config.Version}} Status</h1>
 	<p>
 		<a href="/metrics">Prometheus metrics</a>
 		|
