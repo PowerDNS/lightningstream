@@ -1,9 +1,8 @@
-/.dockerignore
 /.idea
 /tmp
 /bin/*
+!/bin/.gitignore
 **/*.swp
-/docker-compose*.yml
 .env
 .env.*
 **/core
@@ -11,4 +10,3 @@
 **/*.log
 **/*.mdb
 **/*.pb.gz
-/test-in-docker.sh
