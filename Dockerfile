@@ -7,7 +7,7 @@ FROM golang:1.26.5-trixie AS builder
 WORKDIR /src
 ADD . ./
 RUN --mount=type=cache,target="/root/.cache/go-build" --mount=type=cache,target="/go/pkg/mod" \
-    GOBIN=/usr/local/bin go install ./cmd/...
+    GOBIN=/usr/local/bin go install -trimpath ./cmd/...
 
 # Dist
 FROM debian:trixie-slim
