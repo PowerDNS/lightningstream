@@ -37,7 +37,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ vars.IMAGE_NAME }}
+            powerdns/lightningstream
           tags: |
             type=ref,event=branch
             type=ref,event=pr
