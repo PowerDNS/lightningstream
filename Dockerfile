@@ -4,13 +4,16 @@
 # Builder
 FROM golang:1.26.5-trixie AS builder
 
+
 WORKDIR /src
-ADD . ./
-RUN --mount=type=cache,target="/root/.cache/go-build" --mount=type=cache,target="/go/pkg/mod" \
+COPY . ./
+RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=gobuild,target=/root/.cache/go-build \
     GOBIN=/usr/local/bin go install -trimpath ./cmd/...
 
+
 # Dist
-FROM debian:trixie-slim
+FROM debian:trixie-slim AS runtime
 
 RUN <<EOF
 set -euo pipefail
@@ -28,6 +31,6 @@ mkdir /snapshots
 chmod 777 /snapshots
 EOF
 
-COPY --from=builder /usr/local/bin/lightningstream /usr/local/bin/lightningstream
+COPY --from=builder /usr/local/bin/* /usr/local/bin/
 
 ENTRYPOINT ["/usr/local/bin/lightningstream"]
