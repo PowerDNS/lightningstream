@@ -17,13 +17,15 @@ jobs:
   govulncheck:
     runs-on: ubuntu-latest
     name: Run govulncheck
-    strategy:
-      matrix:
-        go:
-          - "1.25.13"
-          - "1.26.6"
     steps:
+      - uses: actions/checkout@v7
+      - name: Detect Go version used in Dockerfile
+        run: sed -n 's/^FROM golang:\(.*\)-[a-z]* AS .*$/GO_VERSION_IN_DOCKERFILE=\1/p' Dockerfile >> "$GITHUB_ENV"
+      - name: Check consistency of Go versions used
+        run: |
+            [ -z "$(yq '.jobs.[].steps[] | select(.uses == "actions/setup-go@*") | select(.with.go-version != strenv(GO_VERSION_IN_DOCKERFILE))' .github/workflows/go-build.yml)" ]
       - id: govulncheck
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: ${{ matrix.go }}
+          repo-checkout: 'false'
+          go-version-input: ${{ env.GO_VERSION_IN_DOCKERFILE }}

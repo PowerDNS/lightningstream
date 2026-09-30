@@ -17,8 +17,8 @@ jobs:
     strategy:
       matrix:
         go:
-          - "1.25"
-          - "1.26"
+          - "oldstable"
+          - "stable"
 
     name: Go ${{ matrix.go }} tests
     steps:
