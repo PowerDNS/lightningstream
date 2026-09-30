@@ -12,5 +12,8 @@ GOMAXPROCS=1 go test -race -count=5 "$@" ./...
 go test -count 20 -run TestSyncer_Sync_startup ./syncer
 
 # Configure linters in .golangci.yml
-GOBIN="$PWD/bin" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
+lint_version=2.14.0
+if [ ! -x ./bin/golangci-lint ] || [ "$(./bin/golangci-lint version --short)" != "$lint_version" ]; then
+    curl -sSfL https://golangci-lint.run/install.sh | sh -s v$lint_version
+fi
 ./bin/golangci-lint run
