@@ -85,8 +85,15 @@ var rootCmd = &cobra.Command{
 		conf.Version = mainVersion
 		// Also check at this stage. A config must always be valid, even if you
 		// later override some items.
-		if err := conf.Check(); err != nil {
-			logrus.Fatalf("Config file error: %v", err)
+		if errs := conf.Check(); len(errs) > 0 {
+			for _, e := range errs {
+				logrus.Errorf("%v", e)
+			}
+			var maybeS string
+			if len(errs) > 1 {
+				maybeS = "s"
+			}
+			logrus.Fatalf("%d config file error%s, aborting", len(errs), maybeS)
 		}
 
 		if conf.Storage.RootPath != "" {
