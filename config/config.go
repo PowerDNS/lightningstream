@@ -351,57 +351,57 @@ type Health struct {
 }
 
 // Check validates a Config instance
-func (c Config) Check() error {
+func (c Config) Check() (errs []error) {
 	if err := c.Log.Check(); err != nil {
-		return err
+		errs = append(errs, err)
 	}
 	if len(c.LMDBs) < 1 {
-		return fmt.Errorf("no LMDBs configured")
+		errs = append(errs, fmt.Errorf("no LMDBs configured"))
 	}
 	for name, l := range c.LMDBs {
 		prefix := fmt.Sprintf("lmdb %q", name)
 		if l.Path == "" {
-			return fmt.Errorf("%s: no path configured", prefix)
+			errs = append(errs, fmt.Errorf("%s: no path configured", prefix))
 		}
 		if l.Options.FileMask > 0o777 {
-			return fmt.Errorf("lmdb.options.file_mask: too large value, possible use of decimal (%d) instead of octal (%#o)",
-				l.Options.FileMask, l.Options.FileMask)
+			errs = append(errs, fmt.Errorf("lmdb.options.file_mask: too large value, possible use of decimal (%d) instead of octal (%#o)",
+				l.Options.FileMask, l.Options.FileMask))
 		}
 		if l.Options.DirMask > 0o777 {
-			return fmt.Errorf("lmdb.options.dir_mask: too large value, possible use of decimal (%d) instead of octal (%#o)",
-				l.Options.DirMask, l.Options.DirMask)
+			errs = append(errs, fmt.Errorf("lmdb.options.dir_mask: too large value, possible use of decimal (%d) instead of octal (%#o)",
+				l.Options.DirMask, l.Options.DirMask))
 		}
 		if l.SchemaTracksChanges && l.DupSortHack {
-			return fmt.Errorf("lmdb.schema_tracks_changes: cannot be used together with the dupsort_hack option")
+			errs = append(errs, fmt.Errorf("lmdb.schema_tracks_changes: cannot be used together with the dupsort_hack option"))
 		}
 	}
 	if c.HTTP.Address != "" {
 		if _, _, err := net.SplitHostPort(c.HTTP.Address); err != nil {
-			return fmt.Errorf("http.address: %v", err)
+			errs = append(errs, fmt.Errorf("http.address: %v", err))
 		}
 	}
 	if c.LMDBPollInterval < 100*time.Millisecond {
-		return fmt.Errorf("lmdb_poll_interval: too short interval")
+		errs = append(errs, fmt.Errorf("lmdb_poll_interval: too short interval"))
 	}
 	if c.StoragePollInterval < 100*time.Millisecond {
-		return fmt.Errorf("storage_poll_interval: too short interval")
+		errs = append(errs, fmt.Errorf("storage_poll_interval: too short interval"))
 	}
 	if c.StorageRetryInterval < 100*time.Millisecond {
-		return fmt.Errorf("storage_retry_interval: too short interval")
+		errs = append(errs, fmt.Errorf("storage_retry_interval: too short interval"))
 	}
 	if dt := c.StorageForceSnapshotInterval; dt != 0 && dt < time.Minute {
-		return fmt.Errorf("storage_force_snapshot_interval: too short interval (minimum 1m if enabled)")
+		errs = append(errs, fmt.Errorf("storage_force_snapshot_interval: too short interval (minimum 1m if enabled)"))
 	}
 	if c.StorageRetryCount < 1 {
-		return fmt.Errorf("storage_retry_count: positive number required")
+		errs = append(errs, fmt.Errorf("storage_retry_count: positive number required"))
 	}
 	if c.MemoryDownloadedSnapshots < 1 {
-		return fmt.Errorf("memory_downloaded_snapshots: positive number required")
+		errs = append(errs, fmt.Errorf("memory_downloaded_snapshots: positive number required"))
 	}
 	if c.MemoryDecompressedSnapshots < 1 {
-		return fmt.Errorf("memory_decompressed_snapshots: positive number required")
+		errs = append(errs, fmt.Errorf("memory_decompressed_snapshots: positive number required"))
 	}
-	return nil
+	return
 }
 
 func (c Config) Clone() Config {
