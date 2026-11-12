@@ -56,6 +56,12 @@ Or run `./build.sh` to install it in a `bin/` subdirectory of this repo.
 
 Easy cross compiling is not supported, because the LMDB bindings require CGo.
 
+**Important:** build Lightning Stream against the same libc as every other process that opens the LMDB.
+LMDB keeps its writer mutex as a raw `pthread_mutex_t` in the lock file, and musl and glibc lay that struct
+out differently without LMDB detecting it. Mixing them (e.g. a static musl/Alpine build of Lightning Stream next
+to the glibc-based Debian/Ubuntu PowerDNS packages) can corrupt the lock file and make the other process hang
+forever in `mdb_txn_begin`. With Debian/Ubuntu PowerDNS packages, do not build Lightning Stream with musl/Alpine.
+
 
 ## Example in Docker Compose
 
