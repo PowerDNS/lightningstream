@@ -25,7 +25,7 @@ jobs:
       build-args: |
         BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
       push: ${{ github.event_name != 'pull_request' }}
-      sbom: true
+      sign: false
       meta-images: |
         powerdns/lightningstream
       meta-tags: |
